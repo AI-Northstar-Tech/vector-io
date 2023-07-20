@@ -1,2 +1,3 @@
 # all-vectordb
-Python Wrapper for all major vector DB offerings
+
+A collection of vector database utility functions and scripts.
