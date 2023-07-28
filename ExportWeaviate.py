@@ -5,27 +5,18 @@ from tqdm import tqdm
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import os
 import re
-from dotenv import load_dotenv
-load_dotenv()
 
 class ExportWeaviate:
 
     data_types = ['text', 'text[]', 'int', 'int[]', 'number', 'number[]', 'boolean', 'boolean[]', 'date', 'date[]', 
               'geoCoordinates', 'phoneNumber', 'blob', 'string', 'string[]', 'uuid', 'uuid[]']
 
-    def __init__(self, weaviate_url, weaviate_key):
+    def __init__(self, client):
         """
         Initialize the class
         """
-        self.weaviate_url = weaviate_url
-        self.weaviate_key = weaviate_key
-        if self.weaviate_key is not None:
-            auth_client_secret=weaviate.auth.AuthApiKey(self.weaviate_key)
-        else:
-            auth_client_secret=None
-        self.weaviate_client = weaviate.Client(url=self.weaviate_url, auth_client_secret=auth_client_secret)
+        self.weaviate_client = client
     
     def get_data(self, class_name, include_crossrefs = False):
         """
@@ -36,9 +27,9 @@ class ExportWeaviate:
         cur = con.cursor()
         property_names = [property['name'] for property in schema['properties'] if property['dataType'][0] in self.data_types]
         property_names = sorted(property_names)
-        con = sqlite3.connect(f'{class_name}.db')
-        cur.execute(f"DROP TABLE IF EXISTS {class_name}")
-        cur.execute(f"CREATE TABLE IF NOT EXISTS {class_name} ({','.join(property_names)})")
+        con = sqlite3.connect(f'{class_name}_weaviate.db')
+        cur.execute(f"DROP TABLE IF EXISTS {class_name}_weaviate")
+        cur.execute(f"CREATE TABLE IF NOT EXISTS {class_name}_weaviate ({','.join(property_names)})")
         insert_query = f"INSERT INTO {class_name} (uuid, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 1))})"  
         if include_crossrefs:
             cross_refs_schemas, cross_refs = self.check_crossref(schema, self.data_types)
@@ -65,6 +56,40 @@ class ExportWeaviate:
                     self.insert_data(property_names, f'{class_name}.parquet', objects, insert_query, cur, None, None, None)
                 except Exception as e:
                     break
+
+        def check_crossref(self, schema, data_types):
+        """
+        Check if there are cross references in the schema
+        """
+        cross_refs = [(property['name'], property['dataType'][0]) for property in schema['properties'] if property['dataType'][0] not in data_types]
+        cross_refs_schemas = []
+        if len(cross_refs) > 0:
+            for _, class_name in cross_refs:
+                schema = self.weaviate_client.schema.get(class_name=class_name)
+                cross_refs_schemas.append(schema)
+            return cross_refs_schemas, cross_refs
+        else:
+            return None
+
+    def create_tables(self, parent_class, cross_refs_schemas, data_types, cur):
+        """
+        Create tables for cross references
+        """
+        insert_queries = {}
+        property_names_dict = {}
+        for schema in cross_refs_schemas:
+            class_name = schema['class']
+            property_names = [property['name'] for property in schema['properties'] if property['dataType'][0] in data_types]
+            property_names = sorted(property_names)
+            property_names_dict[class_name] = property_names
+            cur.execute(f"DROP TABLE IF EXISTS {class_name}_weaviate")
+            cur.execute(f"CREATE TABLE IF NOT EXISTS {class_name}_weaviate (main_uuid REFERENCES {parent_class} (uuid), uuid, {','.join(property_names)})")
+            insert_query = f"INSERT INTO {class_name}_weaviate (main_uuid, uuid, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 2))})"
+            insert_queries[class_name] = insert_query
+        if insert_queries == {}:
+            return None, None
+        else:
+            return insert_queries, property_names_dict
 
     def insert_data(self, file_path, objects, property_names, insert_query, cur, cross_refs, insert_query_crossrefs, property_names_dict):
         """
@@ -118,39 +143,3 @@ class ExportWeaviate:
                     if key == cross_ref_class_name:
                         insert_query_crossref = value
                 cur.executemany(insert_query_crossref, data_to_insert)
-
-    def check_crossref(self, schema, data_types):
-        """
-        Check if there are cross references in the schema
-        """
-        cross_refs = [(property['name'], property['dataType'][0]) for property in schema['properties'] if property['dataType'][0] not in data_types]
-        cross_refs_schemas = []
-        if len(cross_refs) > 0:
-            for _, class_name in cross_refs:
-                schema = self.weaviate_client.schema.get(class_name=class_name)
-                cross_refs_schemas.append(schema)
-            return cross_refs_schemas, cross_refs
-        else:
-            return None
-
-    def create_tables(self, parent_class, cross_refs_schemas, data_types, cur):
-        """
-        Create tables for cross references
-        """
-        insert_queries = {}
-        property_names_dict = {}
-        for schema in cross_refs_schemas:
-            class_name = schema['class']
-            property_names = [property['name'] for property in schema['properties'] if property['dataType'][0] in data_types]
-            property_names = sorted(property_names)
-            property_names_dict[class_name] = property_names
-            cur.execute(f"DROP TABLE IF EXISTS {class_name}")
-            cur.execute(f"CREATE TABLE IF NOT EXISTS {class_name} (main_uuid REFERENCES {parent_class} (uuid), uuid, {','.join(property_names)})")
-            insert_query = f"INSERT INTO {class_name} (main_uuid, uuid, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 2))})"
-            insert_queries[class_name] = insert_query
-        if insert_queries == {}:
-            return None, None
-        else:
-            return insert_queries, property_names_dict
-
-ExportWeaviate(os.getenv('WEAVIATE_URL'), os.getenv('WEAVIATE_API_KEY')).get_data('Patent', include_crossrefs=False)
