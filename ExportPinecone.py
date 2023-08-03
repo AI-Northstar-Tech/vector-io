@@ -24,12 +24,14 @@ class ExportQdrant:
             data.append(response)
         con = sqlite3.connect(f'{index_name}_pinecone.db')
         cur = con.cursor()
+        df = pd.DataFrame(columns=["Vectors"])
         for response in data:
             namespace = response['namespace']
             property_names = list(response['matches'][0]['metadata'].keys())
             cur.execute(f"CREATE TABLE IF NOT EXISTS {namespace}_{index_name} (id, {','.join(property_names)})")
             insert_query = f"INSERT INTO {namespace}_{index_name} (id, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 1))})"
-            self.insert_data(f"{index_name}_pinecone.parquet", response['matches'], property_names, insert_query, cur)
+            df.to_csv(f'{namespace}_{index_name}.csv', index=False)
+            self.insert_data(f"{namespace}_{index_name}.csv", response['matches'], property_names, insert_query, cur)
 
     def insert_data(file_path, objects, property_names, insert_query, cur):
         """
@@ -51,8 +53,5 @@ class ExportQdrant:
                 data_tuple += (property,)
             data_to_insert.append(data_tuple)
         vectors = pd.DataFrame(vectors)
-        schema = pa.Table.from_pandas(vectors).schema
-        with pq.ParquetWriter(file_path, schema) as writer:
-            table = pa.Table.from_pandas(vectors, schema=schema)
-            writer.write_table(table)
+        vectors.to_csv(file_path, index=False, mode='a', header=False)
         cur.executemany(insert_query, data_to_insert)
