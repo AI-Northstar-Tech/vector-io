@@ -3,20 +3,28 @@ import sqlite3
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import argparse
+import os
+from dotenv import load_dotenv
+from tqdm import tqdm
+load_dotenv()
 
-class ExportQdrant:
-    def __init__(self, index):
+class ExportPinecone:
+    def __init__(self, environment, index_name):
         """
         Initialize the index
         """
+        pinecone.init(api_key=os.getenv("PINECONE_API_KEY"), environment=environment)
+        index = pinecone.Index(index_name=index_name)
         self.index = index
 
-    def get_data(self, index_name, vector_dim):
+    def get_data(self, index_name):
         """
-        Get data from Qdrant
+        Get data from Pinecone
         """
         info = self.index.describe_index_stats()
         namespaces = info['namespaces']
+        vector_dim = int(pinecone.describe_index(index_name).dimension)
         zero_array = [0] * vector_dim
         data = []
         for key, value in namespaces.items():
@@ -25,7 +33,7 @@ class ExportQdrant:
         con = sqlite3.connect(f'{index_name}_pinecone.db')
         cur = con.cursor()
         df = pd.DataFrame(columns=["Vectors"])
-        for response in data:
+        for response in tqdm(data):
             namespace = response['namespace']
             property_names = list(response['matches'][0]['metadata'].keys())
             cur.execute(f"CREATE TABLE IF NOT EXISTS {namespace}_{index_name} (id, {','.join(property_names)})")
@@ -33,7 +41,7 @@ class ExportQdrant:
             df.to_csv(f'{namespace}_{index_name}.csv', index=False)
             self.insert_data(f"{namespace}_{index_name}.csv", response['matches'], property_names, insert_query, cur)
 
-    def insert_data(file_path, objects, property_names, insert_query, cur):
+    def insert_data(self, file_path, objects, property_names, insert_query, cur):
         """
         Insert data into sqlite database and parquet file
         """
@@ -55,3 +63,13 @@ class ExportQdrant:
         vectors = pd.DataFrame(vectors)
         vectors.to_csv(file_path, index=False, mode='a', header=False)
         cur.executemany(insert_query, data_to_insert)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Export data from Pinecone to sqlite database and csv file')
+    parser.add_argument('-e', '--environment', type=str, help='Environment of Pinecone instance')
+    parser.add_argument('-i','--index', type=str, help='Name of index to export')
+    args = parser.parse_args()
+    environment = args.environment
+    index = args.index
+    ExportPinecone(environment, index).get_data(index)

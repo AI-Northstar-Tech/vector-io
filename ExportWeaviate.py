@@ -6,17 +6,25 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import re
+import argparse
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 class ExportWeaviate:
 
     data_types = ['text', 'text[]', 'int', 'int[]', 'number', 'number[]', 'boolean', 'boolean[]', 'date', 'date[]', 
               'geoCoordinates', 'phoneNumber', 'blob', 'string', 'string[]', 'uuid', 'uuid[]']
 
-    def __init__(self, client):
+    def __init__(self, weaviate_url):
         """
         Initialize the class
         """
-        self.weaviate_client = client
+        try:
+            auth_client_secret=weaviate.auth.AuthApiKey(os.getenv('WEAVIATE_API_KEY'))
+            self.weaviate_client = weaviate.Client(url=weaviate_url, auth_client_secret=auth_client_secret)
+        except:
+            self.weaviate_client = weaviate.Client(url=weaviate_url)
     
     def get_data(self, class_name, include_crossrefs = False):
         """
@@ -30,15 +38,18 @@ class ExportWeaviate:
         con = sqlite3.connect(f'{class_name}_weaviate.db')
         cur.execute(f"DROP TABLE IF EXISTS {class_name}_weaviate")
         cur.execute(f"CREATE TABLE IF NOT EXISTS {class_name}_weaviate ({','.join(property_names)})")
-        insert_query = f"INSERT INTO {class_name} (uuid, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 1))})"  
+        insert_query = f"INSERT INTO {class_name} (uuid, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 1))})"
+
         if include_crossrefs:
             cross_refs_schemas, cross_refs = self.check_crossref(schema, self.data_types)
             if cross_refs_schemas is not None:
                 insert_queries, property_names_dict = self.create_tables(class_name, cross_refs_schemas, cur)
+        
         total = self.weaviate_client.query.aggregate(f"{class_name}").with_meta_count().do()['data']['Aggregate'][f"{class_name}"][0]['meta']['count']
         objects = self.weaviate_client.data_object.get(class_name=class_name, limit=100, with_vector=True)
         df = pd.DataFrame(columns=["Vectors"])
         df.to_csv(f'{class_name}_weaviate.csv', index=False)
+
         if include_crossrefs:
             self.insert_data(f'{class_name}_weaviate.csv', objects, property_names,insert_query, cur, cross_refs, insert_queries, property_names_dict)
             for _ in tqdm(range(total//100)):
@@ -48,6 +59,7 @@ class ExportWeaviate:
                     self.insert_data(f'{class_name}_weaviate.csv', objects, property_names,insert_query, cur, cross_refs, insert_queries, property_names_dict)
                 except Exception as e:
                     break
+                
         else:
             self.insert_data(f'{class_name}_weaviate.csv', objects, property_names, insert_query, cur, None, None, None)
             for _ in tqdm(range(total//100)):
@@ -94,13 +106,14 @@ class ExportWeaviate:
 
     def insert_data(self, file_path, objects, property_names, insert_query, cur, cross_refs, insert_query_crossrefs, property_names_dict):
         """
-        Insert data into sqlite database and parquet file
+        Insert data into sqlite database and csv file
         """
         data_to_insert = []
         vectors = []
         for object in objects['objects']:
             vectors.append({"Vectors" : object['vector']})
             data_dict = {}
+            data_dict['uuid'] = object['id']
             for property_name in property_names:
                 if property_name in object['properties']:
                     data_dict[property_name] = object['properties'][property_name]
@@ -141,3 +154,15 @@ class ExportWeaviate:
                     if key == cross_ref_class_name:
                         insert_query_crossref = value
                 cur.executemany(insert_query_crossref, data_to_insert)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Export data from Weaviate to sqlite database and csv file')
+    parser.add_argument('-u', '--url', type=str, default='http://localhost:8080', help='Location of Weaviate instance')
+    parser.add_argument('-c','--class_name', type=str, help='Name of class to export')
+    parser.add_argument('-i','--include_crossrefs', type=bool, default=False, help='Include cross references')
+    args = parser.parse_args()
+    url = args.url
+    class_name = args.class_name
+    include_crossrefs = args.include_crossrefs
+    ExportWeaviate(url).get_data(class_name, include_crossrefs)
+        
