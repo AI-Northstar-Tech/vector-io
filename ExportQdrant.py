@@ -6,13 +6,20 @@ import pandas as pd
 import sqlite3
 import pyarrow as pa
 import pyarrow.parquet as pq
+import os
+from dotenv import load_dotenv
+import argparse
+load_dotenv()
 
 class ExportQdrant:
-    def __init__(self, client):
+    def __init__(self, qdrant_url):
         """
         Initialize the class
         """
-        self.client = client
+        try:    
+            self.client = QdrantClient(url=qdrant_url, api_key=os.getenv('QDRANT_API_KEY'))
+        except:
+            self.client = QdrantClient(url=qdrant_url)
 
     def get_data(self, class_name):
         """
@@ -30,11 +37,12 @@ class ExportQdrant:
         insert_query = f"INSERT INTO {class_name}_qdrant (id, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 1))})"
         objects = self.client.scroll(collection_name=class_name, limit = 100, with_payload=True, with_vectors=True)
         df = pd.DataFrame(columns=["Vectors"])
-        self.insert_data(f'{class_name}_qdrant.parquet', objects[0], property_names, insert_query, cur)
+        df.to_csv(f'{class_name}_qdrant.csv', index=False)
+        self.insert_data(f'{class_name}_qdrant.csv', objects[0], property_names, insert_query, cur)
         for i in tqdm(range((total//100)-1)):
             uuid = objects[-1]
             objects = self.client.scroll(collection_name=class_name, limit = 100, offset=uuid, with_payload=True, with_vectors=True)
-            self.insert_data(f'{class_name}_qdrant.parquet', objects[0], property_names, insert_query, cur)
+            self.insert_data(f'{class_name}_qdrant.csv', objects[0], property_names, insert_query, cur)
 
     def insert_data(self, file_path, objects, property_names, insert_query, cur):
         """
@@ -56,8 +64,14 @@ class ExportQdrant:
                 data_tuple += (property,)
             data_to_insert.append(data_tuple)
         vectors = pd.DataFrame(vectors)
-        schema = pa.Table.from_pandas(vectors).schema
-        with pq.ParquetWriter(file_path, schema) as writer:
-            table = pa.Table.from_pandas(vectors, schema=schema)
-            writer.write_table(table)
+        vectors.to_csv(file_path, mode='a', header=False, index=False)
         cur.executemany(insert_query, data_to_insert)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Export data from Qdrant to sqlite database and csv file')
+    parser.add_argument('-u', '--url', type=str, default='http://localhost:6333', help='Location of Qdrant instance')
+    parser.add_argument('-c','--collection', type=str, help='Name of collection to export')
+    args = parser.parse_args()
+    url = args.url
+    collection = args.collection
+    ExportQdrant(url).get_data(collection)
