@@ -31,14 +31,13 @@ class ExportWeaviate:
         Get data from weaviate
         """
         schema = self.weaviate_client.schema.get(class_name="Patent")
-        con = sqlite3.connect(f'{class_name}.db')
-        cur = con.cursor()
         property_names = [property['name'] for property in schema['properties'] if property['dataType'][0] in self.data_types]
         property_names = sorted(property_names)
         con = sqlite3.connect(f'{class_name}_weaviate.db')
+        cur = con.cursor()
         cur.execute(f"DROP TABLE IF EXISTS {class_name}_weaviate")
-        cur.execute(f"CREATE TABLE IF NOT EXISTS {class_name}_weaviate ({','.join(property_names)})")
-        insert_query = f"INSERT INTO {class_name} (uuid, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 1))})"
+        cur.execute(f"CREATE TABLE IF NOT EXISTS {class_name}_weaviate (uuid, {','.join(property_names)})")
+        insert_query = f"INSERT INTO {class_name}_weaviate (uuid, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 1))})"
 
         if include_crossrefs:
             cross_refs_schemas, cross_refs = self.check_crossref(schema, self.data_types)
@@ -154,15 +153,4 @@ class ExportWeaviate:
                     if key == cross_ref_class_name:
                         insert_query_crossref = value
                 cur.executemany(insert_query_crossref, data_to_insert)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Export data from Weaviate to sqlite database and csv file')
-    parser.add_argument('-u', '--url', type=str, default='http://localhost:8080', help='Location of Weaviate instance')
-    parser.add_argument('-c','--class_name', type=str, help='Name of class to export')
-    parser.add_argument('-i','--include_crossrefs', type=bool, default=False, help='Include cross references')
-    args = parser.parse_args()
-    url = args.url
-    class_name = args.class_name
-    include_crossrefs = args.include_crossrefs
-    ExportWeaviate(url).get_data(class_name, include_crossrefs)
-        
+       

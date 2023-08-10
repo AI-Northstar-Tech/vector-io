@@ -46,7 +46,7 @@ class ExportQdrant:
 
     def insert_data(self, file_path, objects, property_names, insert_query, cur):
         """
-        Insert data into sqlite database and parquet file
+        Insert data into sqlite database and csv file
         """
         data_to_insert = []
         vectors = []
@@ -66,12 +66,3 @@ class ExportQdrant:
         vectors = pd.DataFrame(vectors)
         vectors.to_csv(file_path, mode='a', header=False, index=False)
         cur.executemany(insert_query, data_to_insert)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Export data from Qdrant to sqlite database and csv file')
-    parser.add_argument('-u', '--url', type=str, default='http://localhost:6333', help='Location of Qdrant instance')
-    parser.add_argument('-c','--collection', type=str, help='Name of collection to export')
-    args = parser.parse_args()
-    url = args.url
-    collection = args.collection
-    ExportQdrant(url).get_data(collection)

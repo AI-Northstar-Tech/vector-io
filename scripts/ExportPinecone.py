@@ -43,7 +43,7 @@ class ExportPinecone:
 
     def insert_data(self, file_path, objects, property_names, insert_query, cur):
         """
-        Insert data into sqlite database and parquet file
+        Insert data into sqlite database and csv file
         """
         data_to_insert = []
         vectors = []
@@ -63,13 +63,3 @@ class ExportPinecone:
         vectors = pd.DataFrame(vectors)
         vectors.to_csv(file_path, index=False, mode='a', header=False)
         cur.executemany(insert_query, data_to_insert)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Export data from Pinecone to sqlite database and csv file')
-    parser.add_argument('-e', '--environment', type=str, help='Environment of Pinecone instance')
-    parser.add_argument('-i','--index', type=str, help='Name of index to export')
-    args = parser.parse_args()
-    environment = args.environment
-    index = args.index
-    ExportPinecone(environment, index).get_data(index)
