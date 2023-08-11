@@ -1,10 +1,7 @@
-from scripts.ExportPinecone import ExportPinecone
-from scripts.ExportWeaviate import ExportWeaviate
-from scripts.ExportQdrant import ExportQdrant
-
 import argparse
 import os
 from dotenv import load_dotenv
+from export.vdb_export import *
 
 load_dotenv()
 

@@ -1,6 +1,6 @@
 numpy==1.23.5
 pandas==2.0.2
-pinecone==0.1.0
+pinecone-client==2.2.2
 pyarrow==11.0.0
 python-dotenv==1.0.0
 qdrant_client==1.4.0
