@@ -52,13 +52,47 @@ def export_qdrant(args):
 
 
 def main():
+    """
+    Export data from Pinecone, Weaviate and Qdrant to sqlite database and csv file.
+
+    Usage:
+        python export.py <vector_database> [options]
+
+    Arguments:
+        vector_database (str): Choose the vectors database to export data from.
+            Possible values: "pinecone", "weaviate", "qdrant".
+
+    Options:
+        Pinecone:
+            -e, --environment (str): Environment of Pinecone instance.
+            -i, --index (str): Name of index to export.
+
+        Weaviate:
+            -u, --url (str): Location of Weaviate instance.
+            -c, --class_name (str): Name of class to export.
+            -i, --include_crossrefs (bool): Include cross references, set Y or N.
+
+        Qdrant:
+            -u, --url (str): Location of Qdrant instance.
+            -c, --collection (str): Name of collection to export.
+
+    Examples:
+        Export data from Pinecone:
+        python export.py pinecone -e my_env -i my_index
+
+        Export data from Weaviate:
+        python export.py weaviate -u http://localhost:8080 -c my_class -i Y
+
+        Export data from Qdrant:
+        python export.py qdrant -u http://localhost:6333 -c my_collection
+    """
     parser = argparse.ArgumentParser(
         description="Export data from Pinecone, Weaviate and Qdrant to sqlite database and csv file"
     )
     subparsers = parser.add_subparsers(
-        title="Vectors Databases",
+        title="Vector Databases",
         description="Choose the vectors database to export data from",
-        dest="vectors_database",
+        dest="vector_database",
     )
 
     # Pinecone
@@ -100,14 +134,14 @@ def main():
 
     args = parser.parse_args()
 
-    if args.vectors_database == "pinecone":
+    if args.vector_database == "pinecone":
         export_pinecone(args)
-    elif args.vectors_database == "weaviate":
+    elif args.vector_database == "weaviate":
         export_weaviate(args)
-    elif args.vectors_database == "qdrant":
+    elif args.vector_database == "qdrant":
         export_qdrant(args)
     else:
-        print("Please choose a vectors database to export data from")
+        print("Please choose a vector database to export data from")
 
 
 if __name__ == "__main__":
