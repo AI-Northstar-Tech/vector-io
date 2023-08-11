@@ -42,7 +42,15 @@ class ExportWeaviate(ExportVDB):
             )
         except:
             self.weaviate_client = weaviate.Client(url=args.weaviate_url)
-
+    
+    def get_all_class_names(self):
+        """
+        Get all class names from weaviate
+        """
+        class_names = [clss['class'] for clss in self.weaviate_client.schema.get().get("classes")]
+        print(class_names)
+        return class_names
+    
     def get_data(self, class_name, include_crossrefs=False):
         """
         Get data from weaviate

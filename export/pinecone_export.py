@@ -17,12 +17,18 @@ class ExportPinecone(ExportVDB):
         pinecone.init(
             api_key=args.pinecone_api_key, environment=args.environment
         )
-        self.index = pinecone.Index(index_name=args.index_name)
+
+    def get_all_index_names(self):
+        """
+        Get all index names from Pinecone
+        """
+        return pinecone.list_indexes()
 
     def get_data(self, index_name):
         """
         Get data from Pinecone
         """
+        self.index = pinecone.Index(index_name=index_name)
         info = self.index.describe_index_stats()
         namespaces = info["namespaces"]
         vector_dim = int(pinecone.describe_index(index_name).dimension)

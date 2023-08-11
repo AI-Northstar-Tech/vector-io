@@ -23,9 +23,13 @@ def export_pinecone(args):
     args.environment = set_arg_from_input(
         args.environment, "Enter the environment of Pinecone instance: "
     )
-    args.index = set_arg_from_input(args.index, "Enter the name of index to export: ")
+    args.index = set_arg_from_input(args.index, "Enter the name of index to export, or type all to get all indexes: ")
     args.pinecone_api_key = os.getenv("PINECONE_API_KEY")
     pinecone = ExportPinecone(args)
+    if args.index == "all":
+        index_names = pinecone.get_all_index_names()
+        for index_name in index_names:
+            pinecone.get_data(index_name)
     pinecone.get_data(args.index)
 
 
@@ -34,15 +38,21 @@ def export_weaviate(args):
     Export data from Weaviate
     """
     set_arg_from_input(args.url, "Enter the location of Weaviate instance: ")
-    set_arg_from_input(args.class_name, "Enter the name of class to export: ")
+    set_arg_from_input(args.class_name, "Enter the name of class to export, or type all to export all classes: ")
     if args.include_crossrefs is None:
         args.include_crossrefs = input("Include cross references, enter Y or N: ")
         if args.include_crossrefs == "Y":
             args.include_crossrefs = True
         else:
             args.include_crossrefs = False
-    weaviate = ExportWeaviate(args)
-    weaviate.get_data(args.class_name, args.include_crossrefs)
+    if args.class_name == "all":
+        weaviate = ExportWeaviate(args)
+        class_names = weaviate.get_all_class_names()
+        for class_name in class_names:
+            weaviate.get_data(class_name, args.include_crossrefs)
+    else:
+        weaviate = ExportWeaviate(args)
+        weaviate.get_data(args.class_name, args.include_crossrefs)
 
 
 def export_qdrant(args):
@@ -50,9 +60,14 @@ def export_qdrant(args):
     Export data from Qdrant
     """
     set_arg_from_input(args.url, "Enter the location of Qdrant instance: ")
-    set_arg_from_input(args.collection, "Enter the name of collection to export: ")
+    set_arg_from_input(args.collection, "Enter the name of collection to export, or type all to export all collections: ")
     qdrant = ExportQdrant(args)
-    qdrant.get_data(args.collection)
+    if args.collection == "all":
+        collection_names = qdrant.get_all_collection_names()
+        for collection_name in collection_names:
+            qdrant.get_data(collection_name)
+    else:
+        qdrant.get_data(args.collection)
 
 
 def main():
