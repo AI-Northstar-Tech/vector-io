@@ -2,6 +2,7 @@ import argparse
 import os
 from dotenv import load_dotenv
 from export.vdb_export import ExportPinecone, ExportWeaviate, ExportQdrant
+from getpass import getpass
 
 load_dotenv()
 
@@ -14,12 +15,16 @@ def set_arg_from_input(arg_name, prompt):
         arg_name = input(prompt)
     return arg_name
 
+
 def export_pinecone(args):
     """
     Export data from Pinecone
     """
-    args.environment = set_arg_from_input(args.environment, "Enter the environment of Pinecone instance: ")
+    args.environment = set_arg_from_input(
+        args.environment, "Enter the environment of Pinecone instance: "
+    )
     args.index = set_arg_from_input(args.index, "Enter the name of index to export: ")
+    args.pinecone_api_key = os.getenv("PINECONE_API_KEY")
     pinecone = ExportPinecone(args)
     pinecone.get_data(args.index)
 
