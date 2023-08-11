@@ -211,13 +211,13 @@ class ExportWeaviate(ExportVDB):
                 url=args.weaviate_url, auth_client_secret=auth_client_secret
             )
         except:
-            self.weaviate_client = weaviate.Client(url=weaviate_url)
+            self.weaviate_client = weaviate.Client(url=args.weaviate_url)
 
     def get_data(self, class_name, include_crossrefs=False):
         """
         Get data from weaviate
         """
-        schema = self.weaviate_client.schema.get(class_name="Patent")
+        schema = self.weaviate_client.schema.get(class_name=class_name)
         property_names = [
             property["name"]
             for property in schema["properties"]
