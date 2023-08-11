@@ -6,14 +6,20 @@ from export.vdb_export import ExportPinecone, ExportWeaviate, ExportQdrant
 load_dotenv()
 
 
+def set_arg_from_input(arg_name, prompt):
+    """
+    Set the value of an argument from user input if it is not already present
+    """
+    if arg_name is None:
+        arg_name = input(prompt)
+    return arg_name
+
 def export_pinecone(args):
     """
     Export data from Pinecone
     """
-    if args.environment is None:
-        args.environment = input("Enter the environment of Pinecone instance: ")
-    if args.index is None:
-        args.index = input("Enter the name of index to export: ")
+    args.environment = set_arg_from_input(args.environment, "Enter the environment of Pinecone instance: ")
+    args.index = set_arg_from_input(args.index, "Enter the name of index to export: ")
     pinecone = ExportPinecone(args)
     pinecone.get_data(args.index)
 
@@ -22,10 +28,8 @@ def export_weaviate(args):
     """
     Export data from Weaviate
     """
-    if args.url is None:
-        args.url = input("Enter the location of Weaviate instance: ")
-    if args.class_name is None:
-        args.class_name = input("Enter the name of class to export: ")
+    set_arg_from_input(args.url, "Enter the location of Weaviate instance: ")
+    set_arg_from_input(args.class_name, "Enter the name of class to export: ")
     if args.include_crossrefs is None:
         args.include_crossrefs = input("Include cross references, enter Y or N: ")
         if args.include_crossrefs == "Y":
@@ -40,10 +44,8 @@ def export_qdrant(args):
     """
     Export data from Qdrant
     """
-    if args.url is None:
-        args.url = input("Enter the location of Qdrant instance: ")
-    if args.collection is None:
-        args.collection = input("Enter the name of collection to export: ")
+    set_arg_from_input(args.url, "Enter the location of Qdrant instance: ")
+    set_arg_from_input(args.collection, "Enter the name of collection to export: ")
     qdrant = ExportQdrant(args)
     qdrant.get_data(args.collection)
 
