@@ -1,7 +1,7 @@
 import argparse
 import os
 from dotenv import load_dotenv
-from export.vdb_export import *
+from export.vdb_export import ExportPinecone, ExportWeaviate, ExportQdrant
 
 load_dotenv()
 
@@ -14,7 +14,7 @@ def export_pinecone(args):
         args.environment = input("Enter the environment of Pinecone instance: ")
     if args.index is None:
         args.index = input("Enter the name of index to export: ")
-    pinecone = ExportPinecone(args.environment, args.index)
+    pinecone = ExportPinecone(args)
     pinecone.get_data(args.index)
 
 
@@ -32,7 +32,7 @@ def export_weaviate(args):
             args.include_crossrefs = True
         else:
             args.include_crossrefs = False
-    weaviate = ExportWeaviate(args.url)
+    weaviate = ExportWeaviate(args)
     weaviate.get_data(args.class_name, args.include_crossrefs)
 
 
@@ -44,7 +44,7 @@ def export_qdrant(args):
         args.url = input("Enter the location of Qdrant instance: ")
     if args.collection is None:
         args.collection = input("Enter the name of collection to export: ")
-    qdrant = ExportQdrant(args.url)
+    qdrant = ExportQdrant(args)
     qdrant.get_data(args.collection)
 
 

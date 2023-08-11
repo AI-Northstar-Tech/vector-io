@@ -31,13 +31,14 @@ class ExportVDB:
 
 
 class ExportPinecone(ExportVDB):
-    def __init__(self, environment, index_name):
+    def __init__(self, args):
         """
         Initialize the index
         """
-        pinecone.init(api_key=os.getenv("PINECONE_API_KEY"), environment=environment)
-        index = pinecone.Index(index_name=index_name)
-        self.index = index
+        pinecone.init(
+            api_key=os.getenv("PINECONE_API_KEY"), environment=args.environment
+        )
+        self.index = pinecone.Index(index_name=args.index_name)
 
     def get_data(self, index_name):
         """
@@ -101,16 +102,16 @@ class ExportPinecone(ExportVDB):
 
 
 class ExportQdrant(ExportVDB):
-    def __init__(self, qdrant_url):
+    def __init__(self, args):
         """
         Initialize the class
         """
         try:
             self.client = QdrantClient(
-                url=qdrant_url, api_key=os.getenv("QDRANT_API_KEY")
+                url=args.qdrant_url, api_key=os.getenv("QDRANT_API_KEY")
             )
         except:
-            self.client = QdrantClient(url=qdrant_url)
+            self.client = QdrantClient(url=args.qdrant_url)
 
     def get_data(self, class_name):
         """
@@ -200,14 +201,14 @@ class ExportWeaviate(ExportVDB):
         "uuid[]",
     ]
 
-    def __init__(self, weaviate_url):
+    def __init__(self, args):
         """
         Initialize the class
         """
         try:
             auth_client_secret = weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY"))
             self.weaviate_client = weaviate.Client(
-                url=weaviate_url, auth_client_secret=auth_client_secret
+                url=args.weaviate_url, auth_client_secret=auth_client_secret
             )
         except:
             self.weaviate_client = weaviate.Client(url=weaviate_url)
