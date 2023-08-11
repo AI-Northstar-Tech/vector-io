@@ -1,4 +1,4 @@
-from export.vdb_export import ExportVDB
+from vdb_export import ExportVDB
 from qdrant_client import QdrantClient
 import os
 from tqdm import tqdm
@@ -20,6 +20,14 @@ class ExportQdrant(ExportVDB):
             )
         except:
             self.client = QdrantClient(url=args.qdrant_url)
+    
+    def get_all_class_names(self):
+        """
+        Get all class names from Qdrant
+        """
+        collections = self.client.get_collections().collections
+        class_names = [collection.name for collection in collections]
+        return class_names
 
     def get_data(self, class_name):
         """
@@ -86,3 +94,5 @@ class ExportQdrant(ExportVDB):
         vectors = pd.DataFrame(vectors)
         vectors.to_csv(file_path, mode="a", header=False, index=False)
         cur.executemany(insert_query, data_to_insert)
+
+print(ExportQdrant("http://localhost:6333").get_all_class_names())
