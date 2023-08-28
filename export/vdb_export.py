@@ -7,6 +7,6 @@ class ExportVDB:
 
     def insert_data():
         """
-        Insert data into sqlite database and csv file
+        Insert data into sqlite database and parquet file
         """
         raise NotImplementedError

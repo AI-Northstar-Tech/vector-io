@@ -51,9 +51,9 @@ class ExportQdrant(ExportVDB):
             collection_name=class_name, limit=100, with_payload=True, with_vectors=True
         )
         df = pd.DataFrame(columns=["Vectors"])
-        df.to_csv(f"{class_name}_qdrant.csv", index=False)
+        df.to_parquet(f"{class_name}_qdrant.parquet", index=False)
         self.insert_data(
-            f"{class_name}_qdrant.csv", objects[0], property_names, insert_query, cur
+            f"{class_name}_qdrant.parquet", objects[0], property_names, insert_query, cur
         )
         for i in tqdm(range((total // 100) - 1)):
             uuid = objects[-1]
@@ -65,7 +65,7 @@ class ExportQdrant(ExportVDB):
                 with_vectors=True,
             )
             self.insert_data(
-                f"{class_name}_qdrant.csv",
+                f"{class_name}_qdrant.parquet",
                 objects[0],
                 property_names,
                 insert_query,
@@ -74,7 +74,7 @@ class ExportQdrant(ExportVDB):
 
     def insert_data(self, file_path, objects, property_names, insert_query, cur):
         """
-        Insert data into sqlite database and csv file
+        Insert data into sqlite database and parquet file
         """
         data_to_insert = []
         vectors = []
@@ -92,7 +92,7 @@ class ExportQdrant(ExportVDB):
                 data_tuple += (property,)
             data_to_insert.append(data_tuple)
         vectors = pd.DataFrame(vectors)
-        vectors.to_csv(file_path, mode="a", header=False, index=False)
+        vectors.to_parquet(file_path, mode="a", header=False, index=False)
         cur.executemany(insert_query, data_to_insert)
 
 print(ExportQdrant("http://localhost:6333").get_all_class_names())

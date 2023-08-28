@@ -72,7 +72,7 @@ def export_qdrant(args):
 
 def main():
     """
-    Export data from Pinecone, Weaviate and Qdrant to sqlite database and csv file.
+    Export data from Pinecone, Weaviate and Qdrant to sqlite database and parquet file.
 
     Usage:
         python export.py <vector_database> [options]
@@ -106,7 +106,7 @@ def main():
         python export.py qdrant -u http://localhost:6333 -c my_collection
     """
     parser = argparse.ArgumentParser(
-        description="Export data from Pinecone, Weaviate and Qdrant to sqlite database and csv file"
+        description="Export data from Pinecone, Weaviate and Qdrant to sqlite database and parquet file"
     )
     subparsers = parser.add_subparsers(
         title="Vector Databases",

@@ -88,11 +88,11 @@ class ExportWeaviate(ExportVDB):
             class_name=class_name, limit=100, with_vector=True
         )
         df = pd.DataFrame(columns=["Vectors"])
-        df.to_csv(f"{class_name}_weaviate.csv", index=False)
+        df.to_parquet(f"{class_name}_weaviate.parquet", index=False)
 
         if include_crossrefs:
             self.insert_data(
-                f"{class_name}_weaviate.csv",
+                f"{class_name}_weaviate.parquet",
                 objects,
                 property_names,
                 insert_query,
@@ -108,7 +108,7 @@ class ExportWeaviate(ExportVDB):
                         class_name=class_name, limit=100, with_vector=True, after=uuid
                     )
                     self.insert_data(
-                        f"{class_name}_weaviate.csv",
+                        f"{class_name}_weaviate.parquet",
                         objects,
                         property_names,
                         insert_query,
@@ -122,7 +122,7 @@ class ExportWeaviate(ExportVDB):
 
         else:
             self.insert_data(
-                f"{class_name}_weaviate.csv",
+                f"{class_name}_weaviate.parquet",
                 objects,
                 property_names,
                 insert_query,
@@ -138,7 +138,7 @@ class ExportWeaviate(ExportVDB):
                         class_name=class_name, limit=100, with_vector=True, after=uuid
                     )
                     self.insert_data(
-                        f"{class_name}_weaviate.csv",
+                        f"{class_name}_weaviate.parquet",
                         objects,
                         property_names,
                         insert_query,
@@ -206,7 +206,7 @@ class ExportWeaviate(ExportVDB):
         property_names_dict,
     ):
         """
-        Insert data into sqlite database and csv file
+        Insert data into sqlite database and parquet file
         """
         data_to_insert = []
         vectors = []
@@ -224,7 +224,7 @@ class ExportWeaviate(ExportVDB):
                 data_tuple += (property,)
             data_to_insert.append(data_tuple)
         vectors = pd.DataFrame(vectors)
-        vectors.to_csv(file_path, mode="a", header=False, index=False)
+        vectors.to_parquet(file_path, mode="a", header=False, index=False)
         cur.executemany(insert_query, data_to_insert)
         if cross_refs is not None:
             for cross_ref_name, cross_ref_class_name in cross_refs:

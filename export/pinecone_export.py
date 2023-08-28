@@ -53,9 +53,9 @@ class ExportPinecone(ExportVDB):
                 f"CREATE TABLE IF NOT EXISTS {namespace}_{index_name} (id, {','.join(property_names)})"
             )
             insert_query = f"INSERT INTO {namespace}_{index_name} (id, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 1))})"
-            df.to_csv(f"{namespace}_{index_name}.csv", index=False)
+            df.to_parquet(f"{namespace}_{index_name}.parquet", index=False)
             self.insert_data(
-                f"{namespace}_{index_name}.csv",
+                f"{namespace}_{index_name}.parquet",
                 response["matches"],
                 property_names,
                 insert_query,
@@ -64,7 +64,7 @@ class ExportPinecone(ExportVDB):
 
     def insert_data(self, file_path, objects, property_names, insert_query, cur):
         """
-        Insert data into sqlite database and csv file
+        Insert data into sqlite database and parquet file
         """
         data_to_insert = []
         vectors = []
@@ -82,5 +82,5 @@ class ExportPinecone(ExportVDB):
                 data_tuple += (property,)
             data_to_insert.append(data_tuple)
         vectors = pd.DataFrame(vectors)
-        vectors.to_csv(file_path, index=False, mode="a", header=False)
+        vectors.to_parquet(file_path, index=False, mode="a", header=False)
         cur.executemany(insert_query, data_to_insert)
