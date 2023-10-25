@@ -10,7 +10,7 @@ import numpy as np
 class ExportPinecone(ExportVDB):
     def __init__(self, args):
         pinecone.init(
-            api_key='8d48a593-b099-4ba1-a790-6cd416d67cf3',
+            api_key=args.api_key,
             environment=args.environment
         )
 
