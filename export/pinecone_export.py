@@ -10,8 +10,8 @@ import numpy as np
 class ExportPinecone(ExportVDB):
     def __init__(self, args):
         pinecone.init(
-            api_key=args.api_key,
-            environment=args.environment
+            api_key=args["pinecone_api_key"],
+            environment=args["environment"]
         )
 
     def get_all_index_names(self):
@@ -131,6 +131,3 @@ class ExportPinecone(ExportVDB):
 
         df.to_parquet(file_path, index=False)
         cur.executemany(insert_query, data_to_insert)
-
-
-    

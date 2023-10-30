@@ -1,73 +1,88 @@
 import argparse
 import os
 from dotenv import load_dotenv
-from export.vdb_export import ExportPinecone, ExportWeaviate, ExportQdrant
+from export.pinecone_export import ExportPinecone
+from export.weaviate_export import ExportWeaviate
+from export.qdrant_export import ExportQdrant
 from getpass import getpass
 
 load_dotenv()
 
 
-def set_arg_from_input(arg_name, prompt):
+def set_arg_from_input(args, arg_name, prompt):
     """
     Set the value of an argument from user input if it is not already present
     """
-    if arg_name is None:
-        arg_name = input(prompt)
-    return arg_name
+    if arg_name not in args or args[arg_name] is None:
+        args[arg_name] = input(prompt)
+    return
 
 
 def export_pinecone(args):
     """
     Export data from Pinecone
     """
-    args.environment = set_arg_from_input(
-        args.environment, "Enter the environment of Pinecone instance: "
+    args["environment"] = set_arg_from_input(
+        args, "environment", "Enter the environment of Pinecone instance: "
     )
-    args.index = set_arg_from_input(args.index, "Enter the name of index to export, or type all to get all indexes: ")
-    args.pinecone_api_key = os.getenv("PINECONE_API_KEY")
+    args["index"] = set_arg_from_input(
+        args,
+        "index",
+        "Enter the name of index to export, or type all to get all indexes: ",
+    )
+    args["pinecone_api_key"] = os.getenv("PINECONE_API_KEY")
+    print(args)
     pinecone = ExportPinecone(args)
-    if args.index == "all":
+    if args["index"] == "all":
         index_names = pinecone.get_all_index_names()
         for index_name in index_names:
             pinecone.get_data(index_name)
-    pinecone.get_data(args.index)
+        return
+    pinecone.get_data(args["index"])
 
 
 def export_weaviate(args):
     """
     Export data from Weaviate
     """
-    set_arg_from_input(args.url, "Enter the location of Weaviate instance: ")
-    set_arg_from_input(args.class_name, "Enter the name of class to export, or type all to export all classes: ")
-    if args.include_crossrefs is None:
-        args.include_crossrefs = input("Include cross references, enter Y or N: ")
-        if args.include_crossrefs == "Y":
-            args.include_crossrefs = True
-        else:
-            args.include_crossrefs = False
-    if args.class_name == "all":
+    set_arg_from_input(args, "url", "Enter the location of Weaviate instance: ")
+    set_arg_from_input(
+        args,
+        "class_name",
+        "Enter the name of class to export, or type all to export all classes: ",
+    )
+    set_arg_from_input(args, "include_crossrefs", "Include cross references, enter Y or N: ")
+    if args["include_crossrefs"] == "Y":
+        args["include_crossrefs"] = True
+    else:
+        args["include_crossrefs"] = False
+    if args["class_name"] == "all":
         weaviate = ExportWeaviate(args)
         class_names = weaviate.get_all_class_names()
         for class_name in class_names:
-            weaviate.get_data(class_name, args.include_crossrefs)
+            weaviate.get_data(class_name, args["include_crossrefs"])
     else:
         weaviate = ExportWeaviate(args)
-        weaviate.get_data(args.class_name, args.include_crossrefs)
+        weaviate.get_data(args["class_name"], args["include_crossrefs"])
 
 
 def export_qdrant(args):
     """
     Export data from Qdrant
     """
-    set_arg_from_input(args.url, "Enter the location of Qdrant instance: ")
-    set_arg_from_input(args.collection, "Enter the name of collection to export, or type all to export all collections: ")
+    set_arg_from_input(args, "url", "Enter the location of Qdrant instance: ")
+    set_arg_from_input(
+        args,
+        "collection",
+        "Enter the name of collection to export, or type all to export all collections: ",
+    )
     qdrant = ExportQdrant(args)
-    if args.collection == "all":
+    if args["collection"] == "all":
         collection_names = qdrant.get_all_collection_names()
         for collection_name in collection_names:
             qdrant.get_data(collection_name)
     else:
-        qdrant.get_data(args.collection)
+        qdrant.get_data(args["collection"])
 
 
 def main():
@@ -122,7 +137,7 @@ def main():
         "-e", "--environment", type=str, help="Environment of Pinecone instance"
     )
     parser_pinecone.add_argument(
-        "-i", "--index", type=str, help="Name of index to export"
+        "-i", "--index", type=str, help="Name of index to export", default="all"
     )
 
     # Weaviate
@@ -152,12 +167,13 @@ def main():
     )
 
     args = parser.parse_args()
-
-    if args.vector_database == "pinecone":
+    # convert args to dict
+    args = vars(args)
+    if args["vector_database"] == "pinecone":
         export_pinecone(args)
-    elif args.vector_database == "weaviate":
+    elif args["vector_database"] == "weaviate":
         export_weaviate(args)
-    elif args.vector_database == "qdrant":
+    elif args["vector_database"] == "qdrant":
         export_qdrant(args)
     else:
         print("Please choose a vector database to export data from")
