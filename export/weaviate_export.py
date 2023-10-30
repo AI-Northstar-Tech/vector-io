@@ -38,10 +38,10 @@ class ExportWeaviate(ExportVDB):
         try:
             auth_client_secret = weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY"))
             self.weaviate_client = weaviate.Client(
-                url=args.weaviate_url, auth_client_secret=auth_client_secret
+                url=args["weaviate_url"], auth_client_secret=auth_client_secret
             )
         except:
-            self.weaviate_client = weaviate.Client(url=args.weaviate_url)
+            self.weaviate_client = weaviate.Client(url=args["weaviate_url"])
     
     def get_all_class_names(self):
         """

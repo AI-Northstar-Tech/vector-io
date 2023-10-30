@@ -1,10 +1,11 @@
-from vdb_export import ExportVDB
 from qdrant_client import QdrantClient
 import os
 from tqdm import tqdm
 import pandas as pd
 import sqlite3
 from dotenv import load_dotenv
+
+from export.vdb_export import ExportVDB
 
 load_dotenv()
 
@@ -16,11 +17,11 @@ class ExportQdrant(ExportVDB):
         """
         try:
             self.client = QdrantClient(
-                url=args.qdrant_url, api_key=os.getenv("QDRANT_API_KEY")
+                url=args["qdrant_url"], api_key=os.getenv("QDRANT_API_KEY")
             )
         except:
-            self.client = QdrantClient(url=args.qdrant_url)
-    
+            self.client = QdrantClient(url=args["qdrant_url"])
+
     def get_all_class_names(self):
         """
         Get all class names from Qdrant
@@ -53,7 +54,11 @@ class ExportQdrant(ExportVDB):
         df = pd.DataFrame(columns=["Vectors"])
         df.to_parquet(f"{class_name}_qdrant.parquet", index=False)
         self.insert_data(
-            f"{class_name}_qdrant.parquet", objects[0], property_names, insert_query, cur
+            f"{class_name}_qdrant.parquet",
+            objects[0],
+            property_names,
+            insert_query,
+            cur,
         )
         for i in tqdm(range((total // 100) - 1)):
             uuid = objects[-1]
@@ -95,4 +100,5 @@ class ExportQdrant(ExportVDB):
         vectors.to_parquet(file_path, mode="a", header=False, index=False)
         cur.executemany(insert_query, data_to_insert)
 
-print(ExportQdrant("http://localhost:6333").get_all_class_names())
+
+# print(ExportQdrant({"qdrant_url": "http://localhost:6333"}))  # .get_all_class_names()
