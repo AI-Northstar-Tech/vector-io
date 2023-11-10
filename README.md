@@ -1,8 +1,10 @@
 # Vector IO
 
-Use the universal VDF format for vector datasets to easily export and import data from all vector databases.
+## **Vector DB companies don't have an incentive to create an interoperable format for vector datasets, but we've built this library to help the community avoid vendor lock-in and ease migrations and restructuring**
 
-Universal Vector Dataset Format (VDF) specification: https://docs.google.com/document/d/1SaZ0nsBw8ZZCCcPXoc2nwTY5A3KBJkTEnmZZvFxHAu4/edit#heading=h.32if60hafsdt
+### Use the universal VDF format for vector datasets to easily export and import data from all vector databases.
+
+[Universal Vector Dataset Format (VDF) specification](https://docs.google.com/document/d/1SaZ0nsBw8ZZCCcPXoc2nwTY5A3KBJkTEnmZZvFxHAu4/edit#heading=h.32if60hafsdt)
 
 Motivation
 Each vector database has their own way of storing vectors and metadata, making it hard for people to transfer a dataset from one into the other.
@@ -13,8 +15,6 @@ Txt-ai: they have a proprietary format that can only be loaded via their library
 Cohere (https://huggingface.co/datasets/Cohere/wikipedia-22-12-simple-embeddings) released their model's wikipedia embeddings in an ad-hoc schema in parquet format.
 Macrocosm/Alexandria: They provide various embedding dumps. They distribute them as zip files, containing multiple parquet files. The parquet file contains both the embedding as well as metadata like title and doi. They provide an ad-hoc script to read the data, and a params.txt file to record the version and the model+prompt used.
 
-**Vector DB companies don't have an incentive to create an interoperable format for vector datasets, but the community will benefit from it (avoid vendor lock-in).
-**
 
 A collection of utility functions and scripts to import and export vector datasets between various vector databases.
 
