@@ -1,4 +1,5 @@
 import datetime
+from export.util import extract_data_hash
 from export.vdb_export import ExportVDB
 import pinecone
 import os
@@ -6,8 +7,9 @@ import sqlite3
 import json
 import pandas as pd
 import numpy as np
+import json
 
-PINECONE_MAX_K = 20000
+PINECONE_MAX_K = 10_000
 
 
 class ExportPinecone(ExportVDB):
@@ -29,6 +31,7 @@ class ExportPinecone(ExportVDB):
         return ids
 
     def get_all_ids_from_index(self, index, num_dimensions, namespace=""):
+        print("index.describe_index_stats()", index.describe_index_stats())
         num_vectors = index.describe_index_stats()["namespaces"][namespace][
             "vector_count"
         ]
@@ -49,65 +52,65 @@ class ExportPinecone(ExportVDB):
         self.index = pinecone.Index(index_name=index_name)
         info = self.index.describe_index_stats()
         namespace = info["namespaces"]
-        zero_array = [0] * info["dimension"]
-
+        print('info.__dict__[\'_data_store\']',info.__dict__['_data_store'],type(info.__dict__['_data_store']))
+        print(type(info.__dict__['_data_store']['namespaces']))
         # hash_value based on args
-        hash_value = hash(
-            index_name, namespace, info["dimension"], info["vector_count"]
-        )
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        vdf_directory = "VDF_dataset" + str(hash_value) + "_" + timestamp
-        vectors_directory = os.path.join(vdf_directory, "vectors")
-        os.makedirs(vdf_directory, exist_ok=True)
-        os.makedirs(vectors_directory, exist_ok=True)
-
-        con = sqlite3.connect(os.path.join(vdf_directory, "metadata.db"))
-        cur = con.cursor()
+        # convert info to dict
+        info_dict = info.__dict__['_data_store']
+        hash_value = extract_data_hash(info_dict)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
         # Fetch the actual data from the Pinecone index
-        data = self.index.fetch(
-            list(
-                self.get_all_ids_from_index(
-                    index=pinecone.Index(index_name=index_name),
-                    num_dimensions=info["dimension"],
-                    namespace="",
+        for namespace in info["namespaces"]:
+            vdf_directory = "VDF_dataset" + str(hash_value) + "_" + timestamp
+            vectors_directory = os.path.join(vdf_directory, "vectors")
+            os.makedirs(vdf_directory, exist_ok=True)
+            os.makedirs(vectors_directory, exist_ok=True)
+
+            con = sqlite3.connect(os.path.join(vdf_directory, "metadata.db"))
+            cur = con.cursor()
+            data = self.index.fetch(
+                list(
+                    self.get_all_ids_from_index(
+                        index=pinecone.Index(index_name=index_name),
+                        num_dimensions=info["dimension"],
+                        namespace=namespace,
+                    )
                 )
             )
-        )
 
-        vectors = data["vectors"]
-        for id, vector_data in vectors.items():
-            namespace = data["namespace"]
-            property_names = list(vector_data["metadata"].keys())
+            vectors = data["vectors"]
+            for id, vector_data in vectors.items():
+                property_names = list(vector_data["metadata"].keys()).sort()
 
-            # Modify the table name to replace hyphens with underscores
-            table_name = f"{namespace}_{index_name}".replace("-", "_")
+                # Modify the table name to replace hyphens with underscores
+                table_name = f"{index_name}".replace("-", "_")
 
-            parquet_file = os.path.join(vectors_directory, f"{namespace}.parquet")
+                parquet_file = os.path.join(vectors_directory, f"n_{namespace}.parquet")
 
-            cur.execute(
-                f'CREATE TABLE IF NOT EXISTS {table_name} (id, {", ".join(property_names)})'
-            )
-            insert_query = f"INSERT INTO {table_name} (id, {', '.join(property_names)}) VALUES (?, {', '.join(['?'] * len(property_names))})"
-            self.insert_data(
-                parquet_file, vector_data, property_names, insert_query, cur
-            )
+                cur.execute(
+                    f'CREATE TABLE IF NOT EXISTS {table_name} (id, {", ".join(property_names)})'
+                )
+                insert_query = f"INSERT INTO {table_name} (id, {', '.join(property_names)}) VALUES (?, {', '.join(['?'] * len(property_names))})"
+                self.insert_data(
+                    parquet_file, vector_data, property_names, insert_query, cur
+                )
 
-        con.commit()
-        con.close()
-
-        # Create and save internal metadata JSON
-        internal_metadata = {
-            "file_structure": ["vectors/", "metadata.db", "VDF_META.json"],
-            # author is from unix username
-            "author": os.getlogin(),
-            "dimensions": info["dimension"],
-            "vector_count": info["vector_count"],
-            "exported_from": "pinecone",
-            "model_name": "PLEASE_FILL_IN",
-        }
-        with open(os.path.join(vdf_directory, "VDF_META.json"), "w") as json_file:
-            json.dump(internal_metadata, json_file)
+            con.commit()
+            con.close()
+            print("info", info)
+            # Create and save internal metadata JSON
+            internal_metadata = {
+                "file_structure": ["vectors/", "metadata.db", "VDF_META.json"],
+                # author is from unix username
+                "author": os.getlogin(),
+                "dimensions": info["dimension"],
+                "total_vector_count": info["total_vector_count"],
+                "exported_from": "pinecone",
+                "model_name": "PLEASE_FILL_IN",
+            }
+            with open(os.path.join(vdf_directory, "VDF_META.json"), "w") as json_file:
+                json.dump(internal_metadata, json_file)
 
     def insert_data(self, file_path, vector_data, property_names, insert_query, cur):
         data_to_insert = []

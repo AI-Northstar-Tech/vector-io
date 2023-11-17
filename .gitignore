@@ -1,4 +1,4 @@
 __pycache__/
 .DS_Store
 .env
-VDF_dataset/
+VDF_dataset*/
