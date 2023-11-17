@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 from dotenv import load_dotenv
 from export.pinecone_export import ExportPinecone
 from export.weaviate_export import ExportWeaviate
@@ -17,20 +18,29 @@ def set_arg_from_input(args, arg_name, prompt):
         args[arg_name] = input(prompt)
     return
 
+def set_arg_from_password(args, arg_name, prompt, env_var_name):
+    """
+    Set the value of an argument from user input if it is not already present
+    """
+    if os.getenv(env_var_name) is not None:
+        args[arg_name] = os.getenv(env_var_name)
+    elif arg_name not in args or args[arg_name] is None:
+        args[arg_name] = getpass(prompt)
+    return
 
 def export_pinecone(args):
     """
     Export data from Pinecone
     """
-    args["environment"] = set_arg_from_input(
+    set_arg_from_input(
         args, "environment", "Enter the environment of Pinecone instance: "
     )
-    args["index"] = set_arg_from_input(
+    set_arg_from_input(
         args,
         "index",
         "Enter the name of index to export, or type all to get all indexes: ",
     )
-    args["pinecone_api_key"] = os.getenv("PINECONE_API_KEY")
+    set_arg_from_password(args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY")
     print(args)
     pinecone = ExportPinecone(args)
     if args["index"] == "all":
@@ -176,8 +186,13 @@ def main():
     elif args["vector_database"] == "qdrant":
         export_qdrant(args)
     else:
-        print("Please choose a vector database to export data from")
-
+        print("Invalid vector database")
+        args["vector_database"] = input(
+            "Enter the name of vector database to export: "
+        )
+        sys.argv.extend(['--vector_database', args["vector_database"]])
+        main()
+    print("Export completed.")
 
 if __name__ == "__main__":
     main()

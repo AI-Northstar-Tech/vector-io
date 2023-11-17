@@ -1,3 +1,4 @@
+import datetime
 from export.vdb_export import ExportVDB
 import pinecone
 import os
@@ -6,34 +7,37 @@ import json
 import pandas as pd
 import numpy as np
 
+PINECONE_MAX_K = 20000
+
 
 class ExportPinecone(ExportVDB):
     def __init__(self, args):
-        pinecone.init(
-            api_key=args["pinecone_api_key"],
-            environment=args["environment"]
-        )
+        pinecone.init(api_key=args["pinecone_api_key"], environment=args["environment"])
 
     def get_all_index_names(self):
         return pinecone.list_indexes()
 
-    def get_ids_from_query(self,index,input_vector):
+    def get_ids_from_query(self, index, input_vector):
         print("searching pinecone...")
-        results = index.query(vector=input_vector,include_values=False,top_k=100)
+        results = index.query(
+            vector=input_vector, include_values=False, top_k=PINECONE_MAX_K
+        )
         ids = set()
         print(type(results))
-        for result in results['matches']:
-            ids.add(result['id'])
+        for result in results["matches"]:
+            ids.add(result["id"])
         return ids
 
-    def get_all_ids_from_index(self,index, num_dimensions, namespace=""):
-        num_vectors = index.describe_index_stats()["namespaces"][namespace]['vector_count']
+    def get_all_ids_from_index(self, index, num_dimensions, namespace=""):
+        num_vectors = index.describe_index_stats()["namespaces"][namespace][
+            "vector_count"
+        ]
         all_ids = set()
         while len(all_ids) < num_vectors:
             print("Length of ids list is shorter than the number of total vectors...")
             input_vector = np.random.rand(num_dimensions).tolist()
             print("creating random vector...")
-            ids = self.get_ids_from_query(index,input_vector)
+            ids = self.get_ids_from_query(index, input_vector)
             print("getting ids from a vector query...")
             all_ids.update(ids)
             print("updating ids set...")
@@ -47,7 +51,12 @@ class ExportPinecone(ExportVDB):
         namespace = info["namespaces"]
         zero_array = [0] * info["dimension"]
 
-        vdf_directory = "VDF_dataset"
+        # hash_value based on args
+        hash_value = hash(
+            index_name, namespace, info["dimension"], info["vector_count"]
+        )
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        vdf_directory = "VDF_dataset" + str(hash_value) + "_" + timestamp
         vectors_directory = os.path.join(vdf_directory, "vectors")
         os.makedirs(vdf_directory, exist_ok=True)
         os.makedirs(vectors_directory, exist_ok=True)
@@ -56,32 +65,48 @@ class ExportPinecone(ExportVDB):
         cur = con.cursor()
 
         # Fetch the actual data from the Pinecone index
-        data = self.index.fetch(list(self.get_all_ids_from_index(index=pinecone.Index("pinecone-index"),num_dimensions=8)))
+        data = self.index.fetch(
+            list(
+                self.get_all_ids_from_index(
+                    index=pinecone.Index(index_name=index_name),
+                    num_dimensions=info["dimension"],
+                    namespace="",
+                )
+            )
+        )
 
-        vectors = data['vectors']
+        vectors = data["vectors"]
         for id, vector_data in vectors.items():
             namespace = data["namespace"]
             property_names = list(vector_data["metadata"].keys())
 
             # Modify the table name to replace hyphens with underscores
-            table_name = f"{namespace}_{index_name}".replace('-', '_')
+            table_name = f"{namespace}_{index_name}".replace("-", "_")
 
             parquet_file = os.path.join(vectors_directory, f"{namespace}.parquet")
 
             cur.execute(
-                f'CREATE TABLE IF NOT EXISTS {table_name} (id, {", ".join(property_names)}, "values")'
+                f'CREATE TABLE IF NOT EXISTS {table_name} (id, {", ".join(property_names)})'
             )
-            insert_query = f'INSERT INTO {table_name} (id, {", ".join(property_names)}, "values") VALUES ({", ".join(["?"] * (len(property_names) + 1))})'
-            self.insert_data(parquet_file, vector_data, property_names, insert_query, cur)
+            insert_query = f"INSERT INTO {table_name} (id, {', '.join(property_names)}) VALUES (?, {', '.join(['?'] * len(property_names))})"
+            self.insert_data(
+                parquet_file, vector_data, property_names, insert_query, cur
+            )
 
         con.commit()
         con.close()
 
         # Create and save internal metadata JSON
         internal_metadata = {
-            "file_structure": ["vectors/", "metadata.db", "VDF_META.json"]
+            "file_structure": ["vectors/", "metadata.db", "VDF_META.json"],
+            # author is from unix username
+            "author": os.getlogin(),
+            "dimensions": info["dimension"],
+            "vector_count": info["vector_count"],
+            "exported_from": "pinecone",
+            "model_name": "PLEASE_FILL_IN",
         }
-        with open(os.path.join(vdf_directory, "VDF_META.json"), 'w') as json_file:
+        with open(os.path.join(vdf_directory, "VDF_META.json"), "w") as json_file:
             json.dump(internal_metadata, json_file)
 
     def insert_data(self, file_path, vector_data, property_names, insert_query, cur):
@@ -97,13 +122,18 @@ class ExportPinecone(ExportVDB):
             return
 
         data_dict["values"] = values  # Store it as a list
-        data_tuple = tuple(data_dict.get(property_name, "") for property_name in ["id"] + property_names + ["values"])
+        data_tuple = tuple(
+            data_dict.get(property_name, "")
+            for property_name in ["id"] + property_names + ["values"]
+        )
         data_to_insert.append(data_tuple)
 
-        new_df = pd.DataFrame(data_to_insert, columns=["id"] + property_names + ["values"])
+        new_df = pd.DataFrame(
+            data_to_insert, columns=["id"] + property_names + ["values"]
+        )
 
         # Now, convert the 'values' values to JSON strings in the DataFrame
-        new_df['values'] = new_df['values'].apply(json.dumps)
+        new_df["values"] = new_df["values"].apply(json.dumps)
 
         if os.path.exists(file_path):
             df = pd.read_parquet(file_path)
@@ -112,14 +142,14 @@ class ExportPinecone(ExportVDB):
             df = new_df
 
         # Ensure all values in 'values' column are lists and fill null values with empty lists
-        df['values'] = df['values'].apply(lambda x: x if isinstance(x, list) else [])
+        df["values"] = df["values"].apply(lambda x: x if isinstance(x, list) else [])
 
         # Get the actual columns in the DataFrame
         actual_columns = df.columns.tolist()
-        namespace = ''
-        index_name = 'pinecone-index'
+        namespace = ""
+        index_name = "pinecone-index"
         # Modify the table name to replace hyphens with underscores
-        table_name = f"{namespace}_{index_name}".replace('-', '_')
+        table_name = f"{namespace}_{index_name}".replace("-", "_")
 
         # Create the table with the actual columns
         cur.execute(
