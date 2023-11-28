@@ -64,3 +64,9 @@ Feel free to send a PR to add an import/export implementation for your favorite 
 ## Import
 
 WIP
+
+# Compare Vector DBs easily
+
+Check out the [Feature Matrix](https://docs.google.com/spreadsheets/d/e/2PACX-1vTw7znhJYkkJ_EM7ZPMPRPPuAE8kjUDfvi9STzvq1sXaeqei4LSGL_Qpfe-MooQZPHROhdzgJcY8ZXF/pubhtml) which lists all the vector DBs and their attributes.
+
+You can chat with [VectorDB Guide GPT](https://chat.openai.com/g/g-OS6d9grY0-vectordb-guide) to figure out which DB you should to use. It uses the data fro mthe above table.
