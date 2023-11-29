@@ -70,3 +70,8 @@ WIP
 Check out the [Feature Matrix](https://docs.google.com/spreadsheets/d/e/2PACX-1vTw7znhJYkkJ_EM7ZPMPRPPuAE8kjUDfvi9STzvq1sXaeqei4LSGL_Qpfe-MooQZPHROhdzgJcY8ZXF/pubhtml) which lists all the vector DBs and their attributes.
 
 You can chat with [VectorDB Guide GPT](https://chat.openai.com/g/g-OS6d9grY0-vectordb-guide) to figure out which DB you should to use. It uses the data fro mthe above table.
+
+## Other VectorDB Feature Matrices
+
+- https://objectbox.io/vector-database/
+- [Vector Database Comparison Cheatsheet](https://docs.google.com/spreadsheets/d/1oAeF4Q7ILxxfInGJ8vTsBck3-2U9VV8idDf3hJOozNw/edit?pli=1#gid=0)
