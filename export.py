@@ -40,6 +40,7 @@ def export_pinecone(args):
         "index",
         "Enter the name of index to export, or type all to get all indexes: ",
     )
+    set_arg_from_input(args, "model_name", "Enter the name of model used:")
     set_arg_from_password(args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY")
     print(args)
     pinecone = ExportPinecone(args)
@@ -132,6 +133,13 @@ def main():
     """
     parser = argparse.ArgumentParser(
         description="Export data from Pinecone, Weaviate and Qdrant to sqlite database and parquet file"
+    )
+    parser.add_argument(
+        "-m",
+        "--model_name",
+        type=str,
+        help="Name of model used",
+        default="text-embedding-ada-002",
     )
     subparsers = parser.add_subparsers(
         title="Vector Databases",
