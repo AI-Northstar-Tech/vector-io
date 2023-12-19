@@ -3,7 +3,6 @@ from export.util import extract_data_hash
 from export.vdb_export import ExportVDB
 import pinecone
 import os
-import sqlite3
 import json
 import pandas as pd
 import numpy as np
@@ -15,6 +14,7 @@ PINECONE_MAX_K = 10_000
 class ExportPinecone(ExportVDB):
     def __init__(self, args):
         pinecone.init(api_key=args["pinecone_api_key"], environment=args["environment"])
+        self.args = args
 
     def get_all_index_names(self):
         return pinecone.list_indexes()
@@ -52,23 +52,27 @@ class ExportPinecone(ExportVDB):
         self.index = pinecone.Index(index_name=index_name)
         info = self.index.describe_index_stats()
         namespace = info["namespaces"]
-        print('info.__dict__[\'_data_store\']',info.__dict__['_data_store'],type(info.__dict__['_data_store']))
-        print(type(info.__dict__['_data_store']['namespaces']))
+        print(
+            "info.__dict__['_data_store']",
+            info.__dict__["_data_store"],
+            type(info.__dict__["_data_store"]),
+        )
+        print(type(info.__dict__["_data_store"]["namespaces"]))
         # hash_value based on args
         # convert info to dict
-        info_dict = info.__dict__['_data_store']
+        info_dict = info.__dict__["_data_store"]
         hash_value = extract_data_hash(info_dict)
-        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.datetime.now().strftime("%y%m%d%H%M%S")
 
         # Fetch the actual data from the Pinecone index
         for namespace in info["namespaces"]:
-            vdf_directory = "VDF_dataset" + str(hash_value) + "_" + timestamp
-            vectors_directory = os.path.join(vdf_directory, "vectors")
+            vdf_directory = f"vdf_{index_name}_{namespace}_{timestamp}_{hash_value}"
+            vectors_directory = os.path.join(
+                vdf_directory, "vectors_" + self.args["model_name"]
+            )
             os.makedirs(vdf_directory, exist_ok=True)
             os.makedirs(vectors_directory, exist_ok=True)
 
-            con = sqlite3.connect(os.path.join(vdf_directory, "metadata.db"))
-            cur = con.cursor()
             data = self.index.fetch(
                 list(
                     self.get_all_ids_from_index(
@@ -79,25 +83,21 @@ class ExportPinecone(ExportVDB):
                 )
             )
 
+            parquet_file = os.path.join(
+                vectors_directory, f"_n_{namespace}.parquet"
+            )
+            print('data', data)
             vectors = data["vectors"]
-            for id, vector_data in vectors.items():
-                property_names = list(vector_data["metadata"].keys()).sort()
-
-                # Modify the table name to replace hyphens with underscores
-                table_name = f"{index_name}".replace("-", "_")
-
-                parquet_file = os.path.join(vectors_directory, f"n_{namespace}.parquet")
-
-                cur.execute(
-                    f'CREATE TABLE IF NOT EXISTS {table_name} (id, {", ".join(property_names)})'
-                )
-                insert_query = f"INSERT INTO {table_name} (id, {', '.join(property_names)}) VALUES (?, {', '.join(['?'] * len(property_names))})"
-                self.insert_data(
-                    parquet_file, vector_data, property_names, insert_query, cur
-                )
-
-            con.commit()
-            con.close()
+            # vectors is a dict of string to dict with keys id, values, metadata
+            # store the vector in values as a column in the parquet file, and store the metadata as columns in the parquet file
+            vectors = {k: v["values"] for k, v in vectors.items()}
+            metadata = {k: v["metadata"] for k, v in data["vectors"].items()}
+            ids = list(vectors.keys())
+            df = pd.DataFrame.from_dict(vectors, orient="index")
+            df["id"] = ids
+            for k, v in metadata.items():
+                df[k] = v
+            df.to_parquet(parquet_file)
             print("info", info)
             # Create and save internal metadata JSON
             internal_metadata = {
@@ -110,57 +110,6 @@ class ExportPinecone(ExportVDB):
                 "model_name": "PLEASE_FILL_IN",
             }
             with open(os.path.join(vdf_directory, "VDF_META.json"), "w") as json_file:
-                json.dump(internal_metadata, json_file)
-
-    def insert_data(self, file_path, vector_data, property_names, insert_query, cur):
-        data_to_insert = []
-
-        data_dict = {"id": vector_data["id"]}
-        for property_name in property_names:
-            data_dict[property_name] = vector_data["metadata"].get(property_name, "")
-
-        # Ensure 'values' is a list, otherwise skip this data point
-        values = vector_data["values"]
-        if not isinstance(values, list):
-            return
-
-        data_dict["values"] = values  # Store it as a list
-        data_tuple = tuple(
-            data_dict.get(property_name, "")
-            for property_name in ["id"] + property_names + ["values"]
-        )
-        data_to_insert.append(data_tuple)
-
-        new_df = pd.DataFrame(
-            data_to_insert, columns=["id"] + property_names + ["values"]
-        )
-
-        # Now, convert the 'values' values to JSON strings in the DataFrame
-        new_df["values"] = new_df["values"].apply(json.dumps)
-
-        if os.path.exists(file_path):
-            df = pd.read_parquet(file_path)
-            df = pd.concat([df, new_df])
-        else:
-            df = new_df
-
-        # Ensure all values in 'values' column are lists and fill null values with empty lists
-        df["values"] = df["values"].apply(lambda x: x if isinstance(x, list) else [])
-
-        # Get the actual columns in the DataFrame
-        actual_columns = df.columns.tolist()
-        namespace = ""
-        index_name = "pinecone-index"
-        # Modify the table name to replace hyphens with underscores
-        table_name = f"{namespace}_{index_name}".replace("-", "_")
-
-        # Create the table with the actual columns
-        cur.execute(
-            f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(actual_columns)})"
-        )
-
-        # Update the insert query with the actual columns
-        insert_query = f"INSERT INTO {table_name} ({', '.join(actual_columns)}) VALUES ({', '.join(['?'] * len(actual_columns))})"
-
-        df.to_parquet(file_path, index=False)
-        cur.executemany(insert_query, data_to_insert)
+                json.dump(internal_metadata, json_file, indent=4)
+        
+        return True
