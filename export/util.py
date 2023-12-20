@@ -7,7 +7,6 @@ def sort_recursive(d):
     """
     Recursively sort the nested dictionary by its keys.
     """
-    print("t", type(d), d)
     # if isinstance(d, list):
     #     return [sort_recursive(v) for v in d]
     # if isinstance(d, tuple):
@@ -39,7 +38,6 @@ def convert_to_consistent_value(d):
     """
     Convert a nested dictionary to a consistent string regardless of key order.
     """
-    print(type(d), d)
     sorted_dict = sort_recursive(d)
     return json.dumps(sorted_dict, sort_keys=True)
 
