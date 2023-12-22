@@ -40,9 +40,7 @@ def export_pinecone(args):
         "index",
         "Enter the name of index to export, or type all to get all indexes: ",
     )
-    set_arg_from_input(args, "model_name", "Enter the name of model used:")
     set_arg_from_password(args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY")
-    print(args)
     pinecone = ExportPinecone(args)
     if args["index"] == "all":
         index_names = pinecone.get_all_index_names()
