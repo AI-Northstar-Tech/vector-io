@@ -26,6 +26,7 @@ def set_arg_from_input(args, arg_name, prompt, type_name=str):
             args[arg_name] = type_name(inp)
     return
 
+
 def set_arg_from_password(args, arg_name, prompt, env_var_name):
     """
     Set the value of an argument from user input if it is not already present
@@ -35,6 +36,7 @@ def set_arg_from_password(args, arg_name, prompt, env_var_name):
     elif arg_name not in args or args[arg_name] is None:
         args[arg_name] = getpass(prompt)
     return
+
 
 def export_pinecone(args):
     """
@@ -49,18 +51,29 @@ def export_pinecone(args):
         "Enter the name of index to export (hit return to export all): ",
     )
     if "id_list_file" not in args or args["id_list_file"] is None:
-        set_arg_from_input(args, "id_range_start", "Enter the start of id range (hit return to skip): ", int)
-        set_arg_from_input(args, "id_range_end", "Enter the end of id range (hit return to skip): ", int)
+        set_arg_from_input(
+            args,
+            "id_range_start",
+            "Enter the start of id range (hit return to skip): ",
+            int,
+        )
+        set_arg_from_input(
+            args,
+            "id_range_end",
+            "Enter the end of id range (hit return to skip): ",
+            int,
+        )
     if args["id_range_start"] is None and args["id_range_end"] is None:
-        set_arg_from_input(args, "id_list_file", "Enter the path to id list file (hit return to skip): ")
-    set_arg_from_password(args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY")
-    pinecone = ExportPinecone(args)
-    if "index" not in args or args["index"] is None or args["index"] == "all":
-        index_names = pinecone.get_all_index_names()
-        for index_name in index_names:
-            pinecone.get_data(index_name)
-        return
-    pinecone.get_data(args["index"])
+        set_arg_from_input(
+            args,
+            "id_list_file",
+            "Enter the path to id list file (hit return to skip): ",
+        )
+    set_arg_from_password(
+        args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY"
+    )
+    pinecone_export = ExportPinecone(args)
+    pinecone_export.get_data()
 
 
 def export_weaviate(args):
@@ -73,19 +86,15 @@ def export_weaviate(args):
         "class_name",
         "Enter the name of class to export, or type all to export all classes: ",
     )
-    set_arg_from_input(args, "include_crossrefs", "Include cross references, enter Y or N: ")
+    set_arg_from_input(
+        args, "include_crossrefs", "Include cross references, enter Y or N: "
+    )
     if args["include_crossrefs"] == "Y":
         args["include_crossrefs"] = True
     else:
         args["include_crossrefs"] = False
-    if args["class_name"] == "all":
-        weaviate = ExportWeaviate(args)
-        class_names = weaviate.get_all_class_names()
-        for class_name in class_names:
-            weaviate.get_data(class_name, args["include_crossrefs"])
-    else:
-        weaviate = ExportWeaviate(args)
-        weaviate.get_data(args["class_name"], args["include_crossrefs"])
+    weaviate = ExportWeaviate(args)
+    weaviate.get_data()
 
 
 def export_qdrant(args):
@@ -95,16 +104,14 @@ def export_qdrant(args):
     set_arg_from_input(args, "url", "Enter the location of Qdrant instance: ")
     set_arg_from_input(
         args,
-        "collection",
-        "Enter the name of collection to export, or type all to export all collections: ",
+        "collections",
+        "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
+    )
+    set_arg_from_password(
+        args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
     )
     qdrant = ExportQdrant(args)
-    if args["collection"] == "all":
-        collection_names = qdrant.get_all_collection_names()
-        for collection_name in collection_names:
-            qdrant.get_data(collection_name)
-    else:
-        qdrant.get_data(args["collection"])
+    qdrant.get_data()
 
 
 def main():
@@ -121,7 +128,7 @@ def main():
     Options:
         Pinecone:
             -e, --environment (str): Environment of Pinecone instance.
-            -i, --index (str): Name of index to export.
+            -i, --index (str): Name of indexes to export (comma-separated).
 
         Weaviate:
             -u, --url (str): Location of Weaviate instance.
@@ -130,7 +137,7 @@ def main():
 
         Qdrant:
             -u, --url (str): Location of Qdrant instance.
-            -c, --collection (str): Name of collection to export.
+            -c, --collections (str): Names of collections to export (comma-separated).
 
     Examples:
         Export data from Pinecone:
@@ -166,7 +173,7 @@ def main():
         "-e", "--environment", type=str, help="Environment of Pinecone instance"
     )
     parser_pinecone.add_argument(
-        "-i", "--index", type=str, help="Name of index to export", default="all"
+        "-i", "--index", type=str, help="Name of index to export"
     )
     parser_pinecone.add_argument(
         "-s", "--id_range_start", type=int, help="Start of id range", default=None
@@ -201,7 +208,7 @@ def main():
         "-u", "--url", type=str, help="Location of Qdrant instance"
     )
     parser_qdrant.add_argument(
-        "-c", "--collection", type=str, help="Name of collection to export"
+        "-c", "--collections", type=str, help="Names of collections to export"
     )
 
     args = parser.parse_args()
@@ -215,10 +222,8 @@ def main():
         export_qdrant(args)
     else:
         print("Invalid vector database")
-        args["vector_database"] = input(
-            "Enter the name of vector database to export: "
-        )
-        sys.argv.extend(['--vector_database', args["vector_database"]])
+        args["vector_database"] = input("Enter the name of vector database to export: ")
+        sys.argv.extend(["--vector_database", args["vector_database"]])
         main()
     print("Export completed.")
     import ssl
@@ -231,6 +236,7 @@ def main():
 
     # Close the SSL socket
     ssl_socket.close()
+
 
 if __name__ == "__main__":
     main()
