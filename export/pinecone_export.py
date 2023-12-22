@@ -59,15 +59,45 @@ class ExportPinecone(ExportVDB):
         all_ids = set()
         max_tries = min((num_vectors // PINECONE_MAX_K) * 20, MAX_TRIES_OVERALL)
         try_count = 0
+        # -1s in each dimension are the min values
+        vector_range_min = np.array([-1] * num_dimensions)
+        vector_range_max = np.array([1] * num_dimensions)
         with tqdm(total=num_vectors, desc="Collecting IDs") as pbar:
             while len(all_ids) < num_vectors:
                 print(
                     "Length of ids list is shorter than the number of total vectors..."
                 )
-                input_vector = np.random.rand(num_dimensions).tolist()
-                ids = self.get_ids_from_query(index, input_vector)
+                input_vector = (
+                    np.random.rand(num_dimensions)
+                    * (vector_range_max - vector_range_min)
+                    + vector_range_min
+                )
+                ids = self.get_ids_from_query(index, input_vector.tolist())
                 prev_size = len(all_ids)
+                # fetch 10 random vectors from all_ids
+                if len(all_ids) > 10:
+                    random_ids = np.random.choice(list(all_ids), size=10).tolist()
+                    random_vectors = index.fetch(random_ids)["vectors"]
+                    # extend the range of the vectors
+                    vector_range_min = np.min(
+                        [vector_range_min, random_vectors["values"]],
+                    )
+                    vector_range_max = np.max(
+                        [vector_range_max, random_vectors["values"]],
+                    )
                 all_ids.update(ids)
+                new_ids = all_ids - set(ids)
+                if len(new_ids) > 0:
+                    # fetch 10 random vectors from new_ids
+                    random_ids = np.random.choice(list(new_ids), size=1)
+                    random_vectors = index.fetch(random_ids)["vectors"]
+                    # extend the range of the vectors
+                    vector_range_min = np.min(
+                        [vector_range_min, random_vectors["values"]],
+                    )
+                    vector_range_max = np.max(
+                        [vector_range_max, random_vectors["values"]],
+                    )
                 curr_size = len(all_ids)
                 if curr_size > prev_size:
                     print(f"updating ids set with {curr_size - prev_size} new ids...")
@@ -82,7 +112,20 @@ class ExportPinecone(ExportVDB):
         print(f"Collected {len(all_ids)} ids out of {num_vectors}.")
         return all_ids
 
-    def get_data(self, index_name):
+    def get_data(self):
+        if (
+            "index" not in self.args
+            or self.args["index"] is None
+            or self.args["index"] == "all"
+        ):
+            index_names = self.get_all_index_names()
+        else:
+            index_names = self.args["index"].split(",")
+        for index_name in index_names:
+            self.get_data_for_index(index_name)
+        return True
+
+    def get_data_for_index(self, index_name):
         self.index = pinecone.Index(index_name=index_name)
         info = self.index.describe_index_stats()
         namespace = info["namespaces"]
