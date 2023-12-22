@@ -3,3 +3,4 @@ __pycache__/
 .env
 VDF_dataset*/
 vdf_*/
+notebooks/results*.csv
