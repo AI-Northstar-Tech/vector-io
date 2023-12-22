@@ -82,29 +82,6 @@ class ExportPinecone(ExportVDB):
         print(f"Collected {len(all_ids)} ids out of {num_vectors}.")
         return all_ids
 
-    def save_vectors_to_parquet(
-        self, vectors, metadata, namespace, batch_ctr, vectors_directory
-    ):
-        vectors_df = pd.DataFrame(list(vectors.items()), columns=["id", "vector"])
-        # Store the vector in values as a column in the parquet file, and store the metadata as columns in the parquet file
-        # Convert metadata to a dataframe with each of metadata_keys as a column
-        # Convert metadata to a list of dictionaries
-        metadata_list = [{**{"id": k}, **v} for k, v in metadata.items()]
-        # Convert the list to a DataFrame
-        metadata_df = pd.DataFrame.from_records(metadata_list)
-        # Now merge this metadata_df with your main DataFrame
-        df = vectors_df.merge(metadata_df, on="id", how="left")
-
-        # Save the DataFrame to a parquet file
-        parquet_file = os.path.join(vectors_directory, f"{batch_ctr}.parquet")
-        df.to_parquet(parquet_file)
-        self.file_structure.append(parquet_file)
-
-        # Reset vectors and metadata
-        vectors = {}
-        metadata = {}
-        return len(df)
-
     def get_data(self, index_name):
         self.index = pinecone.Index(index_name=index_name)
         info = self.index.describe_index_stats()
@@ -151,13 +128,14 @@ class ExportPinecone(ExportVDB):
                 # if size of vectors is greater than 1GB, save the vectors to a parquet file
                 if vectors.__sizeof__() > MAX_PARQUET_FILE_SIZE:
                     total_size += self.save_vectors_to_parquet(
-                        vectors, metadata, namespace, batch_ctr, vectors_directory
+                        vectors, metadata, batch_ctr, vectors_directory
                     )
                     batch_ctr += 1
             total_size += self.save_vectors_to_parquet(
-                vectors, metadata, namespace, batch_ctr, vectors_directory
+                vectors, metadata, batch_ctr, vectors_directory
             )
             # Create and save internal metadata JSON
+            self.file_structure.append(os.path.join(vdf_directory, "VDF_META.json"))
             internal_metadata = {
                 "file_structure": self.file_structure,
                 # author is from unix username
@@ -170,7 +148,6 @@ class ExportPinecone(ExportVDB):
             }
             with open(os.path.join(vdf_directory, "VDF_META.json"), "w") as json_file:
                 json.dump(internal_metadata, json_file, indent=4)
-                self.file_structure.append(os.path.join(vdf_directory, "VDF_META.json"))
             # print internal metadata properly
             print(json.dumps(internal_metadata, indent=4))
 
