@@ -6,16 +6,24 @@ from export.pinecone_export import ExportPinecone
 from export.weaviate_export import ExportWeaviate
 from export.qdrant_export import ExportQdrant
 from getpass import getpass
+import warnings
+
+# Suppress specific warnings
+warnings.simplefilter("ignore", ResourceWarning)
 
 load_dotenv()
 
 
-def set_arg_from_input(args, arg_name, prompt):
+def set_arg_from_input(args, arg_name, prompt, type_name=str):
     """
     Set the value of an argument from user input if it is not already present
     """
     if arg_name not in args or args[arg_name] is None:
-        args[arg_name] = input(prompt)
+        inp = input(prompt)
+        if inp == "":
+            args[arg_name] = None
+        else:
+            args[arg_name] = type_name(inp)
     return
 
 def set_arg_from_password(args, arg_name, prompt, env_var_name):
@@ -38,11 +46,16 @@ def export_pinecone(args):
     set_arg_from_input(
         args,
         "index",
-        "Enter the name of index to export, or type all to get all indexes: ",
+        "Enter the name of index to export (hit return to export all): ",
     )
+    if "id_list_file" not in args or args["id_list_file"] is None:
+        set_arg_from_input(args, "id_range_start", "Enter the start of id range (hit return to skip): ", int)
+        set_arg_from_input(args, "id_range_end", "Enter the end of id range (hit return to skip): ", int)
+    if args["id_range_start"] is None and args["id_range_end"] is None:
+        set_arg_from_input(args, "id_list_file", "Enter the path to id list file (hit return to skip): ")
     set_arg_from_password(args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY")
     pinecone = ExportPinecone(args)
-    if args["index"] == "all":
+    if "index" not in args or args["index"] is None or args["index"] == "all":
         index_names = pinecone.get_all_index_names()
         for index_name in index_names:
             pinecone.get_data(index_name)
@@ -155,6 +168,15 @@ def main():
     parser_pinecone.add_argument(
         "-i", "--index", type=str, help="Name of index to export", default="all"
     )
+    parser_pinecone.add_argument(
+        "-s", "--id_range_start", type=int, help="Start of id range", default=None
+    )
+    parser_pinecone.add_argument(
+        "--id_range_end", type=int, help="End of id range", default=None
+    )
+    parser_pinecone.add_argument(
+        "-f", "--id_list_file", type=str, help="Path to id list file", default=None
+    )
 
     # Weaviate
     parser_weaviate = subparsers.add_parser(
@@ -199,6 +221,16 @@ def main():
         sys.argv.extend(['--vector_database', args["vector_database"]])
         main()
     print("Export completed.")
+    import ssl
+    import socket
+
+    # Create an SSL socket
+    ssl_socket = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+
+    # Use the SSL socket
+
+    # Close the SSL socket
+    ssl_socket.close()
 
 if __name__ == "__main__":
     main()
