@@ -13,12 +13,14 @@ from tqdm import tqdm
 PINECONE_MAX_K = 10_000
 MAX_TRIES_OVERALL = 100
 MAX_FETCH_SIZE = 1_000
-MAX_PARQUET_FILE_SIZE = 1_000_000_000 # 1GB
+MAX_PARQUET_FILE_SIZE = 1_000_000_000  # 1GB
+
 
 class ExportPinecone(ExportVDB):
     def __init__(self, args):
         pinecone.init(api_key=args["pinecone_api_key"], environment=args["environment"])
         self.args = args
+        self.file_structure = []
 
     def get_all_index_names(self):
         return pinecone.list_indexes()
@@ -32,6 +34,25 @@ class ExportPinecone(ExportVDB):
 
     def get_all_ids_from_index(self, index, num_dimensions, namespace=""):
         print("index.describe_index_stats()", index.describe_index_stats())
+        if (
+            self.args["id_range_start"] is not None
+            and self.args["id_range_end"] is not None
+        ):
+            print(
+                "Using id range {} to {}".format(
+                    self.args["id_range_start"], self.args["id_range_end"]
+                )
+            )
+            return [
+                str(x)
+                for x in range(
+                    int(self.args["id_range_start"]),
+                    int(self.args["id_range_end"]) + 1,
+                )
+            ]
+        if self.args["id_list_file"]:
+            with open(self.args["id_list_file"]) as f:
+                return [line.strip() for line in f.readlines()]
         num_vectors = index.describe_index_stats()["namespaces"][namespace][
             "vector_count"
         ]
@@ -61,23 +82,24 @@ class ExportPinecone(ExportVDB):
         print(f"Collected {len(all_ids)} ids out of {num_vectors}.")
         return all_ids
 
-    def save_vectors_to_parquet(self, vectors, metadata, namespace, batch_ctr, vectors_directory):
-        vectors_df = pd.DataFrame(list(vectors.items()), columns=['id', 'vector'])
-        print("vectors_df", vectors_df.head())
-        
+    def save_vectors_to_parquet(
+        self, vectors, metadata, namespace, batch_ctr, vectors_directory
+    ):
+        vectors_df = pd.DataFrame(list(vectors.items()), columns=["id", "vector"])
         # Store the vector in values as a column in the parquet file, and store the metadata as columns in the parquet file
         # Convert metadata to a dataframe with each of metadata_keys as a column
         # Convert metadata to a list of dictionaries
-        metadata_list = [{**{'id': k}, **v} for k, v in metadata.items()]
+        metadata_list = [{**{"id": k}, **v} for k, v in metadata.items()]
         # Convert the list to a DataFrame
         metadata_df = pd.DataFrame.from_records(metadata_list)
         # Now merge this metadata_df with your main DataFrame
-        df = vectors_df.merge(metadata_df, on='id', how='left')
-        
+        df = vectors_df.merge(metadata_df, on="id", how="left")
+
         # Save the DataFrame to a parquet file
-        parquet_file = os.path.join(vectors_directory, f"_n_{namespace}_{batch_ctr}.parquet")
+        parquet_file = os.path.join(vectors_directory, f"{batch_ctr}.parquet")
         df.to_parquet(parquet_file)
-        
+        self.file_structure.append(parquet_file)
+
         # Reset vectors and metadata
         vectors = {}
         metadata = {}
@@ -94,7 +116,7 @@ class ExportPinecone(ExportVDB):
 
         # Fetch the actual data from the Pinecone index
         for namespace in info["namespaces"]:
-            timestamp_in_format = datetime.datetime.now().strftime("%y-%m-%d-%H-%M-%S")
+            timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             vdf_directory = (
                 f"vdf_{index_name}_{namespace}_{timestamp_in_format}_{hash_value}"
             )
@@ -128,21 +150,28 @@ class ExportPinecone(ExportVDB):
                 dimensions = info["dimension"]
                 # if size of vectors is greater than 1GB, save the vectors to a parquet file
                 if vectors.__sizeof__() > MAX_PARQUET_FILE_SIZE:
-                    total_size += self.save_vectors_to_parquet(vectors, metadata, namespace, batch_ctr, vectors_directory)
+                    total_size += self.save_vectors_to_parquet(
+                        vectors, metadata, namespace, batch_ctr, vectors_directory
+                    )
                     batch_ctr += 1
-            total_size += self.save_vectors_to_parquet(vectors, metadata, namespace, batch_ctr, vectors_directory)
+            total_size += self.save_vectors_to_parquet(
+                vectors, metadata, namespace, batch_ctr, vectors_directory
+            )
             # Create and save internal metadata JSON
             internal_metadata = {
-                "file_structure": [],
+                "file_structure": self.file_structure,
                 # author is from unix username
                 "author": os.getlogin(),
                 "dimensions": info["dimension"],
                 "total_vector_count": info["total_vector_count"],
                 "exported_vector_count": total_size,
                 "exported_from": "pinecone",
-                "model_name": "PLEASE_FILL_IN",
+                "model_name": self.args["model_name"],
             }
             with open(os.path.join(vdf_directory, "VDF_META.json"), "w") as json_file:
                 json.dump(internal_metadata, json_file, indent=4)
+                self.file_structure.append(os.path.join(vdf_directory, "VDF_META.json"))
+            # print internal metadata properly
+            print(json.dumps(internal_metadata, indent=4))
 
         return True
