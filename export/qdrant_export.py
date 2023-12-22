@@ -15,12 +15,13 @@ class ExportQdrant(ExportVDB):
         """
         Initialize the class
         """
+        self.args = args
         try:
             self.client = QdrantClient(
-                url=args["qdrant_url"], api_key=os.getenv("QDRANT_API_KEY")
+                url=self.args["url"], api_key=self.args["qdrant_api_key"]
             )
         except:
-            self.client = QdrantClient(url=args["qdrant_url"])
+            self.client = QdrantClient(url=self.args["url"])
 
     def get_all_class_names(self):
         """
@@ -30,75 +31,67 @@ class ExportQdrant(ExportVDB):
         class_names = [collection.name for collection in collections]
         return class_names
 
-    def get_data(self, class_name):
-        """
-        Get data from Qdrant
-        """
+    def get_data(self):
+        if (
+            "collections" not in self.args
+            or self.args["collections"] is None
+            or self.args["collections"] == "all"
+        ):
+            collection_names = self.get_all_class_names()
+        else:
+            collection_names = self.args["collections"].split(",")
+        for collection_name in collection_names:
+            self.get_data_for_class(collection_name)
+            print("Exported data from collection {}".format(collection_name))
+        print("Exported data from {} collections".format(len(collection_names)))
+        return True
+
+    def get_data_for_class(self, class_name):
+        print(self.client.get_collection(collection_name=class_name))
         total = self.client.get_collection(collection_name=class_name).points_count
-        con = sqlite3.connect(f"{class_name}_qdrant.db")
-        cur = con.cursor()
-        property_names = []
-        first = self.client.scroll(
-            collection_name=class_name, limit=1, with_payload=True
-        )
-        for name in first[0][0].payload:
-            property_names.append(name)
-        cur.execute(f"DROP TABLE IF EXISTS {class_name}_qdrant")
-        cur.execute(
-            f"CREATE TABLE IF NOT EXISTS {class_name}_qdrant (id, {','.join(property_names)})"
-        )
-        insert_query = f"INSERT INTO {class_name}_qdrant (id, {','.join(property_names)}) VALUES ({','.join(['?']*(len(property_names) + 1))})"
-        objects = self.client.scroll(
-            collection_name=class_name, limit=100, with_payload=True, with_vectors=True
-        )
-        df = pd.DataFrame(columns=["Vectors"])
-        df.to_parquet(f"{class_name}_qdrant.parquet", index=False)
-        self.insert_data(
-            f"{class_name}_qdrant.parquet",
-            objects[0],
-            property_names,
-            insert_query,
-            cur,
-        )
-        for i in tqdm(range((total // 100) - 1)):
-            uuid = objects[-1]
-            objects = self.client.scroll(
+        hash_value = extract_data_hash({"class_name": class_name, "total": total})
+        print("Total number of vectors to export: {}".format(total))
+        vectors = {}
+        metadata = {}
+        batch_ctr = 0
+        timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        vdf_directory = f"vdf_{class_name}_{timestamp_in_format}_{hash_value}"
+        vectors_directory = os.path.join(vdf_directory, "vectors_default")
+        os.makedirs(vdf_directory, exist_ok=True)
+        for offset in tqdm(range(0, total, MAX_FETCH_SIZE)):
+            points = self.client.search(
                 collection_name=class_name,
-                limit=100,
-                offset=uuid,
-                with_payload=True,
-                with_vectors=True,
+                query={"vector": {"top": MAX_FETCH_SIZE, "offset": offset}},
+            ).result.points
+            for point in points:
+                vectors[point.id] = point.payload.vector
+                metadata[point.id] = point.payload.metadata
+                if len(vectors) >= MAX_PARQUET_FILE_SIZE:
+                    batch_ctr += 1
+                    num_vectors = self.save_vectors_to_parquet(
+                        vectors, metadata, batch_ctr, vectors_directory
+                    )
+                    print("Saved {} vectors to parquet file".format(num_vectors))
+        if len(vectors) > 0:
+            batch_ctr += 1
+            num_vectors = self.save_vectors_to_parquet(
+                vectors, metadata, batch_ctr, vectors_directory
             )
-            self.insert_data(
-                f"{class_name}_qdrant.parquet",
-                objects[0],
-                property_names,
-                insert_query,
-                cur,
-            )
-
-    def insert_data(self, file_path, objects, property_names, insert_query, cur):
-        """
-        Insert data into sqlite database and parquet file
-        """
-        data_to_insert = []
-        vectors = []
-        for object in objects:
-            vectors.append({"Vectors": object.vector})
-            data_dict = {}
-            data_dict["id"] = object.id
-            for property_name in property_names:
-                if property_name in object.payload:
-                    data_dict[property_name] = object.payload[property_name]
-                else:
-                    data_dict[property_name] = ""
-            data_tuple = ()
-            for property in data_dict.values():
-                data_tuple += (property,)
-            data_to_insert.append(data_tuple)
-        vectors = pd.DataFrame(vectors)
-        vectors.to_parquet(file_path, mode="a", header=False, index=False)
-        cur.executemany(insert_query, data_to_insert)
-
-
-# print(ExportQdrant({"qdrant_url": "http://localhost:6333"}))  # .get_all_class_names()
+            print("Saved {} vectors to parquet file".format(num_vectors))
+        # Create and save internal metadata JSON
+        self.file_structure.append(os.path.join(vectors_directory, "VDF_META.json"))
+        internal_metadata = {
+            "file_structure": self.file_structure,
+            # author is from unix username
+            "author": os.getlogin(),
+            "dimensions": len(vectors[0]),
+            "total_vector_count": total,
+            "exported_vector_count": len(vectors),
+            "exported_from": "qdrant",
+            "model_name": "default",
+        }
+        with open(os.path.join(vectors_directory, "VDF_META.json"), "w") as json_file:
+            json.dump(internal_metadata, json_file, indent=4)
+        # print internal metadata properly
+        print(json.dumps(internal_metadata, indent=4))
+        return True
