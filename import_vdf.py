@@ -27,12 +27,12 @@ def import_pinecone(args):
     )
     args.index = set_arg_from_input(args.index, "Enter the name of index to export, or type all to get all indexes: ")
     args.pinecone_api_key = os.getenv("PINECONE_API_KEY")
-    pinecone = ImportPinecone(args)
+    pinecone_import = ImportPinecone(args)
     # if args.index == "all":
     #     index_names = pinecone.get_all_index_names()
     #     for index_name in index_names:
     #         pinecone.insert_data(index_name)
-    pinecone.upsert_data()
+    pinecone_import.upsert_data()
 
 
 
