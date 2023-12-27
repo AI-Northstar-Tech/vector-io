@@ -3,6 +3,7 @@
 import argparse
 import os
 import sys
+import time
 from dotenv import load_dotenv
 from export.pinecone_export import ExportPinecone
 from export.weaviate_export import ExportWeaviate
@@ -73,6 +74,12 @@ def export_pinecone(args):
         )
     set_arg_from_password(
         args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY"
+    )
+    set_arg_from_input(
+        args,
+        "modify_to_search",
+        "Allow modifying data to search, enter Y or N: ",
+        bool,
     )
     pinecone_export = ExportPinecone(args)
     pinecone_export.get_data()
@@ -186,6 +193,9 @@ def main():
     parser_pinecone.add_argument(
         "-f", "--id_list_file", type=str, help="Path to id list file", default=None
     )
+    parser_pinecone.add_argument(
+        "--modify_to_search", type=bool, help="Allow modifying data to search", default=True
+    )
 
     # Weaviate
     parser_weaviate = subparsers.add_parser(
@@ -216,6 +226,7 @@ def main():
     args = parser.parse_args()
     # convert args to dict
     args = vars(args)
+    t_start = time.time()
     if args["vector_database"] == "pinecone":
         export_pinecone(args)
     elif args["vector_database"] == "weaviate":
@@ -227,17 +238,10 @@ def main():
         args["vector_database"] = input("Enter the name of vector database to export: ")
         sys.argv.extend(["--vector_database", args["vector_database"]])
         main()
+    t_end = time.time()
+    # formatted time
+    print("Time taken to export data: ", time.strftime("%H:%M:%S", time.gmtime(t_end - t_start)))
     print("Export completed.")
-    import ssl
-    import socket
-
-    # Create an SSL socket
-    ssl_socket = ssl.wrap_socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-
-    # Use the SSL socket
-
-    # Close the SSL socket
-    ssl_socket.close()
 
 
 if __name__ == "__main__":
