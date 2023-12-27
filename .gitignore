@@ -4,3 +4,4 @@ __pycache__/
 VDF_dataset*/
 vdf_*/
 notebooks/results*.csv
+vector-io.code-workspace

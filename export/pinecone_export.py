@@ -14,6 +14,7 @@ PINECONE_MAX_K = 10_000
 MAX_TRIES_OVERALL = 100
 MAX_FETCH_SIZE = 1_000
 MAX_PARQUET_FILE_SIZE = 1_000_000_000  # 1GB
+THREAD_POOL_SIZE = 30
 
 
 class ExportPinecone(ExportVDB):
@@ -25,14 +26,64 @@ class ExportPinecone(ExportVDB):
     def get_all_index_names(self):
         return pinecone.list_indexes()
 
-    def get_ids_from_query(self, index, input_vector):
-        results = index.query(
-            vector=input_vector, include_values=False, top_k=PINECONE_MAX_K
-        )
+    def get_ids_from_query(self, index, input_vector, namespace, all_ids, hash_value):
+        if self.args.get("modify_to_search", True):
+            marker_key = "exported_vectorio_" + hash_value
+            results = index.query(
+                vector=input_vector,
+                filters={marker_key: {"$ne": True}},
+                top_k=PINECONE_MAX_K,
+                namespace=namespace,
+            )
+            if len(results["matches"]) == 0:
+                print("No vectors found that have not been exported yet.")
+                return []
+            print(
+                f"Found {len(results['matches'])} vectors that have not been exported yet."
+            )
+            # mark the vectors as exported
+            ids = [result["id"] for result in results["matches"]]
+            ids_to_mark = list(set(ids) - all_ids)
+            # fetch the vectors and upsert them with the exported_vectorio flag with MAX_FETCH_SIZE at a time
+            mark_pbar = tqdm(total=len(ids_to_mark), desc="Marking vectors")
+            for i in range(0, len(ids_to_mark), MAX_FETCH_SIZE):
+                batch_ids = ids_to_mark[i : i + MAX_FETCH_SIZE]
+                data = index.fetch(batch_ids)
+                batch_vectors = data["vectors"]
+                # verify that the ids are the same
+                assert set(batch_ids) == set(batch_vectors.keys())
+                # add exported_vectorio flag to metadata
+                # Format the vectors for upsert
+                upsert_data = []
+                for id, vector_data in batch_vectors.items():
+                    if "metadata" not in vector_data:
+                        vector_data["metadata"] = {}
+                    vector_data["metadata"][marker_key] = True
+                    cur_vec = pinecone.Vector(
+                        id=id,
+                        values=vector_data["values"],
+                        metadata=vector_data["metadata"],
+                    )
+                    if vector_data.get("sparseValues"):
+                        cur_vec.sparse_values = vector_data["sparseValues"]
+                    upsert_data.append(cur_vec)
+                # upsert the vectors
+                index.upsert(vectors=upsert_data, namespace=namespace, async_req=True)
+                print(f"Marked {len(batch_ids)} vectors as exported.")
+                mark_pbar.update(len(batch_ids))
+        else:
+            results = index.query(
+                vector=input_vector,
+                include_values=False,
+                top_k=PINECONE_MAX_K,
+                namespace=namespace,
+            )
         ids = set(result["id"] for result in results["matches"])
         return ids
 
-    def get_all_ids_from_index(self, index, num_dimensions, namespace=""):
+    def get_all_ids_from_index(
+        self, index, num_dimensions, namespace="", hash_value=""
+    ):
         print("index.describe_index_stats()", index.describe_index_stats())
         if (
             self.args["id_range_start"] is not None
@@ -67,37 +118,65 @@ class ExportPinecone(ExportVDB):
                 print(
                     "Length of ids list is shorter than the number of total vectors..."
                 )
+                # fetch 10 random vectors from all_ids
+                if len(all_ids) > 10:
+                    random_ids = np.random.choice(list(all_ids), size=10).tolist()
+                    random_vectors = [
+                        x["values"] for x in index.fetch(random_ids)["vectors"].values()
+                    ]
+                    # extend the range of the vectors
+                    random_vectors_np = np.array(random_vectors)
+
+                    # Initialize vector_range_min and vector_range_max if they are not set
+                    if vector_range_min is None:
+                        vector_range_min = np.min(random_vectors_np, axis=0)
+                    else:
+                        vector_range_min = np.minimum(
+                            vector_range_min, np.min(random_vectors_np, axis=0)
+                        )
+
+                    if vector_range_max is None:
+                        vector_range_max = np.max(random_vectors_np, axis=0)
+                    else:
+                        vector_range_max = np.maximum(
+                            vector_range_max, np.max(random_vectors_np, axis=0)
+                        )
+                print(vector_range_max, vector_range_min)
                 input_vector = (
                     np.random.rand(num_dimensions)
                     * (vector_range_max - vector_range_min)
                     + vector_range_min
                 )
-                ids = self.get_ids_from_query(index, input_vector.tolist())
+                ids = self.get_ids_from_query(
+                    index, input_vector.tolist(), namespace, all_ids, hash_value
+                )
                 prev_size = len(all_ids)
-                # fetch 10 random vectors from all_ids
-                if len(all_ids) > 10:
-                    random_ids = np.random.choice(list(all_ids), size=10).tolist()
-                    random_vectors = index.fetch(random_ids)["vectors"]
-                    # extend the range of the vectors
-                    vector_range_min = np.min(
-                        [vector_range_min, random_vectors["values"]],
-                    )
-                    vector_range_max = np.max(
-                        [vector_range_max, random_vectors["values"]],
-                    )
                 all_ids.update(ids)
+                if len(ids) == 0:
+                    print("No new ids found, exiting...")
+                    break
                 new_ids = all_ids - set(ids)
                 if len(new_ids) > 0:
-                    # fetch 10 random vectors from new_ids
-                    random_ids = np.random.choice(list(new_ids), size=1)
-                    random_vectors = index.fetch(random_ids)["vectors"]
+                    # fetch 1 random vector from new_ids
+                    random_ids = np.random.choice(list(new_ids), size=1).tolist()
+                    random_vectors = [
+                        x["values"] for x in index.fetch(random_ids)["vectors"].values()
+                    ]
                     # extend the range of the vectors
-                    vector_range_min = np.min(
-                        [vector_range_min, random_vectors["values"]],
-                    )
-                    vector_range_max = np.max(
-                        [vector_range_max, random_vectors["values"]],
-                    )
+                    # Convert to a numpy array for element-wise operations
+                    random_vectors_np = np.array(random_vectors)
+
+                    # Update min and max
+                    if vector_range_min is None or vector_range_max is None:
+                        vector_range_min = np.min(random_vectors_np, axis=0)
+                        vector_range_max = np.max(random_vectors_np, axis=0)
+                    else:
+                        vector_range_min = np.minimum(
+                            vector_range_min, np.min(random_vectors_np, axis=0)
+                        )
+                        vector_range_max = np.maximum(
+                            vector_range_max, np.max(random_vectors_np, axis=0)
+                        )
                 curr_size = len(all_ids)
                 if curr_size > prev_size:
                     print(f"updating ids set with {curr_size - prev_size} new ids...")
@@ -121,7 +200,11 @@ class ExportPinecone(ExportVDB):
             index_names = self.get_all_index_names()
         else:
             index_names = self.args["index"].split(",")
-        for index_name in index_names:
+            # check if index exists
+            for index_name in index_names:
+                if index_name not in self.get_all_index_names():
+                    print(f"Index {index_name} does not exist, skipping...")
+        for index_name in tqdm(index_names, desc="Fetching indexes"):
             self.get_data_for_index(index_name)
         return True
 
@@ -135,7 +218,7 @@ class ExportPinecone(ExportVDB):
         hash_value = extract_data_hash(info_dict)
 
         # Fetch the actual data from the Pinecone index
-        for namespace in info["namespaces"]:
+        for namespace in tqdm(info["namespaces"], desc="Fetching namespaces"):
             timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             vdf_directory = (
                 f"vdf_{index_name}_{namespace}_{timestamp_in_format}_{hash_value}"
@@ -148,9 +231,12 @@ class ExportPinecone(ExportVDB):
 
             all_ids = list(
                 self.get_all_ids_from_index(
-                    index=pinecone.Index(index_name=index_name),
+                    index=pinecone.Index(
+                        index_name=index_name, pool_threads=THREAD_POOL_SIZE
+                    ),
                     num_dimensions=info["dimension"],
                     namespace=namespace,
+                    hash_value=hash_value,
                 )
             )
 
@@ -159,7 +245,9 @@ class ExportPinecone(ExportVDB):
             metadata = {}
             batch_ctr = 1
             total_size = 0
-            for i in tqdm(range(0, len(all_ids), MAX_FETCH_SIZE), desc="Fetching data"):
+            for i in tqdm(
+                range(0, len(all_ids), MAX_FETCH_SIZE), desc="Fetching vectors"
+            ):
                 batch_ids = all_ids[i : i + MAX_FETCH_SIZE]
                 data = self.index.fetch(batch_ids)
                 batch_vectors = data["vectors"]
