@@ -6,18 +6,28 @@ from dotenv import load_dotenv
 from getpass import getpass
 from export.util import set_arg_from_input, set_arg_from_password
 from import_vdf.pinecone_import import ImportPinecone
+from import_vdf.qdrant_import import ImportQdrant
 
 
 load_dotenv()
 
+def import_qdrant(args):
+    """
+    Import data to Qdrant
+    """
+    set_arg_from_input(
+        args, "url", "Enter the url of Qdrant instance (default: 'http://localhost:6333'): ", str, "http://localhost:6333"
+    )
+    set_arg_from_password(
+        args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
+    )
+    qdrant_import = ImportQdrant(args)
+    qdrant_import.upsert_data()
 
 def import_pinecone(args):
     """
-    Export data from Pinecone
+    Import data to Pinecone
     """
-    set_arg_from_input(
-        args, "dir", "Enter the directory of vector dataset to be imported: ", str
-    )
     set_arg_from_input(
         args, "environment", "Enter the environment of Pinecone instance: "
     )
@@ -54,21 +64,28 @@ def main():
     parser = argparse.ArgumentParser(
         description="Import data from VDF to a vector database"
     )
-    db_choices = ["pinecone"]
+    db_choices = ["pinecone", "qdrant"]  # Add "qdrant" to the list of database choices
     subparsers = parser.add_subparsers(
         title="Vector Databases",
         description="Choose the vectors database to export data from",
         dest="vector_database",
     )
 
+    parser.add_argument("-d", "--dir", type=str, help="Directory to import")
     # Pinecone
     parser_pinecone = subparsers.add_parser("pinecone", help="Import data to Pinecone")
-    parser_pinecone.add_argument("-d", "--dir", type=str, help="Directory to import")
     parser_pinecone.add_argument("-e", "--environment", type=str, help="Pinecone environment")
+
+    # Qdrant
+    parser_qdrant = subparsers.add_parser("qdrant", help="Import data to Qdrant")
+    parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
 
     args = parser.parse_args()
     args = vars(args)
-
+    set_arg_from_input(
+        args, "dir", "Enter the directory of vector dataset to be imported: ", str
+    )
+    
     if (
         ("vector_database" not in args)
         or (args["vector_database"] is None)
@@ -78,6 +95,8 @@ def main():
         return
     if args["vector_database"] == "pinecone":
         import_pinecone(args)
+    elif args["vector_database"] == "qdrant":
+        import_qdrant(args)  # Add the function to import data to Qdrant
     else:
         print(
             "Unrecognized DB. Please choose a vector database to export data from:",
