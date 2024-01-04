@@ -1,8 +1,20 @@
+import datetime
 import pandas as pd
 import os
 
+from export.util import extract_data_hash
+
 
 class ExportVDB:
+    def __init__(self, args):
+        self.args = args
+        self.file_structure = []
+        self.file_ctr = 1
+        self.hash_value = extract_data_hash(self.args)
+        self.timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.vdf_directory = f"vdf_{self.timestamp_in_format}_{self.hash_value}"
+        os.makedirs(self.vdf_directory, exist_ok=True)
+
     def get_data():
         """
         Get data from vector database

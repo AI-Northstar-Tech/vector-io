@@ -1,13 +1,14 @@
+import json
 from qdrant_client import QdrantClient
 import os
 from tqdm import tqdm
-import pandas as pd
-import sqlite3
 from dotenv import load_dotenv
 
 from export.vdb_export import ExportVDB
 
 load_dotenv()
+
+MAX_FETCH_SIZE = 10_000
 
 
 class ExportQdrant(ExportVDB):
@@ -15,7 +16,7 @@ class ExportQdrant(ExportVDB):
         """
         Initialize the class
         """
-        self.args = args
+        super().__init__(args)
         try:
             self.client = QdrantClient(
                 url=self.args["url"], api_key=self.args["qdrant_api_key"]
@@ -23,75 +24,101 @@ class ExportQdrant(ExportVDB):
         except:
             self.client = QdrantClient(url=self.args["url"])
 
-    def get_all_class_names(self):
+    def get_all_collection_names(self):
         """
-        Get all class names from Qdrant
+        Get all collection names from Qdrant
         """
         collections = self.client.get_collections().collections
-        class_names = [collection.name for collection in collections]
-        return class_names
+        collection_names = [collection.name for collection in collections]
+        return collection_names
 
     def get_data(self):
-        if (
-            "collections" not in self.args
-            or self.args["collections"] is None
-            or self.args["collections"] == "all"
-        ):
-            collection_names = self.get_all_class_names()
+        if "collections" not in self.args or self.args["collections"] is None:
+            collection_names = self.get_all_collection_names()
         else:
             collection_names = self.args["collections"].split(",")
-        for collection_name in collection_names:
-            self.get_data_for_class(collection_name)
-            print("Exported data from collection {}".format(collection_name))
-        print("Exported data from {} collections".format(len(collection_names)))
-        return True
 
-    def get_data_for_class(self, class_name):
-        print(self.client.get_collection(collection_name=class_name))
-        total = self.client.get_collection(collection_name=class_name).points_count
-        hash_value = extract_data_hash({"class_name": class_name, "total": total})
-        print("Total number of vectors to export: {}".format(total))
-        vectors = {}
-        metadata = {}
-        batch_ctr = 0
-        timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        vdf_directory = f"vdf_{class_name}_{timestamp_in_format}_{hash_value}"
-        vectors_directory = os.path.join(vdf_directory, "vectors_default")
-        os.makedirs(vdf_directory, exist_ok=True)
-        for offset in tqdm(range(0, total, MAX_FETCH_SIZE)):
-            points = self.client.search(
-                collection_name=class_name,
-                query={"vector": {"top": MAX_FETCH_SIZE, "offset": offset}},
-            ).result.points
-            for point in points:
-                vectors[point.id] = point.payload.vector
-                metadata[point.id] = point.payload.metadata
-                if len(vectors) >= MAX_PARQUET_FILE_SIZE:
-                    batch_ctr += 1
-                    num_vectors = self.save_vectors_to_parquet(
-                        vectors, metadata, batch_ctr, vectors_directory
-                    )
-                    print("Saved {} vectors to parquet file".format(num_vectors))
-        if len(vectors) > 0:
-            batch_ctr += 1
-            num_vectors = self.save_vectors_to_parquet(
-                vectors, metadata, batch_ctr, vectors_directory
-            )
-            print("Saved {} vectors to parquet file".format(num_vectors))
+        index_metas = {}
+        for collection_name in tqdm(collection_names, desc="Fetching indexes"):
+            index_meta = self.get_data_for_collection(collection_name)
+            index_metas[collection_name] = index_meta
+
         # Create and save internal metadata JSON
-        self.file_structure.append(os.path.join(vectors_directory, "VDF_META.json"))
+        self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
         internal_metadata = {
             "file_structure": self.file_structure,
-            # author is from unix username
-            "author": os.getlogin(),
-            "dimensions": len(vectors[0]),
-            "total_vector_count": total,
-            "exported_vector_count": len(vectors),
+            "author": os.environ.get("USER"),
             "exported_from": "qdrant",
-            "model_name": "default",
+            "indexes": index_metas,
         }
-        with open(os.path.join(vectors_directory, "VDF_META.json"), "w") as json_file:
+        with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
             json.dump(internal_metadata, json_file, indent=4)
         # print internal metadata properly
         print(json.dumps(internal_metadata, indent=4))
         return True
+
+    def get_data_for_collection(self, collection_name):
+        vectors_directory = os.path.join(self.vdf_directory, collection_name)
+        os.makedirs(vectors_directory, exist_ok=True)
+
+        vectors = {}
+        metadata = {}
+        total = self.client.get_collection(collection_name).vectors_count
+
+        num_vectors_exported = 0
+        dim = self.client.get_collection(collection_name).config.params.vectors.size
+        records, next_offset = self.client.scroll(
+            collection_name=collection_name,
+            limit=MAX_FETCH_SIZE,
+            with_payload=True,
+            with_vectors=True,
+        )
+        num_vectors_exported += self.save_from_records(
+            vectors,
+            metadata,
+            records,
+            vectors_directory,
+        )
+        pbar = tqdm(total=total, desc=f"Exporting {collection_name}")
+        while next_offset is not None:
+            records, next_offset = self.client.scroll(
+                collection_name=collection_name,
+                offset=next_offset,
+                limit=MAX_FETCH_SIZE,
+                with_payload=True,
+                with_vectors=True,
+            )
+            num_vectors_exported += self.save_from_records(
+                vectors,
+                metadata,
+                records,
+                num_vectors_exported,
+                vectors_directory,
+            )
+            pbar.update(len(records))
+
+        namespace_meta = {
+            "index_name": collection_name,
+            "namespace": "",
+            "total_vector_count": total,
+            "exported_vector_count": num_vectors_exported,
+            "metric": self.client.get_collection(
+                collection_name
+            ).config.params.vectors.distance,
+            "dimensions": dim,
+            "model_name": self.args["model_name"],
+            "vector_columns": ["vector"],
+            "data_path": vectors_directory,
+        }
+
+        return {"": [namespace_meta]}
+
+    def save_from_records(self, vectors, metadata, records, vectors_directory):
+        num_vectors_exported = 0
+        for point in records:
+            vectors[point.id] = point.vector
+            metadata[point.id] = point.payload
+        num_vectors_exported += self.save_vectors_to_parquet(
+            vectors, metadata, self.file_ctr, vectors_directory
+        )
+        return num_vectors_exported
