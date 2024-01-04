@@ -265,7 +265,7 @@ class ExportPinecone(ExportVDB):
         info_dict = info.__dict__["_data_store"]
 
         # Fetch the actual data from the Pinecone index
-        index_meta = {}
+        index_meta = []
         for namespace in tqdm(info["namespaces"], desc="Fetching namespaces"):
             vectors_directory = os.path.join(
                 self.vdf_directory, f"i{self.file_ctr}.parquet"
@@ -290,15 +290,16 @@ class ExportPinecone(ExportVDB):
             batch_ctr = 1
             total_size = 0
             i = 0
+            fetch_size = MAX_FETCH_SIZE
             while i < len(all_ids):
-                batch_ids = all_ids[i : i + MAX_FETCH_SIZE]
+                batch_ids = all_ids[i : i + fetch_size]
                 try:
                     data = self.index.fetch(batch_ids)
                 except Exception as e:
                     print(
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size)"
                     )
-                    MAX_FETCH_SIZE = MAX_FETCH_SIZE * 3 // 4
+                    fetch_size = fetch_size * 3 // 4
                     continue
                 batch_vectors = data["vectors"]
                 # verify that the ids are the same
@@ -314,7 +315,7 @@ class ExportPinecone(ExportVDB):
                         vectors, metadata, batch_ctr, vectors_directory
                     )
                     batch_ctr += 1
-                i += MAX_FETCH_SIZE
+                i += fetch_size
             total_size += self.save_vectors_to_parquet(
                 vectors, metadata, batch_ctr, vectors_directory
             )
@@ -327,5 +328,5 @@ class ExportPinecone(ExportVDB):
                 "vector_columns": ["vector"],
                 "data_path": vectors_directory,
             }
-            index_meta[namespace] = namespace_meta
+            index_meta.append(namespace_meta)
         return index_meta

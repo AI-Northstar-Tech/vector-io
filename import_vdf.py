@@ -1,10 +1,11 @@
 import argparse
 import os
 from dotenv import load_dotenv
+
 # from export.vdb_export import ExportPinecone, ExportWeaviate, ExportQdrant
 from getpass import getpass
 from export.util import set_arg_from_input, set_arg_from_password
-from import_VDF.pinecone_import import ImportPinecone
+from import_vdf.pinecone_import import ImportPinecone
 
 
 load_dotenv()
@@ -15,12 +16,10 @@ def import_pinecone(args):
     Export data from Pinecone
     """
     set_arg_from_input(
-        args, "environment", "Enter the environment of Pinecone instance: "
+        args, "dir", "Enter the directory of vector dataset to be imported: ", str
     )
     set_arg_from_input(
-        args,
-        "index",
-        "Enter the name of indexes to import (hit return to export all): ",
+        args, "environment", "Enter the environment of Pinecone instance: "
     )
     if "id_list_file" not in args or args["id_list_file"] is None:
         set_arg_from_input(
@@ -48,7 +47,6 @@ def import_pinecone(args):
     pinecone_import.upsert_data()
 
 
-
 def main():
     """
     Import data to Pinecone using a vector dataset directory in the VDF format.
@@ -56,6 +54,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Import data from VDF to a vector database"
     )
+    db_choices = ["pinecone"]
     subparsers = parser.add_subparsers(
         title="Vector Databases",
         description="Choose the vectors database to export data from",
@@ -63,19 +62,27 @@ def main():
     )
 
     # Pinecone
-    parser_pinecone = subparsers.add_parser(
-        "pinecone", help="Import data to Pinecone"
-    )
-    parser_pinecone.add_argument(
-        "-d", "--dir", type=str, help="Directory to import"
-    )
+    parser_pinecone = subparsers.add_parser("pinecone", help="Import data to Pinecone")
+    parser_pinecone.add_argument("-d", "--dir", type=str, help="Directory to import")
+    parser_pinecone.add_argument("-e", "--environment", type=str, help="Pinecone environment")
 
     args = parser.parse_args()
+    args = vars(args)
 
-    if args.vector_database == "pinecone":
-        ImportPinecone(args)
+    if (
+        ("vector_database" not in args)
+        or (args["vector_database"] is None)
+        or (args["vector_database"] not in db_choices)
+    ):
+        print("Please choose a vector database to export data from:", db_choices)
+        return
+    if args["vector_database"] == "pinecone":
+        import_pinecone(args)
     else:
-        print("Please choose a vector database to export data from")
+        print(
+            "Unrecognized DB. Please choose a vector database to export data from:",
+            db_choices,
+        )
 
 
 if __name__ == "__main__":
