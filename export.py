@@ -88,11 +88,12 @@ def export_qdrant(args):
     """
     Export data from Qdrant
     """
-    set_arg_from_input(args, "url", "Enter the location of Qdrant instance: ")
+    set_arg_from_input(args, "url", "Enter the url of Qdrant instance (hit return for 'http://localhost:6333'): ", str, "http://localhost:6333")
     set_arg_from_input(
         args,
         "collections",
         "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
+        lambda x: x.split(","),
     )
     set_arg_from_password(
         args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"

@@ -18,10 +18,12 @@ THREAD_POOL_SIZE = 30
 
 class ExportPinecone(ExportVDB):
     def __init__(self, args):
+        """
+        Initialize the class
+        """
+        # call super class constructor
+        super().__init__(args)
         pinecone.init(api_key=args["pinecone_api_key"], environment=args["environment"])
-        self.file_ctr = 1
-        self.args = args
-        self.file_structure = []
         self.collected_ids_by_modifying = False
 
     def get_all_index_names(self):
@@ -220,14 +222,9 @@ class ExportPinecone(ExportVDB):
         print(f"Unmarked {len(all_ids)} vectors as exported.")
 
     def get_data(self):
-        self.hash_value = extract_data_hash(self.args)
-        self.timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.vdf_directory = f"vdf_{self.timestamp_in_format}_{self.hash_value}"
-        os.makedirs(self.vdf_directory, exist_ok=True)
         if (
             "index" not in self.args
             or self.args["index"] is None
-            or self.args["index"] == "all"
         ):
             index_names = self.get_all_index_names()
         else:
@@ -246,7 +243,7 @@ class ExportPinecone(ExportVDB):
         internal_metadata = {
             "file_structure": self.file_structure,
             # author is from unix username
-            "author": os.getlogin(),
+            "author": os.environ.get('USER'),
             "exported_from": "pinecone",
             "indexes": index_metas,
         }
