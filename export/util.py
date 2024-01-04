@@ -1,6 +1,8 @@
 from collections import OrderedDict
+from getpass import getpass
 import hashlib
 import json
+import os
 
 
 def sort_recursive(d):
@@ -50,3 +52,27 @@ def extract_data_hash(arg_dict_combined):
     # make it 5 characters long
     data_hash = data_hash.hexdigest()[:5]
     return data_hash
+
+def set_arg_from_input(args, arg_name, prompt, type_name=str):
+    """
+    Set the value of an argument from user input if it is not already present
+    """
+    if arg_name not in args or args[arg_name] is None:
+        inp = input(prompt)
+        if inp == "":
+            args[arg_name] = None
+        else:
+            args[arg_name] = type_name(inp)
+    return
+
+
+def set_arg_from_password(args, arg_name, prompt, env_var_name):
+    """
+    Set the value of an argument from user input if it is not already present
+    """
+    if os.getenv(env_var_name) is not None:
+        args[arg_name] = os.getenv(env_var_name)
+    elif arg_name not in args or args[arg_name] is None:
+        args[arg_name] = getpass(prompt)
+    return
+

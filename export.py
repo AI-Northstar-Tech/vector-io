@@ -6,6 +6,7 @@ import sys
 import time
 from dotenv import load_dotenv
 from export.pinecone_export import ExportPinecone
+from export.util import set_arg_from_input, set_arg_from_password
 from export.weaviate_export import ExportWeaviate
 from export.qdrant_export import ExportQdrant
 from getpass import getpass
@@ -16,30 +17,7 @@ warnings.simplefilter("ignore", ResourceWarning)
 
 load_dotenv()
 
-
-def set_arg_from_input(args, arg_name, prompt, type_name=str):
-    """
-    Set the value of an argument from user input if it is not already present
-    """
-    if arg_name not in args or args[arg_name] is None:
-        inp = input(prompt)
-        if inp == "":
-            args[arg_name] = None
-        else:
-            args[arg_name] = type_name(inp)
-    return
-
-
-def set_arg_from_password(args, arg_name, prompt, env_var_name):
-    """
-    Set the value of an argument from user input if it is not already present
-    """
-    if os.getenv(env_var_name) is not None:
-        args[arg_name] = os.getenv(env_var_name)
-    elif arg_name not in args or args[arg_name] is None:
-        args[arg_name] = getpass(prompt)
-    return
-
+DEFAULT_MAX_FILE_SIZE = 1024  # in MB
 
 def export_pinecone(args):
     """
@@ -167,6 +145,12 @@ def main():
         type=str,
         help="Name of model used",
         default="text-embedding-ada-002",
+    )
+    parser.add_argument(
+        "--max_file_size",
+        type=int,
+        help="Maximum file size in MB (default: 1024)",
+        default=DEFAULT_MAX_FILE_SIZE,
     )
     subparsers = parser.add_subparsers(
         title="Vector Databases",

@@ -13,13 +13,13 @@ from tqdm import tqdm
 PINECONE_MAX_K = 10_000
 MAX_TRIES_OVERALL = 150
 MAX_FETCH_SIZE = 1_000
-MAX_PARQUET_FILE_SIZE = 1_000_000_000  # 1GB
 THREAD_POOL_SIZE = 30
 
 
 class ExportPinecone(ExportVDB):
     def __init__(self, args):
         pinecone.init(api_key=args["pinecone_api_key"], environment=args["environment"])
+        self.file_ctr = 1
         self.args = args
         self.file_structure = []
         self.collected_ids_by_modifying = False
@@ -39,12 +39,10 @@ class ExportPinecone(ExportVDB):
             if len(results["matches"]) == 0:
                 print("No vectors found that have not been exported yet.")
                 return []
-            print(
-                f"Found {len(results['matches'])} vectors that have not been exported yet."
-            )
             # mark the vectors as exported
             ids = [result["id"] for result in results["matches"]]
             ids_to_mark = list(set(ids) - all_ids)
+            print(f"Found {len(ids_to_mark)} vectors that have not been exported yet.")
             # fetch the vectors and upsert them with the exported_vectorio flag with MAX_FETCH_SIZE at a time
             mark_pbar = tqdm(total=len(ids_to_mark), desc="Marking vectors")
             for i in range(0, len(ids_to_mark), MAX_FETCH_SIZE):
@@ -222,6 +220,10 @@ class ExportPinecone(ExportVDB):
         print(f"Unmarked {len(all_ids)} vectors as exported.")
 
     def get_data(self):
+        self.hash_value = extract_data_hash(self.args)
+        self.timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.vdf_directory = f"vdf_{self.timestamp_in_format}_{self.hash_value}"
+        os.makedirs(self.vdf_directory, exist_ok=True)
         if (
             "index" not in self.args
             or self.args["index"] is None
@@ -234,8 +236,24 @@ class ExportPinecone(ExportVDB):
             for index_name in index_names:
                 if index_name not in self.get_all_index_names():
                     print(f"Index {index_name} does not exist, skipping...")
+        index_metas = {}
         for index_name in tqdm(index_names, desc="Fetching indexes"):
-            self.get_data_for_index(index_name)
+            index_meta = self.get_data_for_index(index_name)
+            index_metas[index_name] = index_meta
+
+        # Create and save internal metadata JSON
+        self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
+        internal_metadata = {
+            "file_structure": self.file_structure,
+            # author is from unix username
+            "author": os.getlogin(),
+            "exported_from": "pinecone",
+            "indexes": index_metas,
+        }
+        with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
+            json.dump(internal_metadata, json_file, indent=4)
+        # print internal metadata properly
+        print(json.dumps(internal_metadata, indent=4))
         return True
 
     def get_data_for_index(self, index_name):
@@ -245,18 +263,13 @@ class ExportPinecone(ExportVDB):
         # hash_value based on args
         # convert info to dict
         info_dict = info.__dict__["_data_store"]
-        hash_value = extract_data_hash(info_dict)
 
         # Fetch the actual data from the Pinecone index
+        index_meta = {}
         for namespace in tqdm(info["namespaces"], desc="Fetching namespaces"):
-            timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            vdf_directory = (
-                f"vdf_{index_name}_{namespace}_{timestamp_in_format}_{hash_value}"
-            )
             vectors_directory = os.path.join(
-                vdf_directory, "vectors_" + self.args["model_name"]
+                self.vdf_directory, f"i{self.file_ctr}.parquet"
             )
-            os.makedirs(vdf_directory, exist_ok=True)
             os.makedirs(vectors_directory, exist_ok=True)
 
             all_ids = list(
@@ -266,21 +279,27 @@ class ExportPinecone(ExportVDB):
                     ),
                     num_dimensions=info["dimension"],
                     namespace=namespace,
-                    hash_value=hash_value,
+                    hash_value=self.hash_value,
                 )
             )
             # unmark the vectors as exported
-            self.unmark_vectors_as_exported(all_ids, namespace, hash_value)
+            self.unmark_vectors_as_exported(all_ids, namespace, self.hash_value)
             # vectors is a dict of string to dict with keys id, values, metadata
             vectors = {}
             metadata = {}
             batch_ctr = 1
             total_size = 0
-            for i in tqdm(
-                range(0, len(all_ids), MAX_FETCH_SIZE), desc="Fetching vectors"
-            ):
+            i = 0
+            while i < len(all_ids):
                 batch_ids = all_ids[i : i + MAX_FETCH_SIZE]
-                data = self.index.fetch(batch_ids)
+                try:
+                    data = self.index.fetch(batch_ids)
+                except Exception as e:
+                    print(
+                        f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size)"
+                    )
+                    MAX_FETCH_SIZE = MAX_FETCH_SIZE * 3 // 4
+                    continue
                 batch_vectors = data["vectors"]
                 # verify that the ids are the same
                 assert set(batch_ids) == set(batch_vectors.keys())
@@ -288,29 +307,25 @@ class ExportPinecone(ExportVDB):
                 vectors.update({k: v["values"] for k, v in batch_vectors.items()})
                 dimensions = info["dimension"]
                 # if size of vectors is greater than 1GB, save the vectors to a parquet file
-                if vectors.__sizeof__() > MAX_PARQUET_FILE_SIZE:
+                if (vectors.__sizeof__() + metadata.__sizeof__()) > self.args[
+                    "max_file_size"
+                ] * 1024 * 1024:
                     total_size += self.save_vectors_to_parquet(
                         vectors, metadata, batch_ctr, vectors_directory
                     )
                     batch_ctr += 1
+                i += MAX_FETCH_SIZE
             total_size += self.save_vectors_to_parquet(
                 vectors, metadata, batch_ctr, vectors_directory
             )
-            # Create and save internal metadata JSON
-            self.file_structure.append(os.path.join(vdf_directory, "VDF_META.json"))
-            internal_metadata = {
-                "file_structure": self.file_structure,
-                # author is from unix username
-                "author": os.getlogin(),
-                "dimensions": info["dimension"],
+            namespace_meta = {
+                "namespace": namespace,
                 "total_vector_count": info["total_vector_count"],
                 "exported_vector_count": total_size,
-                "exported_from": "pinecone",
+                "dimensions": info["dimension"],
                 "model_name": self.args["model_name"],
+                "vector_columns": ["vector"],
+                "data_path": vectors_directory,
             }
-            with open(os.path.join(vdf_directory, "VDF_META.json"), "w") as json_file:
-                json.dump(internal_metadata, json_file, indent=4)
-            # print internal metadata properly
-            print(json.dumps(internal_metadata, indent=4))
-
-        return True
+            index_meta[namespace] = namespace_meta
+        return index_meta
