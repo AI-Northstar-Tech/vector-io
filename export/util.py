@@ -1,3 +1,4 @@
+from pathlib import Path
 from collections import OrderedDict
 from getpass import getpass
 import hashlib
@@ -53,14 +54,19 @@ def extract_data_hash(arg_dict_combined):
     data_hash = data_hash.hexdigest()[:5]
     return data_hash
 
-def set_arg_from_input(args, arg_name, prompt, type_name=str):
+def extract_numerical_hash(string_value):
+    """
+    Extract a numerical hash from a string
+    """
+    return int(hashlib.md5(string_value.encode("utf-8")).hexdigest(), 16)
+def set_arg_from_input(args, arg_name, prompt, type_name=str, default_value=None):
     """
     Set the value of an argument from user input if it is not already present
     """
     if arg_name not in args or args[arg_name] is None:
         inp = input(prompt)
         if inp == "":
-            args[arg_name] = None
+            args[arg_name] = None if default_value is None else type_name(default_value)
         else:
             args[arg_name] = type_name(inp)
     return
@@ -76,3 +82,18 @@ def set_arg_from_password(args, arg_name, prompt, env_var_name):
         args[arg_name] = getpass(prompt)
     return
 
+
+def expand_shorthand_path(shorthand_path):
+    """
+    Expand shorthand notations in a file path to a full path-like object.
+
+    :param shorthand_path: A string representing the shorthand path.
+    :return: A Path object representing the full path.
+    """
+    # Expand '~' to the user's home directory
+    expanded_path = os.path.expanduser(shorthand_path)
+
+    # Resolve '.' and '..' to get the absolute path
+    full_path = Path(expanded_path).resolve()
+
+    return str(full_path)
