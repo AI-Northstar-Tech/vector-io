@@ -222,10 +222,7 @@ class ExportPinecone(ExportVDB):
         print(f"Unmarked {len(all_ids)} vectors as exported.")
 
     def get_data(self):
-        if (
-            "index" not in self.args
-            or self.args["index"] is None
-        ):
+        if "index" not in self.args or self.args["index"] is None:
             index_names = self.get_all_index_names()
         else:
             index_names = self.args["index"].split(",")
@@ -241,11 +238,14 @@ class ExportPinecone(ExportVDB):
         # Create and save internal metadata JSON
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
         internal_metadata = {
+            "version": self.args["library_version"],
             "file_structure": self.file_structure,
             # author is from unix username
-            "author": os.environ.get('USER'),
+            "author": os.environ.get("USER"),
             "exported_from": "pinecone",
             "indexes": index_metas,
+            # timestamp with timezone
+            "exported_at": datetime.datetime.now().astimezone().isoformat(),
         }
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
             json.dump(internal_metadata, json_file, indent=4)
@@ -255,15 +255,12 @@ class ExportPinecone(ExportVDB):
 
     def get_data_for_index(self, index_name):
         self.index = pinecone.Index(index_name=index_name)
-        info = self.index.describe_index_stats()
-        namespace = info["namespaces"]
-        # hash_value based on args
-        # convert info to dict
-        info_dict = info.__dict__["_data_store"]
-
+        index_info = self.index.describe_index_stats()
         # Fetch the actual data from the Pinecone index
         index_meta = []
-        for namespace in tqdm(info["namespaces"], desc="Fetching namespaces"):
+        for namespace in tqdm(index_info["namespaces"], desc="Fetching namespaces"):
+            namespace_info = index_info["namespaces"][namespace]
+            print(f"Iterating namespace '{namespace}'")
             vectors_directory = os.path.join(
                 self.vdf_directory, f"i{self.file_ctr}.parquet"
             )
@@ -274,7 +271,7 @@ class ExportPinecone(ExportVDB):
                     index=pinecone.Index(
                         index_name=index_name, pool_threads=THREAD_POOL_SIZE
                     ),
-                    num_dimensions=info["dimension"],
+                    num_dimensions=index_info["dimension"],
                     namespace=namespace,
                     hash_value=self.hash_value,
                 )
@@ -303,7 +300,6 @@ class ExportPinecone(ExportVDB):
                 assert set(batch_ids) == set(batch_vectors.keys())
                 metadata.update({k: v["metadata"] for k, v in batch_vectors.items()})
                 vectors.update({k: v["values"] for k, v in batch_vectors.items()})
-                dimensions = info["dimension"]
                 # if size of vectors is greater than 1GB, save the vectors to a parquet file
                 if (vectors.__sizeof__() + metadata.__sizeof__()) > self.args[
                     "max_file_size"
@@ -318,10 +314,11 @@ class ExportPinecone(ExportVDB):
             )
             namespace_meta = {
                 "namespace": namespace,
-                "total_vector_count": info["total_vector_count"],
+                "total_vector_count": namespace_info["vector_count"],
                 "exported_vector_count": total_size,
-                "dimensions": info["dimension"],
+                "dimensions": index_info["dimension"],
                 "model_name": self.args["model_name"],
+                "metric": pinecone.describe_index(index_name).metric,
                 "vector_columns": ["vector"],
                 "data_path": vectors_directory,
             }
