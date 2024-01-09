@@ -10,7 +10,6 @@ class ImportVDF:
         self.args["dir"] = expand_shorthand_path(self.args["dir"])
         if not os.path.isdir(self.args["dir"]):
             raise Exception("Invalid dir path")
-        
         if not os.path.isfile(os.path.join(self.args["dir"], "VDF_META.json")):
             raise Exception("Invalid dir path, VDF_META.json not found")
         # Check if the VDF_META.json file exists

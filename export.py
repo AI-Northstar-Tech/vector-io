@@ -211,6 +211,7 @@ def main():
     args = parser.parse_args()
     # convert args to dict
     args = vars(args)
+    args["library_version"] = open("VERSION.txt").read()
     t_start = time.time()
     if args["vector_database"] == "pinecone":
         export_pinecone(args)
