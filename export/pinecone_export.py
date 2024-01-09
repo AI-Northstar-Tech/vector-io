@@ -85,7 +85,6 @@ class ExportPinecone(ExportVDB):
     def get_all_ids_from_index(
         self, index, num_dimensions, namespace="", hash_value=""
     ):
-        print("index.describe_index_stats()", index.describe_index_stats())
         if (
             self.args["id_range_start"] is not None
             and self.args["id_range_end"] is not None
@@ -233,7 +232,9 @@ class ExportPinecone(ExportVDB):
         for index_name in tqdm(index_names, desc="Fetching indexes"):
             index_meta = self.get_data_for_index(index_name)
             for index_meta_elem in index_meta:
-                index_meta_elem["metric"] = standardize_metric(pinecone.describe_index(index_name).metric, "pinecone")
+                index_meta_elem["metric"] = standardize_metric(
+                    pinecone.describe_index(index_name).metric, "pinecone"
+                )
             index_metas[index_name] = index_meta
 
         # Create and save internal metadata JSON
@@ -286,10 +287,33 @@ class ExportPinecone(ExportVDB):
             total_size = 0
             i = 0
             fetch_size = MAX_FETCH_SIZE
+            pbar = tqdm(total=len(all_ids), desc="Fetching vectors")
             while i < len(all_ids):
                 batch_ids = all_ids[i : i + fetch_size]
+                import signal
+
+                # Define your exception for the timeout event
+                class TimeoutException(Exception):
+                    pass
+
+                # Define your signal handler
+                def signal_handler(signum, frame):
+                    raise TimeoutException()
+
+                # Set the signal handler
+                signal.signal(signal.SIGALRM, signal_handler)
+
+                TIMEOUT = 10  # Set your timeout value here
+
                 try:
+                    # Start the timer
+                    signal.alarm(TIMEOUT)
+
+                    # Try to fetch the data
                     data = self.index.fetch(batch_ids)
+
+                    # If the fetch is successful, cancel the timer
+                    signal.alarm(0)
                 except Exception as e:
                     print(
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size)"
@@ -299,7 +323,12 @@ class ExportPinecone(ExportVDB):
                 batch_vectors = data["vectors"]
                 # verify that the ids are the same
                 assert set(batch_ids) == set(batch_vectors.keys())
-                metadata.update({k: v["metadata"] for k, v in batch_vectors.items()})
+                metadata.update(
+                    {
+                        k: v["metadata"] if "metadata" in v else {}
+                        for k, v in batch_vectors.items()
+                    }
+                )
                 vectors.update({k: v["values"] for k, v in batch_vectors.items()})
                 # if size of vectors is greater than 1GB, save the vectors to a parquet file
                 if (vectors.__sizeof__() + metadata.__sizeof__()) > self.args[
@@ -310,6 +339,7 @@ class ExportPinecone(ExportVDB):
                     )
                     batch_ctr += 1
                 i += fetch_size
+                pbar.update(fetch_size)
             total_size += self.save_vectors_to_parquet(
                 vectors, metadata, batch_ctr, vectors_directory
             )
