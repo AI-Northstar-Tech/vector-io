@@ -33,15 +33,16 @@ class ImportPinecone(ImportVDF):
                 try:
                     pinecone.create_index(
                         name=index_name,
-                        dimension=index_meta["dimensions"],
+                        dimension=index_meta[0]["dimensions"],
                         metric=standardize_metric_reverse(
-                            index_meta["metric"], "pinecone"
+                            index_meta[0]["metric"], "pinecone"
                         ),
                     )
                 except Exception as e:
                     print(e)
                     raise Exception(f"Invalid index name '{index_name}'", e)
             index = pinecone.Index(index_name=index_name)
+            current_batch_size = BATCH_SIZE
             for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
                 print(f"Importing data for namespace '{namespace_meta['namespace']}'")
                 namespace = namespace_meta["namespace"]
@@ -62,13 +63,18 @@ class ImportPinecone(ImportVDF):
 
                 vectors = {}
                 metadata = {}
-                vector_column_name = self.get_vector_column_name(index_name, namespace_meta)
-                
-                for file in parquet_files:
+                vector_column_name = self.get_vector_column_name(
+                    index_name, namespace_meta
+                )
+
+                for file in tqdm(parquet_files, desc="Loading data from parquet files"):
                     file_path = os.path.join(data_path, file)
                     df = pd.read_parquet(file_path)
                     vectors.update(
-                        {row["id"]: row[vector_column_name].tolist() for _, row in df.iterrows()}
+                        {
+                            row["id"]: row[vector_column_name].tolist()
+                            for _, row in df.iterrows()
+                        }
                     )
                     metadata.update(
                         {
@@ -84,11 +90,11 @@ class ImportPinecone(ImportVDF):
                     f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files"
                 )
                 # Upsert the vectors and metadata to the Pinecone index in batches
-                num_batches = math.ceil(len(vectors) / BATCH_SIZE)
-
+                num_batches = math.ceil(len(vectors) / current_batch_size)
+                imported_count = 0
                 for i in tqdm(range(num_batches), desc="Importing data in batches"):
-                    start_idx = i * BATCH_SIZE
-                    end_idx = min((i + 1) * BATCH_SIZE, len(vectors))
+                    start_idx = i * current_batch_size
+                    end_idx = min((i + 1) * current_batch_size, len(vectors))
 
                     batch_vectors = [
                         pinecone.Vector(
@@ -98,7 +104,12 @@ class ImportPinecone(ImportVDF):
                         )
                         for id, vector in list(vectors.items())[start_idx:end_idx]
                     ]
-
-                    index.upsert(vectors=batch_vectors, namespace=namespace)
-
-        print("Data import completed successfully.")
+                    try:
+                        index.upsert(vectors=batch_vectors, namespace=namespace)
+                        imported_count += len(batch_vectors)
+                    except Exception as e:
+                        print(f"Error upserting vectors for index '{index_name}'", e)
+                        current_batch_size = int(2 * current_batch_size / 3)
+                        print(f"Reducing batch size to {current_batch_size}")
+                        continue
+        print(f"Data import completed successfully. Imported {imported_count} vectors")
