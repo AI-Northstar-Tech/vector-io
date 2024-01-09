@@ -1,6 +1,6 @@
 import pandas as pd
 from tqdm import tqdm
-from export.util import expand_shorthand_path
+from export.util import expand_shorthand_path, standardize_metric_reverse
 from import_vdf.vdf_import import ImportVDF
 import pinecone
 import os
@@ -8,7 +8,6 @@ import json
 import json
 from dotenv import load_dotenv
 import math
-from packaging.version import Version
 
 load_dotenv()
 
@@ -21,16 +20,10 @@ class ImportPinecone(ImportVDF):
         pinecone.init(api_key=args["pinecone_api_key"], environment=args["environment"])
 
     def upsert_data(self):
-        # if self.vdf_meta["version"] is ahead fo self.args["library_version"], prompt user to upgrade vector-io library
-        if Version(self.vdf_meta["version"]) > Version(self.args["library_version"]):
-            print(
-                f"Warning: The version of vector-io library: ({self.args['library_version']}) is behind the version of the vdf directory: ({self.vdf_meta['version']})."
-            )
-            print(
-                "Please upgrade the vector-io library to the latest version to ensure compatibility."
-            )
         # Iterate over the indexes and import the data
-        for index_name, index_meta in tqdm(self.vdf_meta["indexes"].items(), desc="Importing indexes"):
+        for index_name, index_meta in tqdm(
+            self.vdf_meta["indexes"].items(), desc="Importing indexes"
+        ):
             print(f"Importing data for index '{index_name}'")
             # list indexes
             indexes = pinecone.list_indexes()
@@ -38,7 +31,13 @@ class ImportPinecone(ImportVDF):
             if index_name not in indexes:
                 # create index
                 try:
-                    pinecone.create_index(name=index_name, dimension=index_meta[0]["dimensions"])
+                    pinecone.create_index(
+                        name=index_name,
+                        dimension=index_meta["dimensions"],
+                        metric=standardize_metric_reverse(
+                            index_meta["metric"], "pinecone"
+                        ),
+                    )
                 except Exception as e:
                     print(e)
                     raise Exception(f"Invalid index name '{index_name}'", e)
@@ -63,21 +62,27 @@ class ImportPinecone(ImportVDF):
 
                 vectors = {}
                 metadata = {}
+                vector_column_name = self.get_vector_column_name(index_name, namespace_meta)
+                
                 for file in parquet_files:
                     file_path = os.path.join(data_path, file)
                     df = pd.read_parquet(file_path)
-                    vectors.update({row["id"]: row["vector"].tolist() for _, row in df.iterrows()})
+                    vectors.update(
+                        {row["id"]: row[vector_column_name].tolist() for _, row in df.iterrows()}
+                    )
                     metadata.update(
                         {
                             row["id"]: {
                                 key: value
                                 for key, value in row.items()
-                                if key != "id" and key != "vector"
+                                if key != "id" and key != vector_column_name
                             }
                             for _, row in df.iterrows()
                         }
                     )
-                print(f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files")
+                print(
+                    f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files"
+                )
                 # Upsert the vectors and metadata to the Pinecone index in batches
                 num_batches = math.ceil(len(vectors) / BATCH_SIZE)
 

@@ -69,18 +69,21 @@ class ImportQdrant(ImportVDF):
 
                 vectors = {}
                 metadata = {}
+                vector_column_name = self.get_vector_column_name(
+                    new_collection_name, namespace_meta
+                )
                 for file in parquet_files:
                     file_path = os.path.join(data_path, file)
                     df = pd.read_parquet(file_path)
                     vectors.update(
-                        {row["id"]: row["vector"] for _, row in df.iterrows()}
+                        {row["id"]: row[vector_column_name] for _, row in df.iterrows()}
                     )
                     metadata.update(
                         {
                             row["id"]: {
                                 key: value
                                 for key, value in row.items()
-                                if key != "id" and key != "vector"
+                                if key != "id" and key != vector_column_name
                             }
                             for _, row in df.iterrows()
                         }

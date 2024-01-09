@@ -46,6 +46,7 @@ class ExportQdrant(ExportVDB):
         # Create and save internal metadata JSON
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
         internal_metadata = {
+            "version": self.args["library_version"],
             "file_structure": self.file_structure,
             "author": os.environ.get("USER"),
             "exported_from": "qdrant",

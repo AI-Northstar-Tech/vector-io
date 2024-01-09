@@ -4,7 +4,7 @@ from getpass import getpass
 import hashlib
 import json
 import os
-
+from qdrant_client.http.models import Distance
 
 def sort_recursive(d):
     """
@@ -97,3 +97,35 @@ def expand_shorthand_path(shorthand_path):
     full_path = Path(expanded_path).resolve()
 
     return str(full_path)
+
+db_metric_to_standard_metric = {
+    "pinecone": {
+        "cosine": Distance.COSINE,
+        "euclidean": Distance.EUCLID,
+        "dotproduct": Distance.DOT,
+    },
+    "qdrant": {
+        Distance.COSINE: Distance.COSINE,
+        Distance.EUCLID: Distance.EUCLID,
+        Distance.DOT: Distance.DOT,
+    },
+}
+def standardize_metric(metric, db):
+    """
+    Standardize the metric name to the one used in the standard library.
+    """
+    if db in db_metric_to_standard_metric and metric in db_metric_to_standard_metric[db]:
+        return db_metric_to_standard_metric[db][metric]
+    else:
+        raise Exception(f"Invalid metric '{metric}' for database '{db}'")
+
+def standardize_metric_reverse(metric, db):
+    """
+    Standardize the metric name to the one used in the standard library.
+    """
+    if db in db_metric_to_standard_metric and metric in db_metric_to_standard_metric[db].values():
+        for key, value in db_metric_to_standard_metric[db].items():
+            if value == metric:
+                return key
+    else:
+        raise Exception(f"Invalid metric '{metric}' for database '{db}'")
