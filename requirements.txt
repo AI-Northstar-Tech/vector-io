@@ -4,6 +4,5 @@ pinecone-client
 pyarrow
 qdrant_client
 tqdm
-weaviate_client
 python-dotenv
 huggingface_hub

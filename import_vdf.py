@@ -4,7 +4,6 @@ import argparse
 import time
 from dotenv import load_dotenv
 
-# from export.vdb_export import ExportPinecone, ExportWeaviate, ExportQdrant
 from export.util import set_arg_from_input, set_arg_from_password
 from import_vdf.pinecone_import import ImportPinecone
 from import_vdf.qdrant_import import ImportQdrant

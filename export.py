@@ -7,7 +7,6 @@ import time
 from dotenv import load_dotenv
 from export.pinecone_export import ExportPinecone
 from export.util import set_arg_from_input, set_arg_from_password
-from export.weaviate_export import ExportWeaviate
 from export.qdrant_export import ExportQdrant
 from getpass import getpass
 import warnings
@@ -65,28 +64,6 @@ def export_pinecone(args):
     return pinecone_export
 
 
-def export_weaviate(args):
-    """
-    Export data from Weaviate
-    """
-    set_arg_from_input(args, "url", "Enter the location of Weaviate instance: ")
-    set_arg_from_input(
-        args,
-        "class_name",
-        "Enter the name of class to export, or type all to export all classes: ",
-    )
-    set_arg_from_input(
-        args, "include_crossrefs", "Include cross references, enter Y or N: "
-    )
-    if args["include_crossrefs"] == "Y":
-        args["include_crossrefs"] = True
-    else:
-        args["include_crossrefs"] = False
-    weaviate_export = ExportWeaviate(args)
-    weaviate_export.get_data()
-    return weaviate_export
-
-
 def export_qdrant(args):
     """
     Export data from Qdrant
@@ -114,24 +91,19 @@ def export_qdrant(args):
 
 def main():
     """
-    Export data from Pinecone, Weaviate and Qdrant to sqlite database and parquet file.
+    Export data from various vector databases to the VDF format for vector datasets.
 
     Usage:
         python export.py <vector_database> [options]
 
     Arguments:
         vector_database (str): Choose the vectors database to export data from.
-            Possible values: "pinecone", "weaviate", "qdrant".
+            Possible values: "pinecone", "qdrant".
 
     Options:
         Pinecone:
             -e, --environment (str): Environment of Pinecone instance.
             -i, --index (str): Name of indexes to export (comma-separated).
-
-        Weaviate:
-            -u, --url (str): Location of Weaviate instance.
-            -c, --class_name (str): Name of class to export.
-            -i, --include_crossrefs (bool): Include cross references, set Y or N.
 
         Qdrant:
             -u, --url (str): Location of Qdrant instance.
@@ -141,14 +113,11 @@ def main():
         Export data from Pinecone:
         python export.py pinecone -e my_env -i my_index
 
-        Export data from Weaviate:
-        python export.py weaviate -u http://localhost:8080 -c my_class -i Y
-
         Export data from Qdrant:
         python export.py qdrant -u http://localhost:6333 -c my_collection
     """
     parser = argparse.ArgumentParser(
-        description="Export data from Pinecone, Weaviate and Qdrant to sqlite database and parquet file"
+        description="Export data from various vector databases to the VDF format for vector datasets"
     )
     parser.add_argument(
         "-m",
@@ -203,23 +172,6 @@ def main():
         default=True,
     )
 
-    # Weaviate
-    parser_weaviate = subparsers.add_parser(
-        "weaviate", help="Export data from Weaviate"
-    )
-    parser_weaviate.add_argument(
-        "-u", "--url", type=str, help="Location of Weaviate instance"
-    )
-    parser_weaviate.add_argument(
-        "-c", "--class_name", type=str, help="Name of class to export"
-    )
-    parser_weaviate.add_argument(
-        "-i",
-        "--include_crossrefs",
-        type=bool,
-        help="Include cross references, set Y or N",
-    )
-
     # Qdrant
     parser_qdrant = subparsers.add_parser("qdrant", help="Export data from Qdrant")
     parser_qdrant.add_argument(
@@ -236,8 +188,6 @@ def main():
     t_start = time.time()
     if args["vector_database"] == "pinecone":
         export_obj = export_pinecone(args)
-    elif args["vector_database"] == "weaviate":
-        export_obj = export_weaviate(args)
     elif args["vector_database"] == "qdrant":
         export_obj = export_qdrant(args)
     else:
