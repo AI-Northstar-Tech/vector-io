@@ -1,41 +1,59 @@
 # Vector IO
 
-## **Vector DB companies don't have an incentive to create an interoperable format for vector datasets. So we've built this library to help the community avoid vendor lock-in and ease migrations and restructuring**
+This library uses a universal format for vector datasets to easily export and import data from all vector databases.
 
-### Use the universal VDF format for vector datasets to easily export and import data from all vector databases
+See the [Contributing](#contributing) section to add support for your favorite vector database.
 
-**[Universal Vector Dataset Format (VDF) specification](https://docs.google.com/document/d/1SaZ0nsBw8ZZCCcPXoc2nwTY5A3KBJkTEnmZZvFxHAu4/edit#heading=h.32if60hafsdt)**
+## Universal Vector Dataset Format (VDF) specification
 
-## Motivation
+1. VDF_META.json: It is a json file with the following schema:
 
-Each vector database has their own way of storing vectors and metadata, making it hard for people to transfer a dataset from one into the other.
-Existing Alternatives:
+```
+interface Index {
+  namespace: string;
+  total_vector_count: number;
+  exported_vector_count: number;
+  dimensions: number;
+  model_name: string;
+  vector_columns: string[];
+  data_path: string;
+  metric: 'Euclid' | 'Cosine' | 'Dot';
+}
 
-1. Qdrant (<https://qdrant.tech/documentation/cloud/backups/>) and Weaviate (<https://weaviate.io/developers/weaviate/configuration/backups>) have their own backup formats, which are not portable to other DBs.
-2. Pinecone has a datasets library: <https://pinecone-io.github.io/pinecone-datasets/pinecone_datasets.html> but it is not used outside of their demo public datasets. Their backups are stored on their own servers, with their own proprietary format, without the ability to move the data out of their cluster.
-3. Txt-ai: they have a proprietary format that can only be loaded via their library: <https://huggingface.co/NeuML/txtai-wikipedia/tree/main>. It was used for just one wikipedia embeddings dump.
-4. Cohere (<https://huggingface.co/datasets/Cohere/wikipedia-22-12-simple-embeddings>) released their model's wikipedia embeddings in an ad-hoc schema in parquet format.
-5. Macrocosm/Alexandria: They provide various embedding dumps. They distribute them as zip files, containing multiple parquet files. The parquet file contains both the embedding as well as metadata like title and doi. They provide an ad-hoc script to read the data, and a params.txt file to record the version and the model+prompt used.
+interface VDFMeta {
+  version: string;
+  file_structure: string[];
+  author: string;
+  exported_from: 'pinecone' | 'qdrant'; // others when they are added
+  indexes: {
+    [key: string]: Index[];
+  };
+  exported_at: string;
+}
+```
 
-A collection of utility functions and scripts to import and export vector datasets between various vector databases.
-
-The representation that we export to is:
-
-1. parquet file for the vectors (to be changed to Parquet)
-2. SQLite file for metadata
-3. json for meta information about the dataset (author, description, model used, statistics, licensing)
+2. Parquet files/folders for metadata and vectors.
 
 Feel free to send a PR to add an import/export implementation for your favorite vector DB.
 
-## Export
+## Installation
 
-## ./export.py --help
+```bash
+git clone https://github.com/AI-Northstar-Tech/vector-io.git
+cd vector-io
+pip install -r requirements.txt
+```
+
+## Export Script
+
+```bash
+./export.py --help
+
 usage: export.py [-h] [-m MODEL_NAME] [--max_file_size MAX_FILE_SIZE]
                  [--push_to_hub | --no-push_to_hub]
-                 {pinecone,weaviate,qdrant} ...
+                 {pinecone,qdrant} ...
 
-Export data from Pinecone, Weaviate and Qdrant to sqlite database and
-parquet file
+Export data from a vector database to VDF
 
 options:
   -h, --help            show this help message and exit
@@ -52,8 +70,10 @@ Vector Databases:
   {pinecone,qdrant}
     pinecone            Export data from Pinecone
     qdrant              Export data from Qdrant
+```
 
-1. ./export.py pinecone --help
+```bash
+./export.py pinecone --help
 usage: export.py pinecone [-h] [-e ENVIRONMENT] [-i INDEX]
                           [-s ID_RANGE_START]
                           [--id_range_end ID_RANGE_END]
@@ -74,8 +94,10 @@ options:
                         Path to id list file
   --modify_to_search MODIFY_TO_SEARCH
                         Allow modifying data to search
+```
 
-2. ./export.py qdrant --help
+```bash
+./export.py qdrant --help
 usage: export.py qdrant [-h] [-u URL] [-c COLLECTIONS]
 
 options:
@@ -83,9 +105,11 @@ options:
   -u URL, --url URL     Location of Qdrant instance
   -c COLLECTIONS, --collections COLLECTIONS
                         Names of collections to export
+```
 
-## Import
+## Import script
 
+```bash
 ./import_vdf.py --help
 usage: import_vdf.py [-h] [-d DIR] {pinecone,qdrant} ...
 
@@ -102,7 +126,7 @@ Vector Databases:
     pinecone         Import data to Pinecone
     qdrant           Import data to Qdrant
 
-./import_vdf.py pinecone --help      
+./import_vdf.py pinecone --help
 usage: import_vdf.py pinecone [-h] [-e ENVIRONMENT]
 
 options:
@@ -116,3 +140,32 @@ usage: import_vdf.py qdrant [-h] [-u URL]
 options:
   -h, --help         show this help message and exit
   -u URL, --url URL  Qdrant url
+
+```
+
+## Examples
+
+```bash
+./export.py -m hkunlp/instructor-xl --push_to_hub pinecone --environment gcp-starter
+```
+
+Follow the prompt to select the index and id range to export.
+
+## Contributing
+
+### Adding a new vector database
+
+If you wish to add an import/export implementation for a new vector database, you must also implement the other side of the import/export for the same database.
+Please fork the repo and send a PR for both the import and export scripts.
+
+### Changing the VDF specification
+
+If you wish to change the VDF specification, please open an issue to discuss the change before sending a PR.
+
+### Efficiency improvements
+
+If you wish to improve the efficiency of the import/export scripts, please fork the repo and send a PR.
+
+## Questions
+
+If you have any questions, please open an issue on the repo or message Dhruv Anand on [LinkedIn](https://www.linkedin.com/in/dhruv-anand-ainorthstartech/)
