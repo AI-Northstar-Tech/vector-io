@@ -247,13 +247,14 @@ def main():
         main()
     t_end = time.time()
     # formatted time
+    print("Export to disk completed. Exported to:", export_obj.vdf_directory)
     print(
         "Time taken to export data: ",
         time.strftime("%H:%M:%S", time.gmtime(t_end - t_start)),
     )
-    print("Export to disk completed. Exported to:", export_obj.vdf_directory)
+
     if args["push_to_hub"]:
-        print("Pushing to hub...")
+        print("Pushing to HuggingFace Hub...")
         from huggingface_hub import HfApi, HfFolder, Repository
 
         # Log in to Hugging Face

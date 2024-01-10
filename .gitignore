@@ -5,3 +5,4 @@ VDF_dataset*/
 vdf_*/
 notebooks/results*.csv
 vector-io.code-workspace
+notebooks/data/*

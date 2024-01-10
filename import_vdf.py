@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import time
 from dotenv import load_dotenv
 
 # from export.vdb_export import ExportPinecone, ExportWeaviate, ExportQdrant
@@ -87,6 +88,8 @@ def main():
         args, "dir", "Enter the directory of vector dataset to be imported: ", str
     )
     
+    start_time = time.time()
+    
     if (
         ("vector_database" not in args)
         or (args["vector_database"] is None)
@@ -104,6 +107,11 @@ def main():
             db_choices,
         )
 
+    end_time = time.time()
+    
+    print(f"Time taken: {end_time - start_time} seconds")
+    
+    
 
 if __name__ == "__main__":
     main()
