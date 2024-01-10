@@ -29,12 +29,13 @@ Feel free to send a PR to add an import/export implementation for your favorite 
 
 ## Export
 
-    ./export.py --help
+## ./export.py --help
 usage: export.py [-h] [-m MODEL_NAME] [--max_file_size MAX_FILE_SIZE]
+                 [--push_to_hub | --no-push_to_hub]
                  {pinecone,weaviate,qdrant} ...
 
-Export data from Pinecone, Weaviate and Qdrant to sqlite database and parquet
-file
+Export data from Pinecone, Weaviate and Qdrant to sqlite database and
+parquet file
 
 options:
   -h, --help            show this help message and exit
@@ -42,18 +43,21 @@ options:
                         Name of model used
   --max_file_size MAX_FILE_SIZE
                         Maximum file size in MB (default: 1024)
+  --push_to_hub, --no-push_to_hub
+                        Push to hub
 
 Vector Databases:
   Choose the vectors database to export data from
 
-  {pinecone,weaviate,qdrant}
+  {pinecone,qdrant}
     pinecone            Export data from Pinecone
-    weaviate            Export data from Weaviate
     qdrant              Export data from Qdrant
 
-./export.py pinecone --help
-usage: export.py pinecone [-h] [-e ENVIRONMENT] [-i INDEX] [-s ID_RANGE_START]
-                          [--id_range_end ID_RANGE_END] [-f ID_LIST_FILE]
+1. ./export.py pinecone --help
+usage: export.py pinecone [-h] [-e ENVIRONMENT] [-i INDEX]
+                          [-s ID_RANGE_START]
+                          [--id_range_end ID_RANGE_END]
+                          [-f ID_LIST_FILE]
                           [--modify_to_search MODIFY_TO_SEARCH]
 
 options:
@@ -71,18 +75,44 @@ options:
   --modify_to_search MODIFY_TO_SEARCH
                         Allow modifying data to search
 
+2. ./export.py qdrant --help
+usage: export.py qdrant [-h] [-u URL] [-c COLLECTIONS]
+
+options:
+  -h, --help            show this help message and exit
+  -u URL, --url URL     Location of Qdrant instance
+  -c COLLECTIONS, --collections COLLECTIONS
+                        Names of collections to export
 
 ## Import
 
-WIP
+./import_vdf.py --help
+usage: import_vdf.py [-h] [-d DIR] {pinecone,qdrant} ...
 
-# Compare Vector DBs easily
+Import data from VDF to a vector database
 
-Check out the [Feature Matrix](https://docs.google.com/spreadsheets/d/e/2PACX-1vTw7znhJYkkJ_EM7ZPMPRPPuAE8kjUDfvi9STzvq1sXaeqei4LSGL_Qpfe-MooQZPHROhdzgJcY8ZXF/pubhtml) which lists all the vector DBs and their attributes.
+options:
+  -h, --help         show this help message and exit
+  -d DIR, --dir DIR  Directory to import
 
-You can chat with [VectorDB Guide GPT](https://chat.openai.com/g/g-OS6d9grY0-vectordb-guide) to figure out which DB you should to use. It uses the data fro mthe above table.
+Vector Databases:
+  Choose the vectors database to export data from
 
-## Other VectorDB Feature Matrices
+  {pinecone,qdrant}
+    pinecone         Import data to Pinecone
+    qdrant           Import data to Qdrant
 
-- <https://objectbox.io/vector-database/>
-- [Vector Database Comparison Cheatsheet](https://docs.google.com/spreadsheets/d/1oAeF4Q7ILxxfInGJ8vTsBck3-2U9VV8idDf3hJOozNw/edit?pli=1#gid=0)
+./import_vdf.py pinecone --help      
+usage: import_vdf.py pinecone [-h] [-e ENVIRONMENT]
+
+options:
+  -h, --help            show this help message and exit
+  -e ENVIRONMENT, --environment ENVIRONMENT
+                        Pinecone environment
+
+./import_vdf.py qdrant --help  
+usage: import_vdf.py qdrant [-h] [-u URL]
+
+options:
+  -h, --help         show this help message and exit
+  -u URL, --url URL  Qdrant url
