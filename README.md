@@ -34,8 +34,6 @@ interface VDFMeta {
 
 2. Parquet files/folders for metadata and vectors.
 
-Feel free to send a PR to add an import/export implementation for your favorite vector DB.
-
 ## Installation
 
 ```bash
