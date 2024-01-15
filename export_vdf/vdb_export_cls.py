@@ -2,7 +2,7 @@ import datetime
 import pandas as pd
 import os
 
-from export.util import extract_data_hash
+from export_vdf.util import extract_data_hash
 
 
 class ExportVDB:

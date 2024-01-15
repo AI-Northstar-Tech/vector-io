@@ -1,11 +1,9 @@
 import pandas as pd
 from tqdm import tqdm
-from export.util import expand_shorthand_path, standardize_metric_reverse
-from import_vdf.vdf_import import ImportVDF
+from export_vdf.util import standardize_metric_reverse
+from import_vdf.vdf_import_cls import ImportVDF
 import pinecone
 import os
-import json
-import json
 from dotenv import load_dotenv
 import math
 
