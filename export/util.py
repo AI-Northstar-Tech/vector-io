@@ -6,6 +6,7 @@ import json
 import os
 from qdrant_client.http.models import Distance
 
+
 def sort_recursive(d):
     """
     Recursively sort the nested dictionary by its keys.
@@ -28,7 +29,10 @@ def sort_recursive(d):
     if hasattr(d, "attribute_map"):
         return sort_recursive(d.attribute_map)
     if not isinstance(d, dict):
-        d = dict(d)
+        try:
+            d = dict(d)
+        except Exception as e:
+            d = {"": str(d)}
 
     sorted_dict = OrderedDict()
     for key, value in sorted(d.items()):
@@ -54,16 +58,23 @@ def extract_data_hash(arg_dict_combined):
     data_hash = data_hash.hexdigest()[:5]
     return data_hash
 
+
 def extract_numerical_hash(string_value):
     """
     Extract a numerical hash from a string
     """
     return int(hashlib.md5(string_value.encode("utf-8")).hexdigest(), 16)
+
+
 def set_arg_from_input(args, arg_name, prompt, type_name=str, default_value=None):
     """
     Set the value of an argument from user input if it is not already present
     """
-    if arg_name not in args or args[arg_name] is None or args[arg_name] == default_value:
+    if (
+        arg_name not in args
+        or args[arg_name] is None
+        or args[arg_name] == default_value
+    ):
         inp = input(prompt)
         if inp == "":
             args[arg_name] = None if default_value is None else type_name(default_value)
@@ -98,6 +109,7 @@ def expand_shorthand_path(shorthand_path):
 
     return str(full_path)
 
+
 db_metric_to_standard_metric = {
     "pinecone": {
         "cosine": Distance.COSINE,
@@ -110,20 +122,29 @@ db_metric_to_standard_metric = {
         Distance.DOT: Distance.DOT,
     },
 }
+
+
 def standardize_metric(metric, db):
     """
     Standardize the metric name to the one used in the standard library.
     """
-    if db in db_metric_to_standard_metric and metric in db_metric_to_standard_metric[db]:
+    if (
+        db in db_metric_to_standard_metric
+        and metric in db_metric_to_standard_metric[db]
+    ):
         return db_metric_to_standard_metric[db][metric]
     else:
         raise Exception(f"Invalid metric '{metric}' for database '{db}'")
+
 
 def standardize_metric_reverse(metric, db):
     """
     Standardize the metric name to the one used in the standard library.
     """
-    if db in db_metric_to_standard_metric and metric in db_metric_to_standard_metric[db].values():
+    if (
+        db in db_metric_to_standard_metric
+        and metric in db_metric_to_standard_metric[db].values()
+    ):
         for key, value in db_metric_to_standard_metric[db].items():
             if value == metric:
                 return key

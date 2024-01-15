@@ -49,3 +49,16 @@ class ImportVDF:
                 )
             vector_column_name = vector_column_names[0]
         return vector_column_name
+
+    def get_parquet_files(self, data_path):
+        # Load the data from the parquet files
+        if not os.path.isdir(data_path):
+            if data_path.endswith(".parquet"):
+                return [data_path]
+            else:
+                raise Exception(f"Invalid data path '{data_path}'")
+        else:
+            parquet_files = sorted(
+                [file for file in os.listdir(data_path) if file.endswith(".parquet")]
+            )
+            return parquet_files

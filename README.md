@@ -47,7 +47,7 @@ pip install -r requirements.txt
 ## Export Script
 
 ```bash
-./export.py --help
+./export_vdf.py --help
 
 usage: export.py [-h] [-m MODEL_NAME] [--max_file_size MAX_FILE_SIZE]
                  [--push_to_hub | --no-push_to_hub]
@@ -73,7 +73,7 @@ Vector Databases:
 ```
 
 ```bash
-./export.py pinecone --help
+./export_vdf.py pinecone --help
 usage: export.py pinecone [-h] [-e ENVIRONMENT] [-i INDEX]
                           [-s ID_RANGE_START]
                           [--id_range_end ID_RANGE_END]
@@ -97,7 +97,7 @@ options:
 ```
 
 ```bash
-./export.py qdrant --help
+./export_vdf.py qdrant --help
 usage: export.py qdrant [-h] [-u URL] [-c COLLECTIONS]
 
 options:
@@ -146,7 +146,7 @@ options:
 ## Examples
 
 ```bash
-./export.py -m hkunlp/instructor-xl --push_to_hub pinecone --environment gcp-starter
+./export_vdf.py -m hkunlp/instructor-xl --push_to_hub pinecone --environment gcp-starter
 ```
 
 Follow the prompt to select the index and id range to export.

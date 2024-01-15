@@ -79,7 +79,7 @@ def export_qdrant(args):
         args,
         "collections",
         "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
-        lambda x: x.split(","),
+        str,
     )
     set_arg_from_password(
         args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"

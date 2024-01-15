@@ -6,3 +6,4 @@ vdf_*/
 notebooks/results*.csv
 vector-io.code-workspace
 notebooks/data/*
+data/*

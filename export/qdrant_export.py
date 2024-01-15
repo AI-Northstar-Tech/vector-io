@@ -58,6 +58,20 @@ class ExportQdrant(ExportVDB):
         print(json.dumps(internal_metadata, indent=4))
         return True
 
+    def try_scroll(self, fetch_size, collection_name, next_offset):
+        try:
+            records, next_offset = self.client.scroll(
+                collection_name=collection_name,
+                offset=next_offset,
+                limit=fetch_size,
+                with_payload=True,
+                with_vectors=True,
+            )
+            return records, next_offset, fetch_size
+        except:
+            print("Failed to fetch data, reducing fetch size to", (fetch_size * 2) // 3)
+            return self.try_scroll((fetch_size * 2) // 3, collection_name, next_offset)
+
     def get_data_for_collection(self, collection_name):
         vectors_directory = os.path.join(self.vdf_directory, collection_name)
         os.makedirs(vectors_directory, exist_ok=True)
@@ -68,11 +82,9 @@ class ExportQdrant(ExportVDB):
 
         num_vectors_exported = 0
         dim = self.client.get_collection(collection_name).config.params.vectors.size
-        records, next_offset = self.client.scroll(
-            collection_name=collection_name,
-            limit=MAX_FETCH_SIZE,
-            with_payload=True,
-            with_vectors=True,
+        next_offset = 0
+        records, next_offset, fetch_size = self.try_scroll(
+            MAX_FETCH_SIZE, collection_name, next_offset
         )
         num_vectors_exported += self.save_from_records(
             vectors,
@@ -82,12 +94,8 @@ class ExportQdrant(ExportVDB):
         )
         pbar = tqdm(total=total, desc=f"Exporting {collection_name}")
         while next_offset is not None:
-            records, next_offset = self.client.scroll(
-                collection_name=collection_name,
-                offset=next_offset,
-                limit=MAX_FETCH_SIZE,
-                with_payload=True,
-                with_vectors=True,
+            records, next_offset, fetch_size = self.try_scroll(
+                fetch_size, collection_name, next_offset
             )
             num_vectors_exported += self.save_from_records(
                 vectors,
