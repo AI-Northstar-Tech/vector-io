@@ -28,7 +28,9 @@ class ExportPinecone(ExportVDB):
     def get_all_index_names(self):
         return self.pc.list_indexes().names()
 
-    def get_ids_from_query(self, index, input_vector, namespace, all_ids, hash_value):
+    def get_ids_from_vector_query(
+        self, index, input_vector, namespace, all_ids, hash_value
+    ):
         if self.args.get("modify_to_search"):
             marker_key = "exported_vectorio_" + hash_value
             results = index.query(
@@ -45,7 +47,7 @@ class ExportPinecone(ExportVDB):
             ids_to_mark = list(set(ids) - all_ids)
             print(f"Found {len(ids_to_mark)} vectors that have not been exported yet.")
             # fetch the vectors and upsert them with the exported_vectorio flag with MAX_FETCH_SIZE at a time
-            mark_pbar = tqdm(total=len(ids_to_mark), desc="Marking vectors")
+            mark_pbar = tqdm(total=len(ids_to_mark), desc="Step 1/3: Marking vectors")
             mark_batch_size = MAX_FETCH_SIZE
             i = 0
             while i < len(ids_to_mark):
@@ -57,7 +59,7 @@ class ExportPinecone(ExportVDB):
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size)"
                     )
                     mark_batch_size = mark_batch_size * 3 // 4
-                    if mark_batch_size < MAX_FETCH_SIZE/100:
+                    if mark_batch_size < MAX_FETCH_SIZE / 100:
                         raise Exception("Could not fetch vectors")
                     continue
                 batch_vectors = data["vectors"]
@@ -82,9 +84,11 @@ class ExportPinecone(ExportVDB):
                 try:
                     resp = index.upsert(vectors=upsert_data, namespace=namespace)
                 except Exception as e:
-                    print(f"Error upserting vectors: {e}. Trying with a smaller batch size (--batch_size)")
+                    print(
+                        f"Error upserting vectors: {e}. Trying with a smaller batch size (--batch_size)"
+                    )
                     mark_batch_size = mark_batch_size * 3 // 4
-                    if mark_batch_size < MAX_FETCH_SIZE/100:
+                    if mark_batch_size < MAX_FETCH_SIZE / 100:
                         raise Exception("Could not upsert vectors")
                     continue
                 i += resp["upserted_count"]
@@ -126,13 +130,81 @@ class ExportPinecone(ExportVDB):
         num_vectors = index.describe_index_stats()["namespaces"][namespace][
             "vector_count"
         ]
+        # do small random search and check if ids are int
+        random_results = index.query(
+            vector=np.random.rand(num_dimensions).tolist(),
+            include_values=False,
+            top_k=10,
+            namespace=namespace,
+        )
+        random_results_ids_strs = [x["id"] for x in random_results["matches"]]
         all_ids = set()
+        if not all(x.isdigit() for x in random_results_ids_strs):
+            print(
+                "The ids are not integers. Please provide a range of ids using --id_list_file if you want to export a subset of vectors."
+            )
+            return []
+        else:
+            random_results_ids = [
+                int(x) for x in random_results_ids_strs if x.isdigit()
+            ]
+            # keep querying out past the range of ids to get all ids
+            all_ids.update(random_results_ids)
+            ids_checked = set(all_ids)
+            with tqdm(
+                total=num_vectors, desc="Collecting IDs using fetch on integer ids"
+            ) as pbar:
+                fetch_size = MAX_FETCH_SIZE
+                while len(all_ids) < num_vectors:
+                    range_min = min(all_ids) - fetch_size
+                    range_max = max(all_ids) + fetch_size
+                    range_obj = range(range_min, range_max)
+                    print("Checking ids in range {} to {}".format(range_min, range_max))
+                    ids_to_fetch = [
+                        x
+                        for x in list(range_obj)
+                        if x not in all_ids.union(ids_checked)
+                    ]
+                    # in increments of fetch size
+                    i = 0
+                    try_count = 0
+                    while (
+                        i < len(ids_to_fetch)
+                        and len(all_ids) < num_vectors
+                        and try_count < MAX_TRIES_OVERALL
+                        and len(ids_to_fetch) > 0
+                    ):
+                        ids_to_fetch_strs = [
+                            str(x) for x in ids_to_fetch[i : i + fetch_size]
+                        ]
+                        newly_fetched = index.fetch(
+                            ids_to_fetch_strs, namespace=namespace
+                        )
+                        pbar.update(len(newly_fetched["vectors"]))
+                        all_ids.update(
+                            [int(x) for x in newly_fetched["vectors"].keys()]
+                        )
+                        i += fetch_size
+                        try_count += 1
+                        ids_checked.update([int(x) for x in ids_to_fetch_strs])
+                    if try_count >= MAX_TRIES_OVERALL:
+                        print(
+                            f"Could not collect all ids after {MAX_TRIES_OVERALL} tries. Please provide range of ids instead. Exporting the ids collected so far."
+                        )
+                    else:
+                        print(
+                            f"Collected {len(all_ids)} ids out of {num_vectors} vectors in {try_count} fetches."
+                        )
+                    return [str(x) for x in all_ids]
+        # random search method
         max_tries = max((num_vectors // PINECONE_MAX_K) * 3, MAX_TRIES_OVERALL)
         try_count = 0
         # -1s in each dimension are the min values
         vector_range_min = np.array([-1] * num_dimensions)
         vector_range_max = np.array([1] * num_dimensions)
-        with tqdm(total=num_vectors, desc="Collecting IDs") as pbar:
+        with tqdm(
+            total=num_vectors, desc="Collecting IDs using random vector search"
+        ) as pbar:
             while len(all_ids) < num_vectors:
                 # fetch 10 random vectors from all_ids
                 if len(all_ids) > 10:
@@ -144,7 +216,7 @@ class ExportPinecone(ExportVDB):
                     * (vector_range_max - vector_range_min)
                     + vector_range_min
                 )
-                ids = self.get_ids_from_query(
+                ids = self.get_ids_from_vector_query(
                     index, input_vector.tolist(), namespace, all_ids, hash_value
                 )
                 prev_size = len(all_ids)
@@ -214,7 +286,9 @@ class ExportPinecone(ExportVDB):
 
         # unmark the vectors as exported
         marker_key = "exported_vectorio_" + hash_value
-        for i in tqdm(range(0, len(all_ids), MAX_FETCH_SIZE), desc="Unmarking vectors"):
+        for i in tqdm(
+            range(0, len(all_ids), MAX_FETCH_SIZE), desc="Step 2/3: Unmarking vectors"
+        ):
             batch_ids = all_ids[i : i + MAX_FETCH_SIZE]
             data = self.index.fetch(batch_ids)
             batch_vectors = data["vectors"]
@@ -307,7 +381,7 @@ class ExportPinecone(ExportVDB):
             prev_total_size = 0
             i = 0
             fetch_size = MAX_FETCH_SIZE
-            pbar = tqdm(total=len(all_ids), desc="Fetching vectors")
+            pbar = tqdm(total=len(all_ids), desc="Final Step: Fetching vectors")
             while i < len(all_ids):
                 batch_ids = all_ids[i : i + fetch_size]
                 import signal
@@ -372,7 +446,7 @@ class ExportPinecone(ExportVDB):
                 "dimensions": index_info["dimension"],
                 "model_name": self.args["model_name"],
                 "vector_columns": ["vector"],
-                "data_path": '/'.join(vectors_directory.split("/")[1:]),
+                "data_path": "/".join(vectors_directory.split("/")[1:]),
             }
             index_meta.append(namespace_meta)
         return index_meta

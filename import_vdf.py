@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 
 from export_vdf.util import set_arg_from_input, set_arg_from_password
 from import_vdf.pinecone_import import ImportPinecone
-from import_vdf.pinecone_serverless_import import ImportPineconeServerless
 from import_vdf.qdrant_import import ImportQdrant
 
 
@@ -36,62 +35,53 @@ def import_pinecone(args):
     """
     Import data to Pinecone
     """
-    set_pinecone_common_args(args)
-    set_arg_from_input(
-        args, "environment", "Enter the environment of Pinecone instance: "
-    )
-    pinecone_import = ImportPinecone(args)
-    pinecone_import.upsert_data()
-
-
-def set_pinecone_common_args(args):
     set_arg_from_password(
         args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY"
     )
-    if args["subset"] is False:
-        return
-    if "id_list_file" not in args or args["id_list_file"] is None:
+    if args["serverless"] is False:
+        set_arg_from_input(
+            args, "environment", "Enter the environment of Pinecone instance: "
+        )
+    else:
         set_arg_from_input(
             args,
-            "id_range_start",
-            "Enter the start of id range (hit return to skip): ",
-            int,
+            "cloud",
+            "Enter the cloud of Pinecone Serverless instance (default: 'aws'): ",
+            str,
+            "aws",
         )
         set_arg_from_input(
             args,
-            "id_range_end",
-            "Enter the end of id range (hit return to skip): ",
-            int,
-        )
-    if args["id_range_start"] is None and args["id_range_end"] is None:
-        set_arg_from_input(
-            args,
-            "id_list_file",
-            "Enter the path to id list file (hit return to skip): ",
+            "region",
+            "Enter the region of Pinecone Serverless instance (default: 'us-west-2'): ",
+            str,
+            "us-west-2",
         )
 
+    if args["subset"] is True:
+        if "id_list_file" not in args or args["id_list_file"] is None:
+            set_arg_from_input(
+                args,
+                "id_range_start",
+                "Enter the start of id range (hit return to skip): ",
+                int,
+            )
+            if args["id_range_start"] is not None:
+                set_arg_from_input(
+                    args,
+                    "id_range_end",
+                    "Enter the end of id range (hit return to skip): ",
+                    int,
+                )
+        if args["id_range_start"] is None and args["id_range_end"] is None:
+            set_arg_from_input(
+                args,
+                "id_list_file",
+                "Enter the path to id list file (hit return to skip): ",
+            )
 
-def import_pinecone_serverless(args):
-    """
-    Import data to Pinecone Serverless
-    """
-    set_arg_from_input(
-        args,
-        "cloud",
-        "Enter the cloud of Pinecone Serverless instance (default: 'aws'): ",
-        str,
-        "aws",
-    )
-    set_arg_from_input(
-        args,
-        "region",
-        "Enter the region of Pinecone Serverless instance (default: 'us-west-2'): ",
-        str,
-        "us-west-2",
-    )
-    set_pinecone_common_args(args)
-    pinecone_serverless_import = ImportPineconeServerless(args)
-    pinecone_serverless_import.upsert_data()
+    pinecone_import = ImportPinecone(args)
+    pinecone_import.upsert_data()
 
 
 def main():
@@ -104,7 +94,6 @@ def main():
     db_choices = [
         "pinecone",
         "qdrant",
-        "pinecone-serverless",
     ]
     subparsers = parser.add_subparsers(
         title="Vector Databases",
@@ -120,19 +109,27 @@ def main():
         help="Import a subset of data (default: False)",
         default=False,
     )
+    parser.add_argument(
+        "--create_new",
+        type=bool,
+        help="Create a new index (default: False)",
+        default=False,
+    )
     # Pinecone
     parser_pinecone = subparsers.add_parser("pinecone", help="Import data to Pinecone")
     parser_pinecone.add_argument(
         "-e", "--environment", type=str, help="Pinecone environment"
     )
-
-    parser_pinecone_serverless = subparsers.add_parser(
-        "pinecone-serverless", help="Import data to Pinecone Serverless"
+    parser_pinecone.add_argument(
+        "--serverless",
+        type=bool,
+        help="Import data to Pinecone Serverless (default: False)",
+        default=False,
     )
-    parser_pinecone_serverless.add_argument(
+    parser_pinecone.add_argument(
         "-c", "--cloud", type=str, help="Pinecone Serverless cloud"
     )
-    parser_pinecone_serverless.add_argument(
+    parser_pinecone.add_argument(
         "-r", "--region", type=str, help="Pinecone Serverless region"
     )
 
@@ -162,8 +159,6 @@ def main():
         import_pinecone(args)
     elif args["vector_database"] == "qdrant":
         import_qdrant(args)  # Add the function to import data to Qdrant
-    elif args["vector_database"] == "pinecone-serverless":
-        import_pinecone_serverless(args)
     else:
         print(
             "Unrecognized DB. Please choose a vector database to export data from:",
