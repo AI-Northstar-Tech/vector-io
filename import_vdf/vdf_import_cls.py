@@ -1,7 +1,7 @@
 import json
 import os
 from packaging.version import Version
-from export.util import expand_shorthand_path
+from export_vdf.util import expand_shorthand_path
 
 
 class ImportVDF:
@@ -20,7 +20,13 @@ class ImportVDF:
             self.vdf_meta = json.load(f)
         if "indexes" not in self.vdf_meta:
             raise Exception("Invalid VDF_META.json, 'indexes' key not found")
-        if Version(self.vdf_meta["version"]) > Version(self.args["library_version"]):
+        if "version" not in self.vdf_meta:
+            print("Warning: 'version' key not found in VDF_META.json")
+        elif "library_version" not in self.args:
+            print(
+                "Warning: 'library_version' not found in args. Skipping version check."
+            )
+        elif Version(self.vdf_meta["version"]) > Version(self.args["library_version"]):
             print(
                 f"Warning: The version of vector-io library: ({self.args['library_version']}) is behind the version of the vdf directory: ({self.vdf_meta['version']})."
             )

@@ -5,9 +5,9 @@ import os
 import sys
 import time
 from dotenv import load_dotenv
-from export.pinecone_export import ExportPinecone
-from export.util import set_arg_from_input, set_arg_from_password
-from export.qdrant_export import ExportQdrant
+from export_vdf.pinecone_export import ExportPinecone
+from export_vdf.util import set_arg_from_input, set_arg_from_password
+from export_vdf.qdrant_export import ExportQdrant
 from getpass import getpass
 import warnings
 
@@ -31,25 +31,6 @@ def export_pinecone(args):
         "index",
         "Enter the name of index to export (hit return to export all): ",
     )
-    if "id_list_file" not in args or args["id_list_file"] is None:
-        set_arg_from_input(
-            args,
-            "id_range_start",
-            "Enter the start of id range (hit return to skip): ",
-            int,
-        )
-        set_arg_from_input(
-            args,
-            "id_range_end",
-            "Enter the end of id range (hit return to skip): ",
-            int,
-        )
-    if args["id_range_start"] is None and args["id_range_end"] is None:
-        set_arg_from_input(
-            args,
-            "id_list_file",
-            "Enter the path to id list file (hit return to skip): ",
-        )
     set_arg_from_password(
         args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY"
     )
@@ -59,6 +40,26 @@ def export_pinecone(args):
         "Allow modifying data to search, enter Y or N: ",
         bool,
     )
+    if args["subset"] is True:
+        if "id_list_file" not in args or args["id_list_file"] is None:
+            set_arg_from_input(
+                args,
+                "id_range_start",
+                "Enter the start of id range (hit return to skip): ",
+                int,
+            )
+            set_arg_from_input(
+                args,
+                "id_range_end",
+                "Enter the end of id range (hit return to skip): ",
+                int,
+            )
+        if args["id_range_start"] is None and args["id_range_end"] is None:
+            set_arg_from_input(
+                args,
+                "id_list_file",
+                "Enter the path to id list file (hit return to skip): ",
+            )
     pinecone_export = ExportPinecone(args)
     pinecone_export.get_data()
     return pinecone_export
@@ -169,7 +170,13 @@ def main():
         "--modify_to_search",
         type=bool,
         help="Allow modifying data to search",
-        default=True,
+        default=False,
+    )
+    parser_pinecone.add_argument(
+        "--subset",
+        type=bool,
+        help="Export a subset of data (default: False)",
+        default=False,
     )
 
     # Qdrant

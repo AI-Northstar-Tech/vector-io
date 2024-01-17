@@ -1,7 +1,7 @@
 import datetime
-from export.util import standardize_metric
-from export.vdb_export import ExportVDB
-import pinecone
+from export_vdf.util import standardize_metric
+from export_vdf.vdb_export_cls import ExportVDB
+from pinecone import Pinecone, Vector
 import os
 import json
 import numpy as np
@@ -22,11 +22,11 @@ class ExportPinecone(ExportVDB):
         """
         # call super class constructor
         super().__init__(args)
-        pinecone.init(api_key=args["pinecone_api_key"], environment=args["environment"])
+        self.pc = Pinecone(api_key=args["pinecone_api_key"])
         self.collected_ids_by_modifying = False
 
     def get_all_index_names(self):
-        return pinecone.list_indexes()
+        return self.pc.list_indexes().names()
 
     def get_ids_from_query(self, index, input_vector, namespace, all_ids, hash_value):
         if self.args.get("modify_to_search"):
@@ -46,9 +46,20 @@ class ExportPinecone(ExportVDB):
             print(f"Found {len(ids_to_mark)} vectors that have not been exported yet.")
             # fetch the vectors and upsert them with the exported_vectorio flag with MAX_FETCH_SIZE at a time
             mark_pbar = tqdm(total=len(ids_to_mark), desc="Marking vectors")
-            for i in range(0, len(ids_to_mark), MAX_FETCH_SIZE):
-                batch_ids = ids_to_mark[i : i + MAX_FETCH_SIZE]
-                data = index.fetch(batch_ids)
+            mark_batch_size = MAX_FETCH_SIZE
+            i = 0
+            while i < len(ids_to_mark):
+                batch_ids = ids_to_mark[i : i + mark_batch_size]
+                try:
+                    data = index.fetch(batch_ids)
+                except Exception as e:
+                    print(
+                        f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size)"
+                    )
+                    mark_batch_size = mark_batch_size * 3 // 4
+                    if mark_batch_size < MAX_FETCH_SIZE/100:
+                        raise Exception("Could not fetch vectors")
+                    continue
                 batch_vectors = data["vectors"]
                 # verify that the ids are the same
                 assert set(batch_ids) == set(batch_vectors.keys())
@@ -59,7 +70,7 @@ class ExportPinecone(ExportVDB):
                     if "metadata" not in vector_data:
                         vector_data["metadata"] = {}
                     vector_data["metadata"][marker_key] = True
-                    cur_vec = pinecone.Vector(
+                    cur_vec = Vector(
                         id=id,
                         values=vector_data["values"],
                         metadata=vector_data["metadata"],
@@ -68,7 +79,15 @@ class ExportPinecone(ExportVDB):
                         cur_vec.sparse_values = vector_data["sparseValues"]
                     upsert_data.append(cur_vec)
                 # upsert the vectors
-                resp = index.upsert(vectors=upsert_data, namespace=namespace)
+                try:
+                    resp = index.upsert(vectors=upsert_data, namespace=namespace)
+                except Exception as e:
+                    print(f"Error upserting vectors: {e}. Trying with a smaller batch size (--batch_size)")
+                    mark_batch_size = mark_batch_size * 3 // 4
+                    if mark_batch_size < MAX_FETCH_SIZE/100:
+                        raise Exception("Could not upsert vectors")
+                    continue
+                i += resp["upserted_count"]
                 mark_pbar.update(len(batch_ids))
             self.collected_ids_by_modifying = True
             print(f"Marked {len(ids_to_mark)} vectors as exported.")
@@ -207,7 +226,7 @@ class ExportPinecone(ExportVDB):
             for id, vector_data in batch_vectors.items():
                 if "metadata" in vector_data:
                     del vector_data["metadata"][marker_key]
-                cur_vec = pinecone.Vector(
+                cur_vec = Vector(
                     id=id,
                     values=vector_data["values"],
                     metadata=vector_data["metadata"],
@@ -233,7 +252,7 @@ class ExportPinecone(ExportVDB):
             index_meta = self.get_data_for_index(index_name)
             for index_meta_elem in index_meta:
                 index_meta_elem["metric"] = standardize_metric(
-                    pinecone.describe_index(index_name).metric, "pinecone"
+                    self.pc.describe_index(index_name).metric, "pinecone"
                 )
             index_metas[index_name] = index_meta
 
@@ -256,7 +275,7 @@ class ExportPinecone(ExportVDB):
         return True
 
     def get_data_for_index(self, index_name):
-        self.index = pinecone.Index(index_name=index_name)
+        self.index = self.pc.Index(index_name)
         index_info = self.index.describe_index_stats()
         # Fetch the actual data from the Pinecone index
         index_meta = []
@@ -270,8 +289,8 @@ class ExportPinecone(ExportVDB):
 
             all_ids = list(
                 self.get_all_ids_from_index(
-                    index=pinecone.Index(
-                        index_name=index_name, pool_threads=THREAD_POOL_SIZE
+                    index=self.pc.Index(
+                        index_name,
                     ),
                     num_dimensions=index_info["dimension"],
                     namespace=namespace,
@@ -285,6 +304,7 @@ class ExportPinecone(ExportVDB):
             metadata = {}
             batch_ctr = 1
             total_size = 0
+            prev_total_size = 0
             i = 0
             fetch_size = MAX_FETCH_SIZE
             pbar = tqdm(total=len(all_ids), desc="Fetching vectors")
@@ -316,13 +336,14 @@ class ExportPinecone(ExportVDB):
                     signal.alarm(0)
                 except Exception as e:
                     print(
-                        f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size)"
+                        f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size): {fetch_size}"
                     )
                     fetch_size = fetch_size * 3 // 4
                     continue
                 batch_vectors = data["vectors"]
                 # verify that the ids are the same
-                assert set(batch_ids) == set(batch_vectors.keys())
+                # commenting out as some ids in range might not be present in DB
+                # assert set(batch_ids) == set(batch_vectors.keys())
                 metadata.update(
                     {
                         k: v["metadata"] if "metadata" in v else {}
@@ -334,12 +355,13 @@ class ExportPinecone(ExportVDB):
                 if (vectors.__sizeof__() + metadata.__sizeof__()) > self.args[
                     "max_file_size"
                 ] * 1024 * 1024:
+                    prev_total_size = total_size
                     total_size += self.save_vectors_to_parquet(
                         vectors, metadata, batch_ctr, vectors_directory
                     )
                     batch_ctr += 1
                 i += fetch_size
-                pbar.update(fetch_size)
+                pbar.update(total_size - prev_total_size)
             total_size += self.save_vectors_to_parquet(
                 vectors, metadata, batch_ctr, vectors_directory
             )
@@ -350,7 +372,7 @@ class ExportPinecone(ExportVDB):
                 "dimensions": index_info["dimension"],
                 "model_name": self.args["model_name"],
                 "vector_columns": ["vector"],
-                "data_path": vectors_directory,
+                "data_path": '/'.join(vectors_directory.split("/")[1:]),
             }
             index_meta.append(namespace_meta)
         return index_meta

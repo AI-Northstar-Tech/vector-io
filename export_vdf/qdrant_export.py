@@ -4,7 +4,7 @@ import os
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-from export.vdb_export import ExportVDB
+from export_vdf.vdb_export_cls import ExportVDB
 
 load_dotenv()
 

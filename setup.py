@@ -8,7 +8,11 @@ setup(
     license="Apache 2.0",
     author="Dhruv Anand",
     author_email="dhruv.anand@ainorthstartech.com",
-    packages=find_packages(),
+    packages=[
+        package
+        for package in find_packages(exclude="archive*")
+        if package.startswith("vdf_io")
+    ],
     entry_points={
         "console_scripts": [
             "export_vdf = vdf_io.export_vdf:main",
