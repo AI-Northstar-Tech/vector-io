@@ -108,12 +108,14 @@ def main():
         type=bool,
         help="Import a subset of data (default: False)",
         default=False,
+        action=argparse.BooleanOptionalAction,
     )
     parser.add_argument(
         "--create_new",
         type=bool,
         help="Create a new index (default: False)",
         default=False,
+        action=argparse.BooleanOptionalAction,
     )
     # Pinecone
     parser_pinecone = subparsers.add_parser("pinecone", help="Import data to Pinecone")
@@ -125,6 +127,7 @@ def main():
         type=bool,
         help="Import data to Pinecone Serverless (default: False)",
         default=False,
+        action=argparse.BooleanOptionalAction,
     )
     parser_pinecone.add_argument(
         "-c", "--cloud", type=str, help="Pinecone Serverless cloud"

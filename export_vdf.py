@@ -171,12 +171,14 @@ def main():
         type=bool,
         help="Allow modifying data to search",
         default=False,
+        action=argparse.BooleanOptionalAction,
     )
     parser_pinecone.add_argument(
         "--subset",
         type=bool,
         help="Export a subset of data (default: False)",
         default=False,
+        action=argparse.BooleanOptionalAction,
     )
 
     # Qdrant

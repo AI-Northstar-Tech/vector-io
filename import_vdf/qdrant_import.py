@@ -69,7 +69,7 @@ class ImportQdrant(ImportVDF):
 
                 vectors = {}
                 metadata = {}
-                vector_column_name = self.get_vector_column_name(
+                vector_column_names, vector_column_name = self.get_vector_column_name(
                     new_collection_name, namespace_meta
                 )
                 for file in parquet_files:
@@ -83,7 +83,7 @@ class ImportQdrant(ImportVDF):
                             row["id"]: {
                                 key: value
                                 for key, value in row.items()
-                                if key != "id" and key != vector_column_name
+                                if key not in ["id"] + vector_column_names
                             }
                             for _, row in df.iterrows()
                         }

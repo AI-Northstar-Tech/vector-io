@@ -46,6 +46,7 @@ class ImportVDF:
                 "vector_columns not found in namespace metadata. Using 'vector' as the vector column name."
             )
             vector_column_name = "vector"
+            vector_column_names = [vector_column_name]
         else:
             vector_column_names = namespace_meta["vector_columns"]
             if len(vector_column_names) > 1:
@@ -54,7 +55,7 @@ class ImportVDF:
                     " Only the first vector column '{vector_column_name}' will be imported."
                 )
             vector_column_name = vector_column_names[0]
-        return vector_column_name
+        return vector_column_names, vector_column_name
 
     def get_parquet_files(self, data_path):
         # Load the data from the parquet files

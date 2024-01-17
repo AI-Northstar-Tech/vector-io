@@ -28,7 +28,7 @@ class ImportPinecone(ImportVDF):
             # check if index exists
             suffix = 2
             while index_name in indexes and self.args["create_new"] is True:
-                index_name = index_name + f"_{suffix}"
+                index_name = index_name + f"-{suffix}"
                 suffix += 1
             if index_name not in indexes:
                 # create index
@@ -96,7 +96,7 @@ class ImportPinecone(ImportVDF):
 
                 vectors = {}
                 metadata = {}
-                vector_column_name = self.get_vector_column_name(
+                vector_column_names, vector_column_name = self.get_vector_column_name(
                     index_name, namespace_meta
                 )
 
@@ -114,7 +114,7 @@ class ImportPinecone(ImportVDF):
                             row["id"]: {
                                 key: value
                                 for key, value in row.items()
-                                if key != "id" and key != vector_column_name
+                                if key not in ["id"] + vector_column_names
                             }
                             for _, row in df.iterrows()
                         }
