@@ -1,0 +1,26 @@
+{
+  "version": "0.0.4",
+  "file_structure": [
+      "vdf_20240122_135409_c5fa3/i1.parquet/1.parquet",
+      "vdf_20240122_135409_c5fa3/VDF_META.json"
+  ],
+  "author": "dhruvanand",
+  "exported_from": "pinecone",
+  "indexes": {
+      "wikipedia-1k-cohere-openai-embeddings": [
+          {
+              "namespace": "",
+              "total_vector_count": 1000,
+              "exported_vector_count": 1000,
+              "dimensions": 768,
+              "model_name": "cohere/embed-multilingual-v2.0",
+              "vector_columns": [
+                  "vector"
+              ],
+              "data_path": "i1.parquet",
+              "metric": "Cosine"
+          }
+      ]
+  },
+  "exported_at": "2024-01-22T13:54:25.649727+05:30"
+}
