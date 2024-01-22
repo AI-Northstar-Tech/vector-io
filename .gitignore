@@ -2,7 +2,7 @@ __pycache__/
 .DS_Store
 .env
 VDF_dataset*/
-vdf_*/
+vdf_2*/
 notebooks/results*.csv
 vector-io.code-workspace
 notebooks/data/*
