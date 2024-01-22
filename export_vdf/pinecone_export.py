@@ -134,7 +134,7 @@ class ExportPinecone(ExportVDB):
         random_results = index.query(
             vector=np.random.rand(num_dimensions).tolist(),
             include_values=False,
-            top_k=10,
+            top_k=100,
             namespace=namespace,
         )
         random_results_ids_strs = [x["id"] for x in random_results["matches"]]
@@ -157,7 +157,7 @@ class ExportPinecone(ExportVDB):
                 fetch_size = MAX_FETCH_SIZE
                 while len(all_ids) < num_vectors:
                     range_min = min(all_ids) - fetch_size
-                    range_max = max(all_ids) + fetch_size
+                    range_max = max(all_ids) + 10 * fetch_size
                     range_obj = range(range_min, range_max)
                     print("Checking ids in range {} to {}".format(range_min, range_max))
                     ids_to_fetch = [

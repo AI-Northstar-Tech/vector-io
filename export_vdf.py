@@ -206,7 +206,7 @@ def main():
         main()
     t_end = time.time()
     # formatted time
-    print("Export to disk completed. Exported to:", export_obj.vdf_directory)
+    print(f"Export to disk completed. Exported to: {export_obj.vdf_directory}/")
     print(
         "Time taken to export data: ",
         time.strftime("%H:%M:%S", time.gmtime(t_end - t_start)),
