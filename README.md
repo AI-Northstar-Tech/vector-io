@@ -156,6 +156,21 @@ Follow the prompt to select the index and id range to export.
 If you wish to add an import/export implementation for a new vector database, you must also implement the other side of the import/export for the same database.
 Please fork the repo and send a PR for both the import and export scripts.
 
+Steps to add a new vector database (ABC):
+
+**Export**:
+
+1. Add a new subparser in `vdf_io/export_vdf.py` for the new vector database.
+2. Add a new file in `vdf_io/export_vdf/` for the new vector database. This file should define a class ExportABC which inherits from ExportVDF. It should implement the get_data() function to download points (in a batched manner) with all the metadata from the specified index of the vector database. This data should be stored in a series of parquet files/folders.
+The metadata should be stored in a json file with the [schema above](#universal-vector-dataset-format-vdf-specification).
+3. Use the script to export data from an example index of the vector database and verify that the data is exported correctly.
+
+**Import**:
+
+1. Add a new subparser in `vdf_io/import_vdf.py` for the new vector database.
+2. Add a new file in `vdf_io/import_vdf/` for the new vector database. This file should define a class ImportABC which inherits from ImportVDF. It should implement the upsert_data() function to upload points from a vdf dataset (in a batched manner) with all the metadata to the specified index of the vector database. All metadata about the dataset should be read fro mthe VDF_META.json file in the vdf folder.
+3. Use the script to import data from the example vdf dataset exported in the previous step and verify that the data is imported correctly.
+
 ### Changing the VDF specification
 
 If you wish to change the VDF specification, please open an issue to discuss the change before sending a PR.
