@@ -142,7 +142,10 @@ def main():
 
     args = parser.parse_args()
     args = vars(args)
-    args["library_version"] = open("VERSION.txt").read()
+    # open VERSION.txt which is in the parent directory of this script
+    args["library_version"] = open(
+        os.path.join(os.path.dirname(__file__), "../VERSION.txt")
+    ).read()
     set_arg_from_input(
         args, "dir", "Enter the directory of vector dataset to be imported: ", str
     )

@@ -103,26 +103,26 @@ class ImportPinecone(ImportVDF):
                 for file in tqdm(parquet_files, desc="Loading data from parquet files"):
                     file_path = os.path.join(final_data_path, file)
                     df = pd.read_parquet(file_path)
-                    
+
                     if self.args["subset"] is True:
-                        if self.args["id_list_file"] is not None:
+                        if (
+                            "id_list_file" in self.args
+                            and self.args["id_list_file"] is not None
+                        ):
                             id_list = pd.read_csv(
                                 self.args["id_list_file"], header=None
                             )[0].tolist()
                             df = df[df["id"].isin(id_list)]
                         elif (
-                            self.args["id_range_start"] is not None
+                            "id_range_start" in self.args
+                            and self.args["id_range_start"] is not None
+                            and "id_range_end" in self.args
                             and self.args["id_range_end"] is not None
                         ):
                             # convert id to int before comparison
                             df = df[
-                                (
-                                    df["id"].astype(int)
-                                    >= self.args["id_range_start"]
-                                )
-                                & (
-                                    df["id"].astype(int) <= self.args["id_range_end"]
-                                )
+                                (df["id"].astype(int) >= self.args["id_range_start"])
+                                & (df["id"].astype(int) <= self.args["id_range_end"])
                             ]
                         else:
                             raise Exception(
