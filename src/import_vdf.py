@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from export_vdf.util import set_arg_from_input, set_arg_from_password
 from import_vdf.pinecone_import import ImportPinecone
 from import_vdf.qdrant_import import ImportQdrant
-
+from import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
 
@@ -91,10 +91,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="Import data from VDF to a vector database"
     )
-    db_choices = [
-        "pinecone",
-        "qdrant",
-    ]
+    # list of all subclasses of ImportVDF
+    db_choices = [c.DB_NAME_SLUG for c in ImportVDF.__subclasses__()]
     subparsers = parser.add_subparsers(
         title="Vector Databases",
         description="Choose the vectors database to export data from",
@@ -118,7 +116,9 @@ def main():
         action=argparse.BooleanOptionalAction,
     )
     # Pinecone
-    parser_pinecone = subparsers.add_parser("pinecone", help="Import data to Pinecone")
+    parser_pinecone = subparsers.add_parser(
+        ImportPinecone.DB_NAME_SLUG, help="Import data to Pinecone"
+    )
     parser_pinecone.add_argument(
         "-e", "--environment", type=str, help="Pinecone environment"
     )
@@ -137,7 +137,9 @@ def main():
     )
 
     # Qdrant
-    parser_qdrant = subparsers.add_parser("qdrant", help="Import data to Qdrant")
+    parser_qdrant = subparsers.add_parser(
+        ImportQdrant.DB_NAME_SLUG, help="Import data to Qdrant"
+    )
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
 
     args = parser.parse_args()
@@ -161,9 +163,9 @@ def main():
     ):
         print("Please choose a vector database to export data from:", db_choices)
         return
-    if args["vector_database"] == "pinecone":
+    if args["vector_database"] == ImportPinecone.DB_NAME_SLUG:
         import_pinecone(args)
-    elif args["vector_database"] == "qdrant":
+    elif args["vector_database"] == ImportQdrant.DB_NAME_SLUG:
         import_qdrant(args)  # Add the function to import data to Qdrant
     else:
         print(

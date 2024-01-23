@@ -11,6 +11,8 @@ from export_vdf.qdrant_export import ExportQdrant
 from getpass import getpass
 import warnings
 
+from src import export_vdf
+
 # Suppress specific warnings
 warnings.simplefilter("ignore", ResourceWarning)
 
@@ -180,7 +182,7 @@ def main():
         default=False,
         action=argparse.BooleanOptionalAction,
     )
-
+    db_choices = [c.DB_NAME_SLUG for c in export_vdf.__subclasses__()]
     # Qdrant
     parser_qdrant = subparsers.add_parser("qdrant", help="Export data from Qdrant")
     parser_qdrant.add_argument(
@@ -198,6 +200,13 @@ def main():
         os.path.join(os.path.dirname(__file__), "../VERSION.txt")
     ).read()
     t_start = time.time()
+    if (
+        ("vector_database" not in args)
+        or (args["vector_database"] is None)
+        or (args["vector_database"] not in db_choices)
+    ):
+        print("Please choose a vector database to export data from:", db_choices)
+        return
     if args["vector_database"] == "pinecone":
         export_obj = export_pinecone(args)
     elif args["vector_database"] == "qdrant":

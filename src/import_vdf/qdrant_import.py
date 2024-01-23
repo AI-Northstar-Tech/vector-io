@@ -10,6 +10,8 @@ load_dotenv()
 
 
 class ImportQdrant(ImportVDF):
+    DB_NAME_SLUG = "qdrant"
+
     def __init__(self, args):
         # call super class constructor
         super().__init__(args)

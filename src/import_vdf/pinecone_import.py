@@ -12,8 +12,8 @@ BATCH_SIZE = 1000  # Set the desired batch size
 
 
 class ImportPinecone(ImportVDF):
+    DB_NAME_SLUG = "pinecone"
     def __init__(self, args):
-        self.db_name = "pinecone"
         super().__init__(args)
         self.pc = Pinecone(api_key=self.args["pinecone_api_key"])
 

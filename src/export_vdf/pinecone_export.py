@@ -16,6 +16,8 @@ THREAD_POOL_SIZE = 30
 
 
 class ExportPinecone(ExportVDB):
+    DB_NAME_SLUG = "pinecone"
+
     def __init__(self, args):
         """
         Initialize the class
@@ -326,7 +328,7 @@ class ExportPinecone(ExportVDB):
             index_meta = self.get_data_for_index(index_name)
             for index_meta_elem in index_meta:
                 index_meta_elem["metric"] = standardize_metric(
-                    self.pc.describe_index(index_name).metric, "pinecone"
+                    self.pc.describe_index(index_name).metric, self.DB_NAME_SLUG
                 )
             index_metas[index_name] = index_meta
 
@@ -337,7 +339,7 @@ class ExportPinecone(ExportVDB):
             "file_structure": self.file_structure,
             # author is from unix username
             "author": os.environ.get("USER"),
-            "exported_from": "pinecone",
+            "exported_from": self.DB_NAME_SLUG,
             "indexes": index_metas,
             # timestamp with timezone
             "exported_at": datetime.datetime.now().astimezone().isoformat(),

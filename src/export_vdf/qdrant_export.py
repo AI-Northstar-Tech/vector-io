@@ -5,6 +5,7 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 
 from export_vdf.vdb_export_cls import ExportVDB
+from src.export_vdf.util import standardize_metric
 
 load_dotenv()
 
@@ -12,6 +13,8 @@ MAX_FETCH_SIZE = 10_000
 
 
 class ExportQdrant(ExportVDB):
+    DB_NAME_SLUG = "qdrant"
+
     def __init__(self, args):
         """
         Initialize the class
@@ -49,7 +52,7 @@ class ExportQdrant(ExportVDB):
             "version": self.args["library_version"],
             "file_structure": self.file_structure,
             "author": os.environ.get("USER"),
-            "exported_from": "qdrant",
+            "exported_from": self.DB_NAME_SLUG,
             "indexes": index_metas,
         }
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
@@ -111,9 +114,12 @@ class ExportQdrant(ExportVDB):
             "namespace": "",
             "total_vector_count": total,
             "exported_vector_count": num_vectors_exported,
-            "metric": self.client.get_collection(
-                collection_name
-            ).config.params.vectors.distance,
+            "metric": standardize_metric(
+                self.client.get_collection(
+                    collection_name
+                ).config.params.vectors.distance,
+                self.DB_NAME_SLUG,
+            ),
             "dimensions": dim,
             "model_name": self.args["model_name"],
             "vector_columns": ["vector"],

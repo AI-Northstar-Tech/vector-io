@@ -12,8 +12,8 @@ setup(
     package_dir={"": "src"},
     entry_points={
         "console_scripts": [
-            "export_vdf = vdf_io.export_vdf:main",
-            "import_vdf = vdf_io.import_vdf:main",
+            "export_vdf=vdf_io.export_vdf:main",
+            "import_vdf=vdf_io.import_vdf:main",
         ],
     },
     install_requires=open("requirements.txt").read().splitlines(),
