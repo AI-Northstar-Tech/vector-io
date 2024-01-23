@@ -6,8 +6,7 @@ import json
 import os
 from qdrant_client.http.models import Distance
 
-from src.import_vdf.pinecone_import import ImportPinecone
-from src.import_vdf.qdrant_import import ImportQdrant
+from names import DBNames
 
 
 def sort_recursive(d):
@@ -114,12 +113,12 @@ def expand_shorthand_path(shorthand_path):
 
 
 db_metric_to_standard_metric = {
-    ImportPinecone.DB_NAME_SLUG: {
+    DBNames.PINECONE: {
         "cosine": Distance.COSINE,
         "euclidean": Distance.EUCLID,
         "dotproduct": Distance.DOT,
     },
-    ImportQdrant.DB_NAME_SLUG: {
+    DBNames.QDRANT: {
         Distance.COSINE: Distance.COSINE,
         Distance.EUCLID: Distance.EUCLID,
         Distance.DOT: Distance.DOT,

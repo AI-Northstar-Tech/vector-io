@@ -1,5 +1,6 @@
 import datetime
-from export_vdf.util import standardize_metric
+from names import DBNames
+from util import standardize_metric
 from export_vdf.vdb_export_cls import ExportVDB
 from pinecone import Pinecone, Vector
 import os
@@ -16,7 +17,7 @@ THREAD_POOL_SIZE = 30
 
 
 class ExportPinecone(ExportVDB):
-    DB_NAME_SLUG = "pinecone"
+    DB_NAME_SLUG = DBNames.PINECONE
 
     def __init__(self, args):
         """

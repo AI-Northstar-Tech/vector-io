@@ -1,14 +1,15 @@
 import json
 import os
 from packaging.version import Version
-from export_vdf.util import expand_shorthand_path
+from util import expand_shorthand_path
+import abc
 
 
-class ImportVDF:
+class ImportVDF(abc.ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         if not hasattr(cls, 'DB_NAME_SLUG'):
-            raise TypeError(f"Class {cls.__name__} lacks required class variable 'db_name_slug'")
+            raise TypeError(f"Class {cls.__name__} lacks required class variable 'DB_NAME_SLUG'")
 
     def __init__(self, args):
         self.args = args
@@ -39,6 +40,7 @@ class ImportVDF:
                 "Please upgrade the vector-io library to the latest version to ensure compatibility."
             )
 
+    @abc.abstractmethod
     def upsert_data():
         """
         Get data from vector database

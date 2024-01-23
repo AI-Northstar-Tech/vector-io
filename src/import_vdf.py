@@ -4,8 +4,9 @@ import argparse
 import os
 import time
 from dotenv import load_dotenv
+from names import DBNames
 
-from export_vdf.util import set_arg_from_input, set_arg_from_password
+from util import set_arg_from_input, set_arg_from_password
 from import_vdf.pinecone_import import ImportPinecone
 from import_vdf.qdrant_import import ImportQdrant
 from import_vdf.vdf_import_cls import ImportVDF
@@ -117,7 +118,7 @@ def main():
     )
     # Pinecone
     parser_pinecone = subparsers.add_parser(
-        ImportPinecone.DB_NAME_SLUG, help="Import data to Pinecone"
+        DBNames.PINECONE, help="Import data to Pinecone"
     )
     parser_pinecone.add_argument(
         "-e", "--environment", type=str, help="Pinecone environment"
@@ -138,7 +139,7 @@ def main():
 
     # Qdrant
     parser_qdrant = subparsers.add_parser(
-        ImportQdrant.DB_NAME_SLUG, help="Import data to Qdrant"
+        DBNames.QDRANT, help="Import data to Qdrant"
     )
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
 
@@ -163,9 +164,9 @@ def main():
     ):
         print("Please choose a vector database to export data from:", db_choices)
         return
-    if args["vector_database"] == ImportPinecone.DB_NAME_SLUG:
+    if args["vector_database"] == DBNames.PINECONE:
         import_pinecone(args)
-    elif args["vector_database"] == ImportQdrant.DB_NAME_SLUG:
+    elif args["vector_database"] == DBNames.QDRANT:
         import_qdrant(args)  # Add the function to import data to Qdrant
     else:
         print(

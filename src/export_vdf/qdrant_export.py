@@ -3,9 +3,9 @@ from qdrant_client import QdrantClient
 import os
 from tqdm import tqdm
 from dotenv import load_dotenv
-
 from export_vdf.vdb_export_cls import ExportVDB
-from src.export_vdf.util import standardize_metric
+from names import DBNames
+from util import standardize_metric
 
 load_dotenv()
 
@@ -13,7 +13,7 @@ MAX_FETCH_SIZE = 10_000
 
 
 class ExportQdrant(ExportVDB):
-    DB_NAME_SLUG = "qdrant"
+    DB_NAME_SLUG = DBNames.QDRANT
 
     def __init__(self, args):
         """
@@ -104,7 +104,6 @@ class ExportQdrant(ExportVDB):
                 vectors,
                 metadata,
                 records,
-                num_vectors_exported,
                 vectors_directory,
             )
             pbar.update(len(records))

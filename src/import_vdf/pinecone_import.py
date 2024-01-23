@@ -1,6 +1,7 @@
 import pandas as pd
 from tqdm import tqdm
-from export_vdf.util import standardize_metric_reverse
+from names import DBNames
+from util import standardize_metric_reverse
 from import_vdf.vdf_import_cls import ImportVDF
 from pinecone import Pinecone, ServerlessSpec, PodSpec, Vector
 import os
@@ -12,7 +13,7 @@ BATCH_SIZE = 1000  # Set the desired batch size
 
 
 class ImportPinecone(ImportVDF):
-    DB_NAME_SLUG = "pinecone"
+    DB_NAME_SLUG = DBNames.PINECONE
     def __init__(self, args):
         super().__init__(args)
         self.pc = Pinecone(api_key=self.args["pinecone_api_key"])

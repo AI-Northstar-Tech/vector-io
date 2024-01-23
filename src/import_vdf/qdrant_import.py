@@ -2,7 +2,8 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 from qdrant_client import QdrantClient
-from export_vdf.util import extract_numerical_hash
+from names import DBNames
+from util import extract_numerical_hash
 from import_vdf.vdf_import_cls import ImportVDF
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, UpdateStatus
 
@@ -10,7 +11,7 @@ load_dotenv()
 
 
 class ImportQdrant(ImportVDF):
-    DB_NAME_SLUG = "qdrant"
+    DB_NAME_SLUG = DBNames.QDRANT
 
     def __init__(self, args):
         # call super class constructor

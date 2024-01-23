@@ -6,12 +6,11 @@ import sys
 import time
 from dotenv import load_dotenv
 from export_vdf.pinecone_export import ExportPinecone
-from export_vdf.util import set_arg_from_input, set_arg_from_password
 from export_vdf.qdrant_export import ExportQdrant
+from export_vdf.vdb_export_cls import ExportVDB
+from util import set_arg_from_input, set_arg_from_password
 from getpass import getpass
 import warnings
-
-from src import export_vdf
 
 # Suppress specific warnings
 warnings.simplefilter("ignore", ResourceWarning)
@@ -182,7 +181,7 @@ def main():
         default=False,
         action=argparse.BooleanOptionalAction,
     )
-    db_choices = [c.DB_NAME_SLUG for c in export_vdf.__subclasses__()]
+    db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
     # Qdrant
     parser_qdrant = subparsers.add_parser("qdrant", help="Export data from Qdrant")
     parser_qdrant.add_argument(

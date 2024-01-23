@@ -1,15 +1,16 @@
 import datetime
 import pandas as pd
 import os
+import abc
 
-from export_vdf.util import extract_data_hash
+from util import extract_data_hash
 
 
-class ExportVDB:
+class ExportVDB(abc.ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         if not hasattr(cls, 'DB_NAME_SLUG'):
-            raise TypeError(f"Class {cls.__name__} lacks required class variable 'db_name_slug'")
+            raise TypeError(f"Class {cls.__name__} lacks required class variable 'DB_NAME_SLUG'")
 
     def __init__(self, args):
         self.args = args
@@ -20,6 +21,7 @@ class ExportVDB:
         self.vdf_directory = f"vdf_{self.timestamp_in_format}_{self.hash_value}"
         os.makedirs(self.vdf_directory, exist_ok=True)
 
+    @abc.abstractmethod
     def get_data():
         """
         Get data from vector database
