@@ -8,7 +8,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 1. VDF_META.json: It is a json file with the following schema:
 
-```
+```typescript
 interface Index {
   namespace: string;
   total_vector_count: number;
@@ -45,7 +45,7 @@ pip install -r requirements.txt
 ## Export Script
 
 ```bash
-./export_vdf.py --help
+src/export_vdf.py --help
 
 usage: export.py [-h] [-m MODEL_NAME] [--max_file_size MAX_FILE_SIZE]
                  [--push_to_hub | --no-push_to_hub]
@@ -71,7 +71,7 @@ Vector Databases:
 ```
 
 ```bash
-./export_vdf.py pinecone --help
+src/export_vdf.py pinecone --help
 usage: export.py pinecone [-h] [-e ENVIRONMENT] [-i INDEX]
                           [-s ID_RANGE_START]
                           [--id_range_end ID_RANGE_END]
@@ -95,7 +95,7 @@ options:
 ```
 
 ```bash
-./export_vdf.py qdrant --help
+src/export_vdf.py qdrant --help
 usage: export.py qdrant [-h] [-u URL] [-c COLLECTIONS]
 
 options:
@@ -108,7 +108,7 @@ options:
 ## Import script
 
 ```bash
-./import_vdf.py --help
+src/import_vdf.py --help
 usage: import_vdf.py [-h] [-d DIR] {pinecone,qdrant} ...
 
 Import data from VDF to a vector database
@@ -124,7 +124,7 @@ Vector Databases:
     pinecone         Import data to Pinecone
     qdrant           Import data to Qdrant
 
-./import_vdf.py pinecone --help
+src/import_vdf.py pinecone --help
 usage: import_vdf.py pinecone [-h] [-e ENVIRONMENT]
 
 options:
@@ -132,7 +132,7 @@ options:
   -e ENVIRONMENT, --environment ENVIRONMENT
                         Pinecone environment
 
-./import_vdf.py qdrant --help  
+src/import_vdf.py qdrant --help  
 usage: import_vdf.py qdrant [-h] [-u URL]
 
 options:
@@ -160,8 +160,8 @@ Steps to add a new vector database (ABC):
 
 **Export**:
 
-1. Add a new subparser in `vdf_io/export_vdf.py` for the new vector database. Add database specific arguments to the subparser, such as the url of the database, any authentication tokens, etc.
-2. Add a new file in `vdf_io/export_vdf/` for the new vector database. This file should define a class ExportABC which inherits from ExportVDF. 
+1. Add a new subparser in `src/export_vdf.py` for the new vector database. Add database specific arguments to the subparser, such as the url of the database, any authentication tokens, etc.
+2. Add a new file in `src/export_vdf/` for the new vector database. This file should define a class ExportABC which inherits from ExportVDF. 
 3. Specify a DB_NAME_SLUG for the class
 4. The class should implement the get_data() function to download points (in a batched manner) with all the metadata from the specified index of the vector database. This data should be stored in a series of parquet files/folders.
 The metadata should be stored in a json file with the [schema above](#universal-vector-dataset-format-vdf-specification).
@@ -169,8 +169,8 @@ The metadata should be stored in a json file with the [schema above](#universal-
 
 **Import**:
 
-1. Add a new subparser in `vdf_io/import_vdf.py` for the new vector database. Add database specific arguments to the subparser, such as the url of the database, any authentication tokens, etc.
-2. Add a new file in `vdf_io/import_vdf/` for the new vector database. This file should define a class ImportABC which inherits from ImportVDF. It should implement the upsert_data() function to upload points from a vdf dataset (in a batched manner) with all the metadata to the specified index of the vector database. All metadata about the dataset should be read fro mthe VDF_META.json file in the vdf folder.
+1. Add a new subparser in `src/import_vdf.py` for the new vector database. Add database specific arguments to the subparser, such as the url of the database, any authentication tokens, etc.
+2. Add a new file in `src/import_vdf/` for the new vector database. This file should define a class ImportABC which inherits from ImportVDF. It should implement the upsert_data() function to upload points from a vdf dataset (in a batched manner) with all the metadata to the specified index of the vector database. All metadata about the dataset should be read fro mthe VDF_META.json file in the vdf folder.
 3. Use the script to import data from the example vdf dataset exported in the previous step and verify that the data is imported correctly.
 
 ### Changing the VDF specification

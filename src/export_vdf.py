@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from export_vdf.pinecone_export import ExportPinecone
 from export_vdf.qdrant_export import ExportQdrant
 from export_vdf.vdb_export_cls import ExportVDB
+from export_vdf.push_to_hub import push_to_hub
 from util import set_arg_from_input, set_arg_from_password
 from getpass import getpass
 import warnings
@@ -142,6 +143,13 @@ def main():
         default=False,
         action=argparse.BooleanOptionalAction,
     )
+    parser.add_argument(
+        "--public",
+        type=bool,
+        help="Make dataset public (default: False)",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+    )
     subparsers = parser.add_subparsers(
         title="Vector Databases",
         description="Choose the vectors database to export data from",
@@ -224,58 +232,7 @@ def main():
     )
 
     if args["push_to_hub"]:
-        print("Pushing to HuggingFace Hub...")
-        from huggingface_hub import HfApi, HfFolder, Repository
-
-        # Log in to Hugging Face
-        if (
-            "HUGGING_FACE_TOKEN" not in os.environ
-            or os.environ["HUGGING_FACE_TOKEN"] is None
-        ):
-            # set HUGGINGFACEHUB_API_TOKEN env var
-            os.environ["HUGGING_FACE_TOKEN"] = getpass(
-                prompt="Enter your HuggingFace API token (with write access): "
-            )
-        if "HF_USERNAME" not in os.environ or os.environ["HF_USERNAME"] is None:
-            # set HF_USERNAME env var
-            os.environ["HF_USERNAME"] = input("Enter your HuggingFace username: ")
-        hf_api = HfApi(token=os.environ["HUGGING_FACE_TOKEN"])
-        repo_id = f"{os.environ['HF_USERNAME']}/{export_obj.vdf_directory}"
-        dataset_url = hf_api.create_repo(
-            token=os.environ["HUGGING_FACE_TOKEN"],
-            repo_id=repo_id,
-            private=True,
-            repo_type="dataset",
-        )
-        # for each file/folder in export_obj.vdf_directory, upload to hub
-        hf_api.upload_folder(
-            repo_id=repo_id,
-            folder_path=export_obj.vdf_directory,
-            repo_type="dataset",
-        )
-        # create hf dataset card in temp README.md
-        readme_path = os.path.join(export_obj.vdf_directory, "README.md")
-        with open(readme_path, "w") as f:
-            f.write(
-                """
----
-tags:
-- vdf
-- vector-io
-- vector-dataset
-- vector-embeddings
----
-
-This is a dataset created using [vector-io](https://github.com/ai-northstar-tech/vector-io)
-"""
-            )
-        hf_api.upload_file(
-            repo_id=repo_id,
-            path_or_fileobj=readme_path,
-            path_in_repo="README.md",
-            repo_type="dataset",
-        )
-        print(f"Created a private HuggingFace dataset repo at {dataset_url}")
+        push_to_hub(export_obj, args)
 
 
 if __name__ == "__main__":
