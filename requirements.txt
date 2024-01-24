@@ -6,3 +6,4 @@ qdrant_client
 tqdm
 python-dotenv
 huggingface_hub
+pymilvus>=2.3.6
