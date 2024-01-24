@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 from qdrant_client import QdrantClient
+import tqdm
 from names import DBNames
 from util import extract_numerical_hash
 from import_vdf.vdf_import_cls import ImportVDF
@@ -24,7 +25,7 @@ class ImportQdrant(ImportVDF):
         # we know that the self.vdf_meta["indexes"] is a list
         for index_name, index_meta in self.vdf_meta["indexes"].items():
             # load data
-            print(f"Importing data for index '{index_name}'")
+            tqdm.write(f"Importing data for index '{index_name}'")
             for namespace_meta in index_meta:
                 data_path = namespace_meta["data_path"]
                 # list indexes
@@ -52,13 +53,13 @@ class ImportQdrant(ImportVDF):
                             ),
                         )
                     except Exception as e:
-                        print(f"Failed to create index '{new_collection_name}'", e)
+                        tqdm.write(f"Failed to create index '{new_collection_name}'", e)
                         return
                 prev_vector_count = self.client.get_collection(
                     collection_name=new_collection_name
                 ).vectors_count
                 if prev_vector_count > 0:
-                    print(
+                    tqdm.write(
                         f"Index '{new_collection_name}' has {prev_vector_count} vectors before import"
                     )
                 # Load the data from the parquet files
@@ -107,15 +108,15 @@ class ImportQdrant(ImportVDF):
                     wait=True,
                 )
                 if response.status != UpdateStatus.COMPLETED:
-                    print(
+                    tqdm.write(
                         f"Failed to upsert data for collection '{new_collection_name}'"
                     )
                     continue
                 vector_count = self.client.get_collection(
                     collection_name=new_collection_name
                 ).vectors_count
-                print(
+                tqdm.write(
                     f"Index '{new_collection_name}' has {vector_count} vectors after import"
                 )
-                print(f"{vector_count - prev_vector_count} vectors were imported")
-        print("Data import completed successfully.")
+                tqdm.write(f"{vector_count - prev_vector_count} vectors were imported")
+        tqdm.write("Data import completed successfully.")

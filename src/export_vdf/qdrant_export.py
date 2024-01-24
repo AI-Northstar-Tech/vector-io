@@ -58,7 +58,7 @@ class ExportQdrant(ExportVDB):
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
             json.dump(internal_metadata, json_file, indent=4)
         # print internal metadata properly
-        print(json.dumps(internal_metadata, indent=4))
+        tqdm.write(json.dumps(internal_metadata, indent=4))
         return True
 
     def try_scroll(self, fetch_size, collection_name, next_offset):
@@ -71,8 +71,13 @@ class ExportQdrant(ExportVDB):
                 with_vectors=True,
             )
             return records, next_offset, fetch_size
-        except:
-            print("Failed to fetch data, reducing fetch size to", (fetch_size * 2) // 3)
+        except Exception as e:
+            # if it is keyboard interrupt, raise it
+            if isinstance(e, KeyboardInterrupt):
+                raise e
+            tqdm.write(
+                "Failed to fetch data, reducing fetch size to", (fetch_size * 2) // 3
+            )
             return self.try_scroll((fetch_size * 2) // 3, collection_name, next_offset)
 
     def get_data_for_collection(self, collection_name):
@@ -90,8 +95,6 @@ class ExportQdrant(ExportVDB):
             MAX_FETCH_SIZE, collection_name, next_offset
         )
         num_vectors_exported += self.save_from_records(
-            vectors,
-            metadata,
             records,
             vectors_directory,
         )
@@ -101,8 +104,6 @@ class ExportQdrant(ExportVDB):
                 fetch_size, collection_name, next_offset
             )
             num_vectors_exported += self.save_from_records(
-                vectors,
-                metadata,
                 records,
                 vectors_directory,
             )
@@ -127,12 +128,15 @@ class ExportQdrant(ExportVDB):
 
         return {"": [namespace_meta]}
 
-    def save_from_records(self, vectors, metadata, records, vectors_directory):
+    def save_from_records(self, records, vectors_directory):
         num_vectors_exported = 0
+        vectors = {}
+        metadata = {}
         for point in records:
             vectors[point.id] = point.vector
             metadata[point.id] = point.payload
         num_vectors_exported += self.save_vectors_to_parquet(
             vectors, metadata, self.file_ctr, vectors_directory
         )
+        self.file_ctr += 1
         return num_vectors_exported
