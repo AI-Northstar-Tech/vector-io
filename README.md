@@ -106,7 +106,7 @@ options:
 ```
 
 ```bash
-./export_vdf.py milvus --help
+src/export_vdf.py milvus --help
 usage: export_vdf.py milvus [-h] [-u URI] [-t TOKEN] [-c COLLECTIONS]
 
 optional arguments:

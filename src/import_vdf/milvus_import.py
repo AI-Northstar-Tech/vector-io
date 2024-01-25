@@ -88,13 +88,7 @@ class ImportMilvus(ImportVDF):
                     )
                 
                 # Load the data from the parquet files
-                parquet_files = sorted(
-                    [
-                        file
-                        for file in os.listdir(data_path)
-                        if file.endswith(".parquet")
-                    ]
-                )
+                parquet_files = self.get_parquet_files(data_path)
 
                 _, vector_column_name = self.get_vector_column_name(collection_name, namespace_meta)
 

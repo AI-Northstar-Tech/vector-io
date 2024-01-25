@@ -10,6 +10,7 @@ from export_vdf.qdrant_export import ExportQdrant
 from export_vdf.milvus_export import ExportMilvus
 from export_vdf.vdb_export_cls import ExportVDB
 from export_vdf.push_to_hub import push_to_hub
+from names import DBNames
 from util import set_arg_from_input, set_arg_from_password
 from getpass import getpass
 import warnings
@@ -251,11 +252,11 @@ def main():
     ):
         print("Please choose a vector database to export data from:", db_choices)
         return
-    if args["vector_database"] == "pinecone":
+    if args["vector_database"] == DBNames.PINECONE:
         export_obj = export_pinecone(args)
-    elif args["vector_database"] == "qdrant":
+    elif args["vector_database"] == DBNames.QDRANT:
         export_obj = export_qdrant(args)
-    elif args["vector_database"] == "milvus":
+    elif args["vector_database"] == DBNames.MILVUS:
         export_obj = export_milvus(args)
     else:
         print("Invalid vector database")
