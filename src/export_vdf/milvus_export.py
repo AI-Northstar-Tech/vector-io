@@ -22,7 +22,7 @@ class NamespaceMeta(BaseModel):
     exported_vector_count: int
     dimensions: int
     model_name: str
-    vector_columns: List[str] = ['vector']
+    vector_columns: List[str] = ["vector"]
     data_path: str
     metric: str
 
@@ -31,8 +31,8 @@ class VDFMeta(BaseModel):
     version: str
     file_structure: List[str]
     author: str
-    exported_from: str = 'milvus'
-    indexes: Dict[str, List[NamespaceMeta]]
+    exported_from: str = "milvus"
+    indexes: Dict[str, Dict[str, NamespaceMeta]]
     exported_at: str
 
 
@@ -40,49 +40,49 @@ class ExportMilvus(ExportVDB):
     DB_NAME_SLUG = DBNames.MILVUS
 
     def __init__(self, args: Dict):
-        '''
+        """
         Initialize the class.
-        
+
         Keys in args:
             uri: optional, a string of connection uri
             token: a string of API key or token
             collections: optional, a string of collection names with comma as seperator
-        '''
+        """
         if args is None:
             args = {}
-        assert isinstance(args, dict), 'Invalid args.'
+        assert isinstance(args, dict), "Invalid args."
         super().__init__(args)
-        
-        uri = self.args.get('uri', 'http://localhost:19530')
-        token = self.args.get('token', '')
+
+        uri = self.args.get("uri", "http://localhost:19530")
+        token = self.args.get("token", "")
         connections.connect(uri=uri, token=token)
 
     def get_data(self) -> bool:
-        if self.args.get('collections') is None:
+        if self.args.get("collections") is None:
             collection_names = self.get_all_collection_names()
         else:
-            collection_names = self.args.get('collections').split(',')
+            collection_names = self.args.get("collections").split(",")
 
         index_metas = {}
-        for collection_name in tqdm(collection_names, desc='Fetching indexes'):
+        for collection_name in tqdm(collection_names, desc="Fetching indexes"):
             index_meta = self.get_data_for_collection(collection_name)
             index_metas[collection_name] = index_meta
 
-        self.file_structure.append(os.path.join(self.vdf_directory, 'VDF_META.json'))
+        self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
         internal_metadata = VDFMeta(
-            version=self.args.get('library_version'),
+            version=self.args.get("library_version"),
             file_structure=self.file_structure,
-            author=os.environ.get('USER'),
+            author=os.environ.get("USER"),
             exported_from=self.DB_NAME_SLUG,
             indexes=index_metas,
             exported_at=datetime.datetime.now().astimezone().isoformat(),
         )
-        with open(os.path.join(self.vdf_directory, 'VDF_META.json'), 'w') as json_file:
+        with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
             json.dump(internal_metadata.dict(), json_file, indent=4)
         # print internal metadata properly
         print(json.dumps(internal_metadata.dict(), indent=4))
         return True
-    
+
     def get_all_collection_names(self) -> List[str]:
         return utility.list_collections()
 
@@ -94,7 +94,7 @@ class ExportMilvus(ExportVDB):
             collection = Collection(collection_name)
             collection.load()
         except Exception as e:
-            raise RuntimeError(f'Load collection failed. \n{e}')
+            raise RuntimeError(f"Load collection failed. \n{e}")
 
         total = collection.num_entities
         dim = None
@@ -104,12 +104,14 @@ class ExportMilvus(ExportVDB):
         for f in collection.schema.fields:
             all_fields.append(f.name)
             if f.dtype.value in [100, 101]:
-                dim = f.params['dim']
+                dim = f.params["dim"]
                 vector_field = f.name
 
         num_vectors_exported = 0
         pbar = tqdm(total=total, desc=f"Exporting {collection_name}")
-        query_iterator = collection.query_iterator(batch_size=MAX_FETCH_SIZE, output_fields=all_fields)
+        query_iterator = collection.query_iterator(
+            batch_size=MAX_FETCH_SIZE, output_fields=all_fields
+        )
 
         while True:
             res = query_iterator.next()
@@ -129,19 +131,18 @@ class ExportMilvus(ExportVDB):
             num_vectors_exported += len(res)
             pbar.update(len(res))
 
-        index_metas = []
-        for index in collection.indexes:
-            metric_type = index.params.get('metric_type')
-            namespace_meta = NamespaceMeta(
-                namespace=collection_name,
-                index_name=index.index_name,
-                total_vector_count=total,
-                exported_vector_count=num_vectors_exported,
-                dimensions=dim,
-                model_name=self.args.get('model_name'),
-                data_path=vectors_directory,
-                metric=standardize_metric(metric_type, self.DB_NAME_SLUG) if metric_type else ''
-            )
-            index_metas.append(namespace_meta)
+        namespace_meta = NamespaceMeta(
+            namespace="",
+            index_name=collection_name,
+            total_vector_count=total,
+            exported_vector_count=num_vectors_exported,
+            vector_columns=[vector_field],
+            dimensions=dim,
+            model_name=self.args.get("model_name"),
+            data_path="/".join(vectors_directory.split("/")[1:]),
+            metric=standardize_metric(
+                collection.indexes[0].params["metric_type"], self.DB_NAME_SLUG
+            ),
+        )
 
-        return index_metas
+        return {"": namespace_meta}

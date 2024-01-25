@@ -123,7 +123,7 @@ class ExportQdrant(ExportVDB):
             "dimensions": dim,
             "model_name": self.args["model_name"],
             "vector_columns": ["vector"],
-            "data_path": vectors_directory,
+            "data_path": "/".join(vectors_directory.split("/")[1:]),
         }
 
         return {"": [namespace_meta]}

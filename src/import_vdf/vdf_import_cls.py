@@ -76,3 +76,17 @@ class ImportVDF(abc.ABC):
                 [file for file in os.listdir(data_path) if file.endswith(".parquet")]
             )
             return parquet_files
+        
+    def get_final_data_path(self, data_path):
+        final_data_path = os.path.join(
+            self.args["cwd"], self.args["dir"], data_path
+        )
+        if not os.path.isdir(final_data_path):
+            raise Exception(
+                f"Invalid data path\n"
+                f"data_path: {data_path}',\n"
+                f"Joined path: {final_data_path}'"
+                f"Current working directory: {self.args['cwd']}'\n"
+                f"Command line arg (dir): {self.args['dir']}'"
+            )
+        return final_data_path
