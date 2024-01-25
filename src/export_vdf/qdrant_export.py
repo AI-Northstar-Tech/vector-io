@@ -136,7 +136,6 @@ class ExportQdrant(ExportVDB):
             vectors[point.id] = point.vector
             metadata[point.id] = point.payload
         num_vectors_exported += self.save_vectors_to_parquet(
-            vectors, metadata, self.file_ctr, vectors_directory
+            vectors, metadata, vectors_directory
         )
-        self.file_ctr += 1
         return num_vectors_exported

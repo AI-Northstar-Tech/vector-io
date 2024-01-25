@@ -9,8 +9,10 @@ from util import extract_data_hash
 class ExportVDB(abc.ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        if not hasattr(cls, 'DB_NAME_SLUG'):
-            raise TypeError(f"Class {cls.__name__} lacks required class variable 'DB_NAME_SLUG'")
+        if not hasattr(cls, "DB_NAME_SLUG"):
+            raise TypeError(
+                f"Class {cls.__name__} lacks required class variable 'DB_NAME_SLUG'"
+            )
 
     def __init__(self, args):
         self.args = args
@@ -28,7 +30,7 @@ class ExportVDB(abc.ABC):
         """
         raise NotImplementedError
 
-    def save_vectors_to_parquet(self, vectors, metadata, batch_ctr, vectors_directory):
+    def save_vectors_to_parquet(self, vectors, metadata, vectors_directory):
         vectors_df = pd.DataFrame(list(vectors.items()), columns=["id", "vector"])
         # Store the vector in values as a column in the parquet file, and store the metadata as columns in the parquet file
         # Convert metadata to a dataframe with each of metadata_keys as a column
@@ -40,9 +42,10 @@ class ExportVDB(abc.ABC):
         df = vectors_df.merge(metadata_df, on="id", how="left")
 
         # Save the DataFrame to a parquet file
-        parquet_file = os.path.join(vectors_directory, f"{batch_ctr}.parquet")
+        parquet_file = os.path.join(vectors_directory, f"{self.file_ctr}.parquet")
         df.to_parquet(parquet_file)
         self.file_structure.append(parquet_file)
+        self.file_ctr += 1
 
         # Reset vectors and metadata
         vectors = {}

@@ -442,13 +442,12 @@ class ExportPinecone(ExportVDB):
                 ] * 1024 * 1024:
                     prev_total_size = total_size
                     total_size += self.save_vectors_to_parquet(
-                        vectors, metadata, batch_ctr, vectors_directory
+                        vectors, metadata, vectors_directory
                     )
-                    batch_ctr += 1
                 i += fetch_size
                 pbar.update(total_size - prev_total_size)
             total_size += self.save_vectors_to_parquet(
-                vectors, metadata, batch_ctr, vectors_directory
+                vectors, metadata, vectors_directory
             )
             namespace_meta = {
                 "namespace": namespace,

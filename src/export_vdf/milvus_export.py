@@ -32,7 +32,7 @@ class VDFMeta(BaseModel):
     file_structure: List[str]
     author: str
     exported_from: str = "milvus"
-    indexes: Dict[str, Dict[str, NamespaceMeta]]
+    indexes: Dict[str, List[NamespaceMeta]]
     exported_at: str
 
 
@@ -125,9 +125,8 @@ class ExportMilvus(ExportVDB):
                 k = res_i.pop(id_field)
                 vectors[k] = res_i.pop(vector_field)
                 metadata[k] = res_i
-            self.save_vectors_to_parquet(
-                vectors, metadata, self.file_ctr, vectors_directory
-            )
+            self.save_vectors_to_parquet(vectors, metadata, vectors_directory)
+
             num_vectors_exported += len(res)
             pbar.update(len(res))
 
@@ -145,4 +144,4 @@ class ExportMilvus(ExportVDB):
             ),
         )
 
-        return {"": namespace_meta}
+        return [namespace_meta]
