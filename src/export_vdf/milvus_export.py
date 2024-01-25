@@ -1,5 +1,5 @@
-from pydantic import BaseModel, validator
-from typing import Dict, List, Any
+from pydantic import BaseModel
+from typing import Dict, List
 import os
 import json
 import datetime
@@ -129,7 +129,9 @@ class ExportMilvus(ExportVDB):
             num_vectors_exported += len(res)
             pbar.update(len(res))
 
+        index_metas = []
         for index in collection.indexes:
+            metric_type = index.params.get('metric_type')
             namespace_meta = NamespaceMeta(
                 namespace=collection_name,
                 index_name=index.index_name,
@@ -138,7 +140,8 @@ class ExportMilvus(ExportVDB):
                 dimensions=dim,
                 model_name=self.args.get('model_name'),
                 data_path=vectors_directory,
-                metric=standardize_metric(index.params['metric_type'], self.DB_NAME_SLUG)
+                metric=standardize_metric(metric_type, self.DB_NAME_SLUG) if metric_type else ''
             )
+            index_metas.append(namespace_meta)
 
-        return [namespace_meta]
+        return index_metas

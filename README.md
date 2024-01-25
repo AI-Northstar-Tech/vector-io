@@ -105,6 +105,19 @@ options:
                         Names of collections to export
 ```
 
+```bash
+./export_vdf.py milvus --help
+usage: export_vdf.py milvus [-h] [-u URI] [-t TOKEN] [-c COLLECTIONS]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -u URI, --uri URI     Milvus connection URI
+  -t TOKEN, --token TOKEN
+                        Milvus connection token
+  -c COLLECTIONS, --collections COLLECTIONS
+                        Names of collections to export
+```
+
 ## Import script
 
 ```bash

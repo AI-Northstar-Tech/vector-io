@@ -111,7 +111,7 @@ def export_milvus(args):
         str,
     )
     set_arg_from_password(
-        args, "token", "Enter your Milvus Token (skip if no token needed): ", "Milvus Token"
+        args, "token", "Enter your Milvus Token (hit return to skip): ", "Milvus Token"
     )
     milvus_export = ExportMilvus(args)
     milvus_export.get_data()
@@ -167,7 +167,7 @@ def main():
         type=bool,
         help="Push to hub",
         default=False,
-        action='argparse.BooleanOptionalAction'
+        action=argparse.BooleanOptionalAction
     )
     parser.add_argument(
         "--public",
