@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Dict, List
 import os
 import json
@@ -25,6 +25,7 @@ class NamespaceMeta(BaseModel):
     vector_columns: List[str] = ["vector"]
     data_path: str
     metric: str
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class VDFMeta(BaseModel):
