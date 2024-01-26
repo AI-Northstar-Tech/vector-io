@@ -28,3 +28,4 @@ share/python-wheels/
 *.egg
 MANIFEST
 *.csv
+output.txt

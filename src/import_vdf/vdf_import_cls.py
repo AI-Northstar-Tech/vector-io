@@ -56,12 +56,12 @@ class ImportVDF(abc.ABC):
             vector_column_names = [vector_column_name]
         else:
             vector_column_names = namespace_meta["vector_columns"]
+            vector_column_name = vector_column_names[0]
             if len(vector_column_names) > 1:
                 print(
-                    f"Warning: More than one vector column found for index '{index_name}'."
-                    " Only the first vector column '{vector_column_name}' will be imported."
+                    f"Warning: More than one vector column found for index {index_name}."
+                    f" Only the first vector column {vector_column_name} will be imported."
                 )
-            vector_column_name = vector_column_names[0]
         return vector_column_names, vector_column_name
 
     def get_parquet_files(self, data_path):

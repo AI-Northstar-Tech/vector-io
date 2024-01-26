@@ -49,7 +49,12 @@ class ImportMilvus(ImportVDF):
                     if namespace_meta["namespace"]
                     else ""
                 )
+                _, vector_column_name = self.get_vector_column_name(
+                    collection_name, namespace_meta
+                )
                 # replace - with _
+                old_vector_column_name = vector_column_name
+                vector_column_name = vector_column_name.replace("-", "_")
                 index_name = index_name.replace("-", "_")
                 print(f"Index name: {index_name}")
 
@@ -74,7 +79,7 @@ class ImportMilvus(ImportVDF):
                             auto_id=False,
                         )
                         f_vector = FieldSchema(
-                            name="vector",
+                            name=vector_column_name,
                             dtype=DataType.FLOAT_VECTOR,
                             dim=namespace_meta["dimensions"],
                         )
@@ -117,31 +122,29 @@ class ImportMilvus(ImportVDF):
                 final_data_path = self.get_final_data_path(data_path)
                 parquet_files = self.get_parquet_files(final_data_path)
 
-                _, vector_column_name = self.get_vector_column_name(
-                    collection_name, namespace_meta
-                )
-
                 num_inserted = 0
                 for file in tqdm(parquet_files, desc="Inserting data"):
                     file_path = os.path.join(final_data_path, file)
                     df = pd.read_parquet(file_path)
-                    df['id'] = df['id'].apply(lambda x: str(x))
-                    df.rename(columns={'id': f_pk.name, vector_column_name: f_vector.name}, inplace=True)
+                    df["id"] = df["id"].apply(lambda x: str(x))
                     data_rows = []
                     for _, row in df.iterrows():
-                        row = row.to_dict()
-                        data_row = {}
-                        data_row[f_pk.name] = str(row.pop("id"))
-                        data_row[f_vector.name] = row.pop(vector_column_name)
-                        data_row.update(row)
-                        data_rows.append(data_row)
-                    mr = collection.insert(data_rows)
-                    num_inserted += mr.succ_count
+                        row = json.loads(row.to_json())
+                        # replace old_vector_column_name with vector_column_name
+                        row[vector_column_name] = row[old_vector_column_name]
+                        del row[old_vector_column_name]
+                        assert isinstance(row[f_pk.name], str), row[f_pk.name]
+                        assert isinstance(row[f_vector.name][0], float), type(
+                            row[f_vector.name][0]
+                        )
+                        data_rows.append(row)
+                    BATCH_SIZE = 100
+                    for i in tqdm(range(0, len(data_rows), BATCH_SIZE), desc="Upserting in Batches"):
+                        mr = collection.insert(data_rows[i : i + BATCH_SIZE])
+                        num_inserted += mr.succ_count
 
                 collection.flush()
                 vector_count = collection.num_entities
-                print(
-                    f"Index '{index_name}' has {vector_count} vectors after import"
-                )
+                print(f"Index '{index_name}' has {vector_count} vectors after import")
                 print(f"{num_inserted} vectors were imported")
         print("Data import completed successfully.")
