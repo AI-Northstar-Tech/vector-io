@@ -5,7 +5,6 @@ import hashlib
 import json
 import os
 from qdrant_client.http.models import Distance
-
 from names import DBNames
 
 
@@ -75,7 +74,6 @@ def set_arg_from_input(args, arg_name, prompt, type_name=str, default_value=None
     if (
         arg_name not in args
         or args[arg_name] is None
-        or args[arg_name] == default_value
     ):
         inp = input(prompt)
         if inp == "":
@@ -126,8 +124,8 @@ db_metric_to_standard_metric = {
     DBNames.MILVUS: {
         "COSINE": Distance.COSINE,
         "IP": Distance.DOT,
-        "L2": Distance.EUCLID
-    }
+        "L2": Distance.EUCLID,
+    },
 }
 
 
@@ -157,3 +155,30 @@ def standardize_metric_reverse(metric, db):
                 return key
     else:
         raise Exception(f"Invalid metric '{metric}' for database '{db}'")
+
+
+def get_final_data_path(cwd, dir, data_path):
+    final_data_path = os.path.join(cwd, dir, data_path)
+    if not os.path.isdir(final_data_path):
+        raise Exception(
+            f"Invalid data path\n"
+            f"data_path: {data_path},\n"
+            f"Joined path: {final_data_path}\n"
+            f"Current working directory: {cwd}\n"
+            f"Command line arg (dir): {dir}"
+        )
+    return final_data_path
+
+
+def get_parquet_files(data_path):
+    # Load the data from the parquet files
+    if not os.path.isdir(data_path):
+        if data_path.endswith(".parquet"):
+            return [data_path]
+        else:
+            raise Exception(f"Invalid data path '{data_path}'")
+    else:
+        parquet_files = sorted(
+            [file for file in os.listdir(data_path) if file.endswith(".parquet")]
+        )
+        return parquet_files

@@ -1,15 +1,17 @@
 import json
 import os
 from packaging.version import Version
-from util import expand_shorthand_path
+from util import expand_shorthand_path, get_final_data_path, get_parquet_files
 import abc
 
 
 class ImportVDF(abc.ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        if not hasattr(cls, 'DB_NAME_SLUG'):
-            raise TypeError(f"Class {cls.__name__} lacks required class variable 'DB_NAME_SLUG'")
+        if not hasattr(cls, "DB_NAME_SLUG"):
+            raise TypeError(
+                f"Class {cls.__name__} lacks required class variable 'DB_NAME_SLUG'"
+            )
 
     def __init__(self, args):
         self.args = args
@@ -65,28 +67,7 @@ class ImportVDF(abc.ABC):
         return vector_column_names, vector_column_name
 
     def get_parquet_files(self, data_path):
-        # Load the data from the parquet files
-        if not os.path.isdir(data_path):
-            if data_path.endswith(".parquet"):
-                return [data_path]
-            else:
-                raise Exception(f"Invalid data path '{data_path}'")
-        else:
-            parquet_files = sorted(
-                [file for file in os.listdir(data_path) if file.endswith(".parquet")]
-            )
-            return parquet_files
-        
+        return get_parquet_files(data_path)
+
     def get_final_data_path(self, data_path):
-        final_data_path = os.path.join(
-            self.args["cwd"], self.args["dir"], data_path
-        )
-        if not os.path.isdir(final_data_path):
-            raise Exception(
-                f"Invalid data path\n"
-                f"data_path: {data_path}',\n"
-                f"Joined path: {final_data_path}'"
-                f"Current working directory: {self.args['cwd']}'\n"
-                f"Command line arg (dir): {self.args['dir']}'"
-            )
-        return final_data_path
+        return get_final_data_path(self.args["cwd"], self.args["dir"], data_path)
