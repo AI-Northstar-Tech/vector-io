@@ -154,6 +154,28 @@ options:
 
 ```
 
+## Re-embed script
+
+This Python script is used to re-embed a vector dataset. It takes a directory of vector dataset in the VDF format and re-embeds it using a new model. The script also allows you to specify the name of the column containing text to be embedded.
+
+```bash
+src/reembed.py --help
+usage: reembed.py [-h] -d DIR [-m NEW_MODEL_NAME]
+                  [-t TEXT_COLUMN]
+
+Reembed a vector dataset
+
+options:
+  -h, --help            show this help message and exit
+  -d DIR, --dir DIR     Directory of vector dataset in
+                        the VDF format
+  -m NEW_MODEL_NAME, --new_model_name NEW_MODEL_NAME
+                        Name of new model to be used
+  -t TEXT_COLUMN, --text_column TEXT_COLUMN
+                        Name of the column containing
+                        text to be embedded
+```
+
 ## Examples
 
 ```bash
