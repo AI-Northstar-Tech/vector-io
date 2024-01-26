@@ -9,4 +9,3 @@ huggingface_hub
 pymilvus>=2.3.6
 openai>=1.10.0
 litellm>=1.19.4
-dask
