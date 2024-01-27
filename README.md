@@ -65,9 +65,10 @@ options:
 Vector Databases:
   Choose the vectors database to export data from
 
-  {pinecone,qdrant}
-    pinecone            Export data from Pinecone
-    qdrant              Export data from Qdrant
+  {pinecone,qdrant,vertexai_vectorsearch}
+    pinecone                 Export data from Pinecone
+    qdrant                   Export data from Qdrant
+    vertexai_vectorsearch    Export data from Vertex AI Vector Search
 ```
 
 ```bash
@@ -103,6 +104,21 @@ options:
   -u URL, --url URL     Location of Qdrant instance
   -c COLLECTIONS, --collections COLLECTIONS
                         Names of collections to export
+```
+
+```bash
+src/export_vdf.py vertexai_vectorsearch --help
+usage: export.py vertexai_vectorsearch [-h] [-p PROJECT_ID] [-i INDEX]
+                          [-c GCLOUD_CREDENTIALS_FILE]
+
+options:
+  -h, --help            show this help message and exit
+  -p PROJECT_ID, --project-id PROJECT_ID
+                        Google Cloud Project ID
+  -i INDEX, --index INDEX
+                        Name of index/indexes to export (comma-separated)
+  -c GCLOUD_CREDENTIALS_FILE, --gcloud-credentials-file GCLOUD_CREDENTIALS_FILE
+                        Google Cloud Service Account Credentials file
 ```
 
 ## Import script

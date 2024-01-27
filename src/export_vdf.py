@@ -7,6 +7,7 @@ import time
 from dotenv import load_dotenv
 from export_vdf.pinecone_export import ExportPinecone
 from export_vdf.qdrant_export import ExportQdrant
+from export_vdf.vertexai_vectorsearch_export import ExportVertexAIVectorSearch
 from export_vdf.vdb_export_cls import ExportVDB
 from export_vdf.push_to_hub import push_to_hub
 from util import set_arg_from_input, set_arg_from_password
@@ -92,6 +93,30 @@ def export_qdrant(args):
     return qdrant_export
 
 
+def export_vertexai_vectorsearch(args):
+    """
+    Export data from Vertex AI Vector Search
+    """
+    set_arg_from_input(
+        args, 
+        "project_id", 
+        "Enter the Google Cloud Project ID: "
+    )
+    set_arg_from_input(
+        args,
+        "index",
+        "Enter name of index to export (hit return to export all. Comma separated for multiple indexes): ",
+    )
+    set_arg_from_input(
+        args, 
+        "gcloud_credentials_file", 
+        "Enter path to service account credentials file (hit return to use application default credentials): ", 
+    )
+    vertexai_vectorsearch_export = ExportVertexAIVectorSearch(args)
+    vertexai_vectorsearch_export.get_data()
+    return vertexai_vectorsearch_export
+
+
 def main():
     """
     Export data from various vector databases to the VDF format for vector datasets.
@@ -101,7 +126,7 @@ def main():
 
     Arguments:
         vector_database (str): Choose the vectors database to export data from.
-            Possible values: "pinecone", "qdrant".
+            Possible values: "pinecone", "qdrant", "vertexai_vectorsearch".
 
     Options:
         Pinecone:
@@ -112,12 +137,20 @@ def main():
             -u, --url (str): Location of Qdrant instance.
             -c, --collections (str): Names of collections to export (comma-separated).
 
+        Vertex AI Vector Search:
+            -p, --project-id (str): Google Cloud Project ID.
+            -i, --index (str): Name of indexes to export (comma-separated).
+            -c, --gcloud-credentials-file: Path to Goofle Cloud Service Account credentials
+            
     Examples:
         Export data from Pinecone:
-        python export.py pinecone -e my_env -i my_index
+        python export_vdf.py pinecone -e my_env -i my_index
 
         Export data from Qdrant:
-        python export.py qdrant -u http://localhost:6333 -c my_collection
+        python export_vdf.py qdrant -u http://localhost:6333 -c my_collection
+
+        Export data from Vertex AI Vector Search:
+        python export_vdf.py vertexai_vectorsearch -p your_project_id -i your_index
     """
     parser = argparse.ArgumentParser(
         description="Export data from various vector databases to the VDF format for vector datasets"
@@ -199,6 +232,20 @@ def main():
         "-c", "--collections", type=str, help="Names of collections to export"
     )
 
+    # Vertex AI VectorSearch
+    parser_vertexai_vectorsearch = subparsers.add_parser(
+        "vertexai_vectorsearch", help="Export data from Vertex AI Vector Search"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-p", "--project-id", type=str, help="Google Cloud Project ID"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-i", "--index", type=str, help="Name of the index or indexes to export"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-c", "--gcloud-credentials-file", type=str, help="Path to Google Cloud service account credentials file", default=None
+    )
+
     args = parser.parse_args()
     # convert args to dict
     args = vars(args)
@@ -218,6 +265,8 @@ def main():
         export_obj = export_pinecone(args)
     elif args["vector_database"] == "qdrant":
         export_obj = export_qdrant(args)
+    elif args["vector_database"] == "vertexai_vectorsearch":
+        export_obj = export_vertexai_vectorsearch(args)
     else:
         print("Invalid vector database")
         args["vector_database"] = input("Enter the name of vector database to export: ")

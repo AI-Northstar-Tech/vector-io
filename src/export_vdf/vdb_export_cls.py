@@ -33,11 +33,14 @@ class ExportVDB(abc.ABC):
         # Store the vector in values as a column in the parquet file, and store the metadata as columns in the parquet file
         # Convert metadata to a dataframe with each of metadata_keys as a column
         # Convert metadata to a list of dictionaries
-        metadata_list = [{**{"id": k}, **v} for k, v in metadata.items()]
-        # Convert the list to a DataFrame
-        metadata_df = pd.DataFrame.from_records(metadata_list)
-        # Now merge this metadata_df with your main DataFrame
-        df = vectors_df.merge(metadata_df, on="id", how="left")
+        if metadata:
+            metadata_list = [{**{"id": k}, **v} for k, v in metadata.items()]
+            # Convert the list to a DataFrame
+            metadata_df = pd.DataFrame.from_records(metadata_list)
+            # Now merge this metadata_df with your main DataFrame
+            df = vectors_df.merge(metadata_df, on="id", how="left")
+        else:
+            df = vectors_df
 
         # Save the DataFrame to a parquet file
         parquet_file = os.path.join(vectors_directory, f"{batch_ctr}.parquet")
