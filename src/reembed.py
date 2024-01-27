@@ -51,6 +51,12 @@ def main():
         default="text",
     )
 
+    parser.add_argument(
+        "--dimensions",
+        type=int,
+        help="Dimensions of the new model to be used",
+    )
+
     args = parser.parse_args()
     args = vars(args)
 
@@ -61,6 +67,14 @@ def main():
         str,
         "text-embedding-3-small",
     )
+
+    if args["new_model_name"].startswith("text-embedding-3"):
+        set_arg_from_input(
+            args,
+            "dimensions",
+            "Enter the dimensions of the new model to be used (default: 1536 for small, 3072 for large): ",
+            int,
+        )
 
     set_arg_from_password(
         args,
@@ -88,7 +102,13 @@ def main():
     # open VDF_META.json
     with open(os.path.join(args["dir"], "VDF_META.json"), "r+") as f:
         vdf_meta = json.load(f)
-        for _, index_meta in tqdm(vdf_meta["indexes"].items(), desc=f"Iterating over indexes"):
+        for _, index_meta in tqdm(
+            vdf_meta["indexes"].items(), desc=f"Iterating over indexes"
+        ):
+            new_vector_column = (
+                f"vector_{args['new_model_name'].replace('/', '_')}"
+            )
+            overwrite_bool = False
             for namespace_meta in tqdm(index_meta, desc=f"Iterating over namespaces"):
                 data_path = namespace_meta["data_path"]
                 final_data_path = get_final_data_path(
@@ -97,9 +117,20 @@ def main():
                 parquet_files = get_parquet_files(final_data_path)
                 for file in tqdm(parquet_files, desc=f"Iterating over parquet files"):
                     file_path = os.path.join(final_data_path, file)
-                    new_vector_column = (
-                        f"vector_{args['new_model_name'].replace('/', '_')}"
-                    )
+                    if new_vector_column in namespace_meta["vector_columns"] and not overwrite_bool:
+                        # ask user if they want to overwrite (y/n)
+                        overwrite = input(
+                            f"{new_vector_column} already exists in vector_columns. Overwrite? (y/n): "
+                        )
+                        overwrite_bool = overwrite.lower() == "y"
+                        if not overwrite_bool:
+                            tqdm.write(
+                                f"Skipping {file_path} because {new_vector_column} already exists in vector_columns.\n"
+                                "Aborting reembedding."
+                            )
+                            exit()
+                    if "dimensions" in args:
+                        new_vector_column += f"_{args['dimensions']}"
                     tqdm.write(f"Reembedding {file_path}")
                     # read parquet file
                     df = pd.read_parquet(file_path)
@@ -119,20 +150,31 @@ def main():
                         embeddings = litellm.embedding(
                             model=args["new_model_name"],
                             input=batch_text,
+                            dimensions=args.get("dimensions"),
                         )
                         # add embeddings to df
                         # embeddings.data is a list of dicts. Each dict has keys "embedding" and "index"
                         # first sort by "index" and then extract "embedding"
-                        vectors = [x["embedding"] for x in sorted(embeddings.data, key=lambda x: x["index"])]
+                        vectors = [
+                            x["embedding"]
+                            for x in sorted(embeddings.data, key=lambda x: x["index"])
+                        ]
                         dim = len(vectors[0])
                         all_embeddings.extend(vectors)
                     # add only the new_vector_column in parquet file
                     df[new_vector_column] = all_embeddings
                     df.to_parquet(file_path)
-                    tqdm.write(f"Computed {len(all_embeddings)} vectors for {len(df)} rows in {file_path}")
+                    tqdm.write(
+                        f"Computed {len(all_embeddings)} vectors for {len(df)} rows in column:{new_vector_column} of {file_path}"
+                    )
                     reembed_count += len(all_embeddings)
                 # prepend new_vector_column to vector_columns in namespace_meta
-                namespace_meta["vector_columns"].insert(0, new_vector_column)
+                if new_vector_column not in namespace_meta["vector_columns"]:
+                    namespace_meta["vector_columns"].insert(0, new_vector_column)
+                else:
+                    tqdm.write(
+                        f"Warning: {new_vector_column} already exists in vector_columns. Overwriting."
+                    )
                 if "model_map" not in namespace_meta:
                     namespace_meta["model_map"] = {}
                     for vector_column in namespace_meta["vector_columns"]:
@@ -140,18 +182,22 @@ def main():
                             "model_name": namespace_meta["model_name"],
                             "text_column": args["text_column"],
                             "dimensions": namespace_meta["dimensions"],
+                            "vector_column": vector_column,
                         }
                 namespace_meta["model_map"][new_vector_column] = {
                     "model_name": args["new_model_name"],
                     "text_column": args["text_column"],
                     "dimensions": dim,
+                    "vector_column": new_vector_column,
                 }
                 namespace_meta["model_name"] = args["new_model_name"]
                 namespace_meta["dimensions"] = dim
         # write vdf_meta to VDF_META.json
         f.seek(0)
         json.dump(vdf_meta, f, indent=4)
-        tqdm.write(f"Reembedding complete. Computed {reembed_count} vectors. Updated VDF_META.json")
+        tqdm.write(
+            f"Reembedding complete. Computed {reembed_count} vectors. Updated VDF_META.json"
+        )
 
 
 if __name__ == "__main__":
