@@ -7,6 +7,7 @@ import argparse
 
 
 def push_to_hub(export_obj, args):
+    args = vars(args)
     print("Pushing to HuggingFace Hub...")
 
     # Log in to Hugging Face
@@ -18,9 +19,12 @@ def push_to_hub(export_obj, args):
         os.environ["HUGGING_FACE_TOKEN"] = getpass(
             prompt="Enter your HuggingFace API token (with write access): "
         )
-    if "HF_USERNAME" not in os.environ or os.environ["HF_USERNAME"] is None:
-        # set HF_USERNAME env var
-        os.environ["HF_USERNAME"] = input("Enter your HuggingFace username: ")
+    if "HF_USERNAME" not in args or args["HF_USERNAME"] is None or args["HF_USERNAME"] == "":
+        if "HF_USERNAME" not in os.environ or os.environ["HF_USERNAME"] is None:
+            # set HF_USERNAME env var
+            os.environ["HF_USERNAME"] = input("Enter your HuggingFace username: ")
+    else:
+        os.environ["HF_USERNAME"] = args["HF_USERNAME"]
     hf_api = HfApi(token=os.environ["HUGGING_FACE_TOKEN"])
     repo_id = f"{os.environ['HF_USERNAME']}/{export_obj.vdf_directory}"
     dataset_url = hf_api.create_repo(
@@ -77,7 +81,12 @@ def main():
         default=False,
         action=argparse.BooleanOptionalAction,
     )
-
+    parser.add_argument(
+        "--HF_USERNAME",
+        type=str,
+        help="HuggingFace username (default: existing env var HF_USERNAME)",
+        default=None,
+    )
     args = parser.parse_args()
 
     if args.vdf_directory is None:

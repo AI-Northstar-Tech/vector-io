@@ -7,9 +7,11 @@ import time
 from dotenv import load_dotenv
 from export_vdf.pinecone_export import ExportPinecone
 from export_vdf.qdrant_export import ExportQdrant
+from export_vdf.milvus_export import ExportMilvus
 from export_vdf.vertexai_vectorsearch_export import ExportVertexAIVectorSearch
 from export_vdf.vdb_export_cls import ExportVDB
 from export_vdf.push_to_hub import push_to_hub
+from names import DBNames
 from util import set_arg_from_input, set_arg_from_password
 from getpass import getpass
 import warnings
@@ -93,6 +95,31 @@ def export_qdrant(args):
     return qdrant_export
 
 
+def export_milvus(args):
+    """
+    Export data from Milvus
+    """
+    set_arg_from_input(
+        args,
+        "uri",
+        "Enter the uri of Milvus (hit return for 'http://localhost:19530'): ",
+        str,
+        "http://localhost:19530",
+    )
+    set_arg_from_input(
+        args,
+        "collections",
+        "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
+        str,
+    )
+    set_arg_from_password(
+        args, "token", "Enter your Milvus Token (hit return to skip): ", "Milvus Token"
+    )
+    milvus_export = ExportMilvus(args)
+    milvus_export.get_data()
+    return milvus_export
+
+
 def export_vertexai_vectorsearch(args):
     """
     Export data from Vertex AI Vector Search
@@ -174,7 +201,7 @@ def main():
         type=bool,
         help="Push to hub",
         default=False,
-        action=argparse.BooleanOptionalAction,
+        action=argparse.BooleanOptionalAction
     )
     parser.add_argument(
         "--public",
@@ -213,14 +240,14 @@ def main():
         type=bool,
         help="Allow modifying data to search",
         default=False,
-        action=argparse.BooleanOptionalAction,
+        action=argparse.BooleanOptionalAction
     )
     parser_pinecone.add_argument(
         "--subset",
         type=bool,
         help="Export a subset of data (default: False)",
         default=False,
-        action=argparse.BooleanOptionalAction,
+        action=argparse.BooleanOptionalAction
     )
     db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
     # Qdrant
@@ -229,6 +256,17 @@ def main():
         "-u", "--url", type=str, help="Location of Qdrant instance"
     )
     parser_qdrant.add_argument(
+        "-c", "--collections", type=str, help="Names of collections to export"
+    )
+    # Milvus
+    parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
+    parser_milvus.add_argument(
+        "-u", "--uri", type=str, help="Milvus connection URI"
+    )
+    parser_milvus.add_argument(
+        "-t", "--token", type=str, required=False, help="Milvus connection token"
+    )
+    parser_milvus.add_argument(
         "-c", "--collections", type=str, help="Names of collections to export"
     )
 
@@ -261,11 +299,13 @@ def main():
     ):
         print("Please choose a vector database to export data from:", db_choices)
         return
-    if args["vector_database"] == "pinecone":
+    if args["vector_database"] == DBNames.PINECONE:
         export_obj = export_pinecone(args)
-    elif args["vector_database"] == "qdrant":
+    elif args["vector_database"] == DBNames.QDRANT:
         export_obj = export_qdrant(args)
-    elif args["vector_database"] == "vertexai_vectorsearch":
+    elif args["vector_database"] == DBNames.MILVUS:
+        export_obj = export_milvus(args)
+    elif args["vector_database"] == DBNames.VERTEXAI:
         export_obj = export_vertexai_vectorsearch(args)
     else:
         print("Invalid vector database")
