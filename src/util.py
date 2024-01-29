@@ -123,10 +123,15 @@ db_metric_to_standard_metric = {
         Distance.EUCLID: Distance.EUCLID,
         Distance.DOT: Distance.DOT,
     },
+    DBNames.MILVUS: {
+        "COSINE": Distance.COSINE,
+        "IP": Distance.DOT,
+        "L2": Distance.EUCLID,
+    },
     DBNames.KDBAI: {
-	"L2":Distance.EUCLID,
-	"CS":Distance.COSINE,
-	"IP":Distance.DOT,
+	   "L2":Distance.EUCLID,
+	   "CS":Distance.COSINE,
+	   "IP":Distance.DOT,
     },
 }
 
