@@ -27,3 +27,5 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.csv
+output.txt

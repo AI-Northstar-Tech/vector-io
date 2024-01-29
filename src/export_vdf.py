@@ -7,7 +7,11 @@ import time
 from dotenv import load_dotenv
 from export_vdf.pinecone_export import ExportPinecone
 from export_vdf.qdrant_export import ExportQdrant
+from export_vdf.milvus_export import ExportMilvus
+from export_vdf.vertexai_vectorsearch_export import ExportVertexAIVectorSearch
 from export_vdf.vdb_export_cls import ExportVDB
+from export_vdf.push_to_hub import push_to_hub
+from names import DBNames
 from util import set_arg_from_input, set_arg_from_password
 from getpass import getpass
 import warnings
@@ -91,6 +95,55 @@ def export_qdrant(args):
     return qdrant_export
 
 
+def export_milvus(args):
+    """
+    Export data from Milvus
+    """
+    set_arg_from_input(
+        args,
+        "uri",
+        "Enter the uri of Milvus (hit return for 'http://localhost:19530'): ",
+        str,
+        "http://localhost:19530",
+    )
+    set_arg_from_input(
+        args,
+        "collections",
+        "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
+        str,
+    )
+    set_arg_from_password(
+        args, "token", "Enter your Milvus Token (hit return to skip): ", "Milvus Token"
+    )
+    milvus_export = ExportMilvus(args)
+    milvus_export.get_data()
+    return milvus_export
+
+
+def export_vertexai_vectorsearch(args):
+    """
+    Export data from Vertex AI Vector Search
+    """
+    set_arg_from_input(
+        args, 
+        "project_id", 
+        "Enter the Google Cloud Project ID: "
+    )
+    set_arg_from_input(
+        args,
+        "index",
+        "Enter name of index to export (hit return to export all. Comma separated for multiple indexes): ",
+    )
+    set_arg_from_input(
+        args, 
+        "gcloud_credentials_file", 
+        "Enter path to service account credentials file (hit return to use application default credentials): ", 
+    )
+    vertexai_vectorsearch_export = ExportVertexAIVectorSearch(args)
+    vertexai_vectorsearch_export.get_data()
+    return vertexai_vectorsearch_export
+
+
 def main():
     """
     Export data from various vector databases to the VDF format for vector datasets.
@@ -100,7 +153,7 @@ def main():
 
     Arguments:
         vector_database (str): Choose the vectors database to export data from.
-            Possible values: "pinecone", "qdrant".
+            Possible values: "pinecone", "qdrant", "vertexai_vectorsearch".
 
     Options:
         Pinecone:
@@ -111,12 +164,20 @@ def main():
             -u, --url (str): Location of Qdrant instance.
             -c, --collections (str): Names of collections to export (comma-separated).
 
+        Vertex AI Vector Search:
+            -p, --project-id (str): Google Cloud Project ID.
+            -i, --index (str): Name of indexes to export (comma-separated).
+            -c, --gcloud-credentials-file: Path to Goofle Cloud Service Account credentials
+            
     Examples:
         Export data from Pinecone:
-        python export.py pinecone -e my_env -i my_index
+        python export_vdf.py pinecone -e my_env -i my_index
 
         Export data from Qdrant:
-        python export.py qdrant -u http://localhost:6333 -c my_collection
+        python export_vdf.py qdrant -u http://localhost:6333 -c my_collection
+
+        Export data from Vertex AI Vector Search:
+        python export_vdf.py vertexai_vectorsearch -p your_project_id -i your_index
     """
     parser = argparse.ArgumentParser(
         description="Export data from various vector databases to the VDF format for vector datasets"
@@ -139,6 +200,13 @@ def main():
         "--push_to_hub",
         type=bool,
         help="Push to hub",
+        default=False,
+        action=argparse.BooleanOptionalAction
+    )
+    parser.add_argument(
+        "--public",
+        type=bool,
+        help="Make dataset public (default: False)",
         default=False,
         action=argparse.BooleanOptionalAction,
     )
@@ -172,14 +240,14 @@ def main():
         type=bool,
         help="Allow modifying data to search",
         default=False,
-        action=argparse.BooleanOptionalAction,
+        action=argparse.BooleanOptionalAction
     )
     parser_pinecone.add_argument(
         "--subset",
         type=bool,
         help="Export a subset of data (default: False)",
         default=False,
-        action=argparse.BooleanOptionalAction,
+        action=argparse.BooleanOptionalAction
     )
     db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
     # Qdrant
@@ -189,6 +257,31 @@ def main():
     )
     parser_qdrant.add_argument(
         "-c", "--collections", type=str, help="Names of collections to export"
+    )
+    # Milvus
+    parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
+    parser_milvus.add_argument(
+        "-u", "--uri", type=str, help="Milvus connection URI"
+    )
+    parser_milvus.add_argument(
+        "-t", "--token", type=str, required=False, help="Milvus connection token"
+    )
+    parser_milvus.add_argument(
+        "-c", "--collections", type=str, help="Names of collections to export"
+    )
+
+    # Vertex AI VectorSearch
+    parser_vertexai_vectorsearch = subparsers.add_parser(
+        "vertexai_vectorsearch", help="Export data from Vertex AI Vector Search"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-p", "--project-id", type=str, help="Google Cloud Project ID"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-i", "--index", type=str, help="Name of the index or indexes to export"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-c", "--gcloud-credentials-file", type=str, help="Path to Google Cloud service account credentials file", default=None
     )
 
     args = parser.parse_args()
@@ -206,10 +299,14 @@ def main():
     ):
         print("Please choose a vector database to export data from:", db_choices)
         return
-    if args["vector_database"] == "pinecone":
+    if args["vector_database"] == DBNames.PINECONE:
         export_obj = export_pinecone(args)
-    elif args["vector_database"] == "qdrant":
+    elif args["vector_database"] == DBNames.QDRANT:
         export_obj = export_qdrant(args)
+    elif args["vector_database"] == DBNames.MILVUS:
+        export_obj = export_milvus(args)
+    elif args["vector_database"] == DBNames.VERTEXAI:
+        export_obj = export_vertexai_vectorsearch(args)
     else:
         print("Invalid vector database")
         args["vector_database"] = input("Enter the name of vector database to export: ")
@@ -224,58 +321,7 @@ def main():
     )
 
     if args["push_to_hub"]:
-        print("Pushing to HuggingFace Hub...")
-        from huggingface_hub import HfApi, HfFolder, Repository
-
-        # Log in to Hugging Face
-        if (
-            "HUGGING_FACE_TOKEN" not in os.environ
-            or os.environ["HUGGING_FACE_TOKEN"] is None
-        ):
-            # set HUGGINGFACEHUB_API_TOKEN env var
-            os.environ["HUGGING_FACE_TOKEN"] = getpass(
-                prompt="Enter your HuggingFace API token (with write access): "
-            )
-        if "HF_USERNAME" not in os.environ or os.environ["HF_USERNAME"] is None:
-            # set HF_USERNAME env var
-            os.environ["HF_USERNAME"] = input("Enter your HuggingFace username: ")
-        hf_api = HfApi(token=os.environ["HUGGING_FACE_TOKEN"])
-        repo_id = f"{os.environ['HF_USERNAME']}/{export_obj.vdf_directory}"
-        dataset_url = hf_api.create_repo(
-            token=os.environ["HUGGING_FACE_TOKEN"],
-            repo_id=repo_id,
-            private=True,
-            repo_type="dataset",
-        )
-        # for each file/folder in export_obj.vdf_directory, upload to hub
-        hf_api.upload_folder(
-            repo_id=repo_id,
-            folder_path=export_obj.vdf_directory,
-            repo_type="dataset",
-        )
-        # create hf dataset card in temp README.md
-        readme_path = os.path.join(export_obj.vdf_directory, "README.md")
-        with open(readme_path, "w") as f:
-            f.write(
-                """
----
-tags:
-- vdf
-- vector-io
-- vector-dataset
-- vector-embeddings
----
-
-This is a dataset created using [vector-io](https://github.com/ai-northstar-tech/vector-io)
-"""
-            )
-        hf_api.upload_file(
-            repo_id=repo_id,
-            path_or_fileobj=readme_path,
-            path_in_repo="README.md",
-            repo_type="dataset",
-        )
-        print(f"Created a private HuggingFace dataset repo at {dataset_url}")
+        push_to_hub(export_obj, args)
 
 
 if __name__ == "__main__":

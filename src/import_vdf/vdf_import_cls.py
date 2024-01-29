@@ -1,6 +1,7 @@
 import json
 import os
 from packaging.version import Version
+from util import expand_shorthand_path, get_final_data_path, get_parquet_files
 from src.util import expand_shorthand_path
 import abc
 
@@ -58,23 +59,16 @@ class ImportVDF(abc.ABC):
             vector_column_names = [vector_column_name]
         else:
             vector_column_names = namespace_meta["vector_columns"]
+            vector_column_name = vector_column_names[0]
             if len(vector_column_names) > 1:
                 print(
-                    f"Warning: More than one vector column found for index '{index_name}'."
-                    " Only the first vector column '{vector_column_name}' will be imported."
+                    f"Warning: More than one vector column found for index {index_name}."
+                    f" Only the first vector column {vector_column_name} will be imported."
                 )
-            vector_column_name = vector_column_names[0]
         return vector_column_names, vector_column_name
 
     def get_parquet_files(self, data_path):
-        # Load the data from the parquet files
-        if not os.path.isdir(data_path):
-            if data_path.endswith(".parquet"):
-                return [data_path]
-            else:
-                raise Exception(f"Invalid data path '{data_path}'")
-        else:
-            parquet_files = sorted(
-                [file for file in os.listdir(data_path) if file.endswith(".parquet")]
-            )
-            return parquet_files
+        return get_parquet_files(data_path)
+
+    def get_final_data_path(self, data_path):
+        return get_final_data_path(self.args["cwd"], self.args["dir"], data_path)

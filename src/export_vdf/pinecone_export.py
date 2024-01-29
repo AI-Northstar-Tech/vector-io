@@ -43,12 +43,14 @@ class ExportPinecone(ExportVDB):
                 namespace=namespace,
             )
             if len(results["matches"]) == 0:
-                print("No vectors found that have not been exported yet.")
+                tqdm.write("No vectors found that have not been exported yet.")
                 return []
             # mark the vectors as exported
             ids = [result["id"] for result in results["matches"]]
             ids_to_mark = list(set(ids) - all_ids)
-            print(f"Found {len(ids_to_mark)} vectors that have not been exported yet.")
+            tqdm.write(
+                f"Found {len(ids_to_mark)} vectors that have not been exported yet."
+            )
             # fetch the vectors and upsert them with the exported_vectorio flag with MAX_FETCH_SIZE at a time
             mark_pbar = tqdm(total=len(ids_to_mark), desc="Step 1/3: Marking vectors")
             mark_batch_size = MAX_FETCH_SIZE
@@ -58,7 +60,7 @@ class ExportPinecone(ExportVDB):
                 try:
                     data = index.fetch(batch_ids)
                 except Exception as e:
-                    print(
+                    tqdm.write(
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size)"
                     )
                     mark_batch_size = mark_batch_size * 3 // 4
@@ -87,7 +89,7 @@ class ExportPinecone(ExportVDB):
                 try:
                     resp = index.upsert(vectors=upsert_data, namespace=namespace)
                 except Exception as e:
-                    print(
+                    tqdm.write(
                         f"Error upserting vectors: {e}. Trying with a smaller batch size (--batch_size)"
                     )
                     mark_batch_size = mark_batch_size * 3 // 4
@@ -97,7 +99,7 @@ class ExportPinecone(ExportVDB):
                 i += resp["upserted_count"]
                 mark_pbar.update(len(batch_ids))
             self.collected_ids_by_modifying = True
-            print(f"Marked {len(ids_to_mark)} vectors as exported.")
+            tqdm.write(f"Marked {len(ids_to_mark)} vectors as exported.")
         else:
             results = index.query(
                 vector=input_vector,
@@ -115,7 +117,7 @@ class ExportPinecone(ExportVDB):
             self.args["id_range_start"] is not None
             and self.args["id_range_end"] is not None
         ):
-            print(
+            tqdm.write(
                 "Using id range {} to {}".format(
                     self.args["id_range_start"], self.args["id_range_end"]
                 )
@@ -143,7 +145,7 @@ class ExportPinecone(ExportVDB):
         random_results_ids_strs = [x["id"] for x in random_results["matches"]]
         all_ids = set()
         if not all(x.isdigit() for x in random_results_ids_strs):
-            print(
+            tqdm.write(
                 "The ids are not integers. Please provide a range of ids using --id_list_file if you want to export a subset of vectors."
             )
             return []
@@ -162,7 +164,9 @@ class ExportPinecone(ExportVDB):
                     range_min = min(all_ids) - fetch_size
                     range_max = max(all_ids) + 10 * fetch_size
                     range_obj = range(range_min, range_max)
-                    print("Checking ids in range {} to {}".format(range_min, range_max))
+                    tqdm.write(
+                        "Checking ids in range {} to {}".format(range_min, range_max)
+                    )
                     ids_to_fetch = [
                         x
                         for x in list(range_obj)
@@ -191,11 +195,11 @@ class ExportPinecone(ExportVDB):
                         try_count += 1
                         ids_checked.update([int(x) for x in ids_to_fetch_strs])
                     if try_count >= MAX_TRIES_OVERALL:
-                        print(
+                        tqdm.write(
                             f"Could not collect all ids after {MAX_TRIES_OVERALL} tries. Please provide range of ids instead. Exporting the ids collected so far."
                         )
                     else:
-                        print(
+                        tqdm.write(
                             f"Collected {len(all_ids)} ids out of {num_vectors} vectors in {try_count} fetches."
                         )
                     return [str(x) for x in all_ids]
@@ -225,7 +229,7 @@ class ExportPinecone(ExportVDB):
                 prev_size = len(all_ids)
                 all_ids.update(ids)
                 if len(ids) == 0:
-                    print("No new ids found, exiting...")
+                    tqdm.write("No new ids found, exiting...")
                     break
                 new_ids = all_ids - set(ids)
                 if len(new_ids) > 0:
@@ -235,16 +239,18 @@ class ExportPinecone(ExportVDB):
                     )
                 curr_size = len(all_ids)
                 if curr_size > prev_size:
-                    print(f"updating ids set with {curr_size - prev_size} new ids...")
+                    tqdm.write(
+                        f"updating ids set with {curr_size - prev_size} new ids..."
+                    )
                 try_count += 1
                 if try_count > max_tries and len(all_ids) < num_vectors:
-                    print(
+                    tqdm.write(
                         f"Could not collect all ids after {max_tries} random searches."
                         " Please provide range of ids instead. Exporting the ids collected so far."
                     )
                     break
                 pbar.update(curr_size - prev_size)
-        print(
+        tqdm.write(
             f"Collected {len(all_ids)} ids out of {num_vectors} vectors in {try_count} tries."
         )
         return all_ids
@@ -313,7 +319,7 @@ class ExportPinecone(ExportVDB):
                 upsert_data.append(cur_vec)
             # upsert the vectors
             resp = self.index.upsert(vectors=upsert_data, namespace=namespace)
-        print(f"Unmarked {len(all_ids)} vectors as exported.")
+        tqdm.write(f"Unmarked {len(all_ids)} vectors as exported.")
 
     def get_data(self):
         if "index" not in self.args or self.args["index"] is None:
@@ -323,7 +329,7 @@ class ExportPinecone(ExportVDB):
             # check if index exists
             for index_name in index_names:
                 if index_name not in self.get_all_index_names():
-                    print(f"Index {index_name} does not exist, skipping...")
+                    tqdm.write(f"Index {index_name} does not exist, skipping...")
         index_metas = {}
         for index_name in tqdm(index_names, desc="Fetching indexes"):
             index_meta = self.get_data_for_index(index_name)
@@ -348,7 +354,7 @@ class ExportPinecone(ExportVDB):
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
             json.dump(internal_metadata, json_file, indent=4)
         # print internal metadata properly
-        print(json.dumps(internal_metadata, indent=4))
+        tqdm.write(json.dumps(internal_metadata, indent=4))
         return True
 
     def get_data_for_index(self, index_name):
@@ -358,9 +364,11 @@ class ExportPinecone(ExportVDB):
         index_meta = []
         for namespace in tqdm(index_info["namespaces"], desc="Fetching namespaces"):
             namespace_info = index_info["namespaces"][namespace]
-            print(f"Iterating namespace '{namespace}'")
+            tqdm.write(f"Iterating namespace '{namespace}'")
             vectors_directory = os.path.join(
-                self.vdf_directory, f"i{self.file_ctr}.parquet"
+                self.vdf_directory,
+                index_name + ("_" + namespace if namespace else ""),
+                f"i{self.file_ctr}.parquet",
             )
             os.makedirs(vectors_directory, exist_ok=True)
 
@@ -412,7 +420,7 @@ class ExportPinecone(ExportVDB):
                     # If the fetch is successful, cancel the timer
                     signal.alarm(0)
                 except Exception as e:
-                    print(
+                    tqdm.write(
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size): {fetch_size}"
                     )
                     fetch_size = fetch_size * 3 // 4
@@ -434,13 +442,12 @@ class ExportPinecone(ExportVDB):
                 ] * 1024 * 1024:
                     prev_total_size = total_size
                     total_size += self.save_vectors_to_parquet(
-                        vectors, metadata, batch_ctr, vectors_directory
+                        vectors, metadata, vectors_directory
                     )
-                    batch_ctr += 1
                 i += fetch_size
                 pbar.update(total_size - prev_total_size)
             total_size += self.save_vectors_to_parquet(
-                vectors, metadata, batch_ctr, vectors_directory
+                vectors, metadata, vectors_directory
             )
             namespace_meta = {
                 "namespace": namespace,

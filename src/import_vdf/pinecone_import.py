@@ -14,6 +14,7 @@ BATCH_SIZE = 1000  # Set the desired batch size
 
 class ImportPinecone(ImportVDF):
     DB_NAME_SLUG = DBNames.PINECONE
+
     def __init__(self, args):
         super().__init__(args)
         self.pc = Pinecone(api_key=self.args["pinecone_api_key"])
@@ -23,7 +24,7 @@ class ImportPinecone(ImportVDF):
         for index_name, index_meta in tqdm(
             self.vdf_meta["indexes"].items(), desc="Importing indexes"
         ):
-            print(f"Importing data for index '{index_name}'")
+            tqdm.write(f"Importing data for index '{index_name}'")
             # list indexes
             indexes = self.pc.list_indexes().names()
             # check if index exists
@@ -64,36 +65,22 @@ class ImportPinecone(ImportVDF):
                             ),
                         )
                 except Exception as e:
-                    print(e)
+                    tqdm.write(e)
                     raise Exception(f"Invalid index name '{index_name}'", e)
             index = self.pc.Index(index_name)
             current_batch_size = BATCH_SIZE
             for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
-                print(f"Importing data for namespace '{namespace_meta['namespace']}'")
+                tqdm.write(
+                    f"Importing data for namespace '{namespace_meta['namespace']}'"
+                )
                 namespace = namespace_meta["namespace"]
                 data_path = namespace_meta["data_path"]
 
                 # Check if the data path exists
-                final_data_path = os.path.join(
-                    self.args["cwd"], self.args["dir"], data_path
-                )
-                if not os.path.isdir(final_data_path):
-                    raise Exception(
-                        f"Invalid data path for index '{index_name},\n"
-                        f"data_path: {data_path}',\n"
-                        f"Joined path: {final_data_path}'"
-                        f"Current working directory: {self.args['cwd']}'\n"
-                        f"Command line arg (dir): {self.args['dir']}'"
-                    )
+                final_data_path = self.get_final_data_path(data_path)
 
                 # Load the data from the parquet files
-                parquet_files = sorted(
-                    [
-                        file
-                        for file in os.listdir(final_data_path)
-                        if file.endswith(".parquet")
-                    ]
-                )
+                parquet_files = self.get_parquet_files(final_data_path)
 
                 vectors = {}
                 metadata = {}
@@ -146,7 +133,7 @@ class ImportPinecone(ImportVDF):
                             for _, row in df.iterrows()
                         }
                     )
-                print(
+                tqdm.write(
                     f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files"
                 )
                 # Upsert the vectors and metadata to the Pinecone index in batches
@@ -177,11 +164,15 @@ class ImportPinecone(ImportVDF):
                         imported_count += resp["upserted_count"]
                         start_idx += resp["upserted_count"]
                     except Exception as e:
-                        print(f"Error upserting vectors for index '{index_name}'", e)
+                        tqdm.write(
+                            f"Error upserting vectors for index '{index_name}'", e
+                        )
                         if current_batch_size < BATCH_SIZE / 100:
-                            print("Batch size is not the issue. Aborting import")
+                            tqdm.write("Batch size is not the issue. Aborting import")
                             raise e
                         current_batch_size = int(9 * current_batch_size / 10)
-                        print(f"Reducing batch size to {current_batch_size}")
+                        tqdm.write(f"Reducing batch size to {current_batch_size}")
                         continue
-        print(f"Data import completed successfully. Imported {imported_count} vectors")
+        tqdm.write(
+            f"Data import completed successfully. Imported {imported_count} vectors"
+        )
