@@ -7,6 +7,7 @@ import time
 from dotenv import load_dotenv
 from export_vdf.pinecone_export import ExportPinecone
 from export_vdf.qdrant_export import ExportQdrant
+from export_vdf.kdbai_export import ExportKDBAI
 from export_vdf.vdb_export_cls import ExportVDB
 from util import set_arg_from_input, set_arg_from_password
 from getpass import getpass
@@ -90,6 +91,28 @@ def export_qdrant(args):
     qdrant_export.get_data()
     return qdrant_export
 
+def export_kdbai(args):
+    """
+    Export data from KDBAI
+    """
+    set_arg_from_input(
+        args,
+        "url",
+        "Enter the KDB.AI endpoint instance: ",
+        str,
+    )
+    set_arg_from_input(
+        args,
+        "tables",
+        "Enter the name of table to export:",
+        str,
+    )
+    set_arg_from_password(
+        args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
+    )
+    kdbai_export = ExportKDBAI(args)
+    kdbai_export.get_data()
+    return kdbai_export
 
 def main():
     """
@@ -100,7 +123,7 @@ def main():
 
     Arguments:
         vector_database (str): Choose the vectors database to export data from.
-            Possible values: "pinecone", "qdrant".
+            Possible values: "pinecone", "qdrant", "kdbai".
 
     Options:
         Pinecone:
@@ -111,12 +134,18 @@ def main():
             -u, --url (str): Location of Qdrant instance.
             -c, --collections (str): Names of collections to export (comma-separated).
 
+        KDB.AI:
+            -t, --kdbai_table (str): Name of the KDB.AI table to export.
+
     Examples:
         Export data from Pinecone:
         python export.py pinecone -e my_env -i my_index
 
         Export data from Qdrant:
         python export.py qdrant -u http://localhost:6333 -c my_collection
+
+        Export data from KDBAI:
+        python export.py kdbai -u https://cloud.kdb.ai/instance/xyz -t my_table
     """
     parser = argparse.ArgumentParser(
         description="Export data from various vector databases to the VDF format for vector datasets"
@@ -146,6 +175,17 @@ def main():
         title="Vector Databases",
         description="Choose the vectors database to export data from",
         dest="vector_database",
+    )
+
+    #KDB.AI
+    parser_kdbai = subparsers.add_parser(
+        "kdbai", help="Export data from KDB.AI"
+    )
+    parser_kdbai.add_argument(
+        "-u", "--endpoint", type=str, help="KDB.AI cloud endpoint to connect"
+    )
+    parser_kdbai.add_argument(
+        "-t", "--kdbai_table", type=str, help="KDB.AI table to export"
     )
 
     # Pinecone
@@ -210,6 +250,8 @@ def main():
         export_obj = export_pinecone(args)
     elif args["vector_database"] == "qdrant":
         export_obj = export_qdrant(args)
+    elif args["vector_database"] == "kdbai":
+        export_obj = export_kdbai(args)
     else:
         print("Invalid vector database")
         args["vector_database"] = input("Enter the name of vector database to export: ")
