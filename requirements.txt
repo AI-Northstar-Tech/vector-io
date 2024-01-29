@@ -10,3 +10,6 @@ pymilvus>=2.3.6
 openai>=1.10.0
 litellm>=1.20.0
 google-cloud-aiplatform
+google-api-python-client
+google-auth-httplib2 
+google-auth-oauthlib

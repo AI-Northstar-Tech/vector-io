@@ -5,8 +5,10 @@ import hashlib
 import json
 import os
 from qdrant_client.http.models import Distance
-from names import DBNames
 
+# TODO - fix / consolidate below
+from names import DBNames
+# from src.names import DBNames
 
 def sort_recursive(d):
     """
@@ -126,12 +128,19 @@ db_metric_to_standard_metric = {
         "IP": Distance.DOT,
         "L2": Distance.EUCLID,
     },
+  # TODO - consolidate / resolve below
     DBNames.VERTEXAI: {
         "DOT_PRODUCT_DISTANCE": Distance.DOT,
         "SQUARED_L2_DISTANCE": Distance.EUCLID,
         "COSINE_DISTANCE": Distance.COSINE,
         "L1_DISTANCE": Distance.MANHATTAN
     },
+#     DBNames.VERTEX_VECTOR_SEARCH: {
+#         "cosine": "COSINE_DISTANCE",
+#         "euclidean": "L_2",
+#         "dotproduct": "DOT_PRODUCT_DISTANCE",
+#         "l1": "L1_DISTANCE",
+#     },
 }
 
 
