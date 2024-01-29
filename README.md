@@ -4,6 +4,48 @@ This library uses a universal format for vector datasets to easily export and im
 
 See the [Contributing](#contributing) section to add support for your favorite vector database.
 
+## Supported Vector Databases
+
+| Vector Database                | Import | Export |
+|--------------------------------|--------|--------|
+| Pinecone                       | ✅     | ✅     |
+| Qdrant                         | ✅     | ✅     |
+| Milvus                         | ✅     | ✅     |
+| Azure AI Search                | 🔜     | 🔜     |
+| GCP Vertex AI Vector Search    | 🔜     | 🔜     |
+| KDB.AI                         | 🔜     | 🔜     |
+| Rockset                        | 🔜     | 🔜     |
+| Weaviate                       | ⏳     | ⏳     |
+| MongoDB Atlas                  | ⏳     | ⏳     |
+| Epsilla                        | ⏳     | ⏳     |
+| txtai                          | ⏳     | ⏳     |
+| Redis Search                   | ⏳     | ⏳     |
+| OpenSearch                     | ⏳     | ⏳     |
+| Vespa                          | ❌     | ❌     |
+| Activeloop Deep Lake           | ❌     | ❌     |
+| Anari AI                       | ❌     | ❌     |
+| Apache Cassandra               | ❌     | ❌     |
+| ApertureDB                     | ❌     | ❌     |
+| Chroma                         | ❌     | ❌     |
+| ClickHouse                     | ❌     | ❌     |
+| CrateDB                        | ❌     | ❌     |
+| DataStax Astra DB              | ❌     | ❌     |
+| Elasticsearch                  | ❌     | ❌     |
+| LanceDB                        | ❌     | ❌     |
+| Marqo                          | ❌     | ❌     |
+| Meilisearch                    | ❌     | ❌     |
+| Milvus                         | ❌     | ❌     |
+| MyScale                        | ❌     | ❌     |
+| Neo4j                          | ❌     | ❌     |
+| Nuclia DB                      | ❌     | ❌     |
+| OramaSearch                    | ❌     | ❌     |
+| pgvector                       | ❌     | ❌     |
+| Turbopuffer                    | ❌     | ❌     |
+| Typesense                      | ❌     | ❌     |
+| USearch                        | ❌     | ❌     |
+| Vald                           | ❌     | ❌     |
+| Apache Solr                    | ❌     | ❌     |
+
 ## Universal Vector Dataset Format (VDF) specification
 
 1. VDF_META.json: It is a json file with the following schema:
@@ -196,7 +238,7 @@ Steps to add a new vector database (ABC):
 **Export**:
 
 1. Add a new subparser in `src/export_vdf.py` for the new vector database. Add database specific arguments to the subparser, such as the url of the database, any authentication tokens, etc.
-2. Add a new file in `src/export_vdf/` for the new vector database. This file should define a class ExportABC which inherits from ExportVDF. 
+2. Add a new file in `src/export_vdf/` for the new vector database. This file should define a class ExportABC which inherits from ExportVDF.
 3. Specify a DB_NAME_SLUG for the class
 4. The class should implement the get_data() function to download points (in a batched manner) with all the metadata from the specified index of the vector database. This data should be stored in a series of parquet files/folders.
 The metadata should be stored in a json file with the [schema above](#universal-vector-dataset-format-vdf-specification).
