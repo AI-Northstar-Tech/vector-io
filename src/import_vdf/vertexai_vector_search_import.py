@@ -1,7 +1,7 @@
 import google.auth
 import google.auth.transport.requests
 
-from typing import Dict
+from typing import Dict, List
 from src.names import DBNames
 from os import listdir
 
@@ -17,18 +17,18 @@ from googleapiclient.errors import HttpError
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
 
-class ImportVertexVectorSearch():
+class ImportVertexVectorSearch(ImportVDF):
     DB_NAME_SLUG = DBNames.VERTEX_VECTOR_SEARCH
 
-    def __init__(self, project_id: str, location: str) -> None:
+    def __init__(self, args: Dict) -> None:
         # super duper call
-        super().__init__()
-        self.project_id = project_id
-        self.location = location
+        super().__init__(args)
+        self.project_id = args['project_id']
+        self.location = args['location']
         self.DB_NAME_SLUG = DBNames.VERTEX_VECTOR_SEARCH
-        # super().__init__(args={})
         self.parent = f"projects/{self.project_id}/locations/{self.location}"
         self.client = self._get_client()
+        # self.vdf_meta #TODO - this is where the vdf metadata sits, we will need to map this to the test import
 
     def _get_client(self):
         """Gets the Vertex AI Vector Search client.
@@ -64,7 +64,7 @@ class ImportVertexVectorSearch():
         gcs_data_path: str,
         dimensions: int,
         approximate_neighbors_count: int,
-        distance_measure_type: str = db_metric_to_standard_metric[DB_NAME_SLUG]["euclidean"],
+        distance_measure_type: str = "dotproduct",
         leaf_node_embedding_count: int = 1000,
         leaf_nodes_to_search_percent: int = 10,
         index_type="streaming",
@@ -85,6 +85,7 @@ class ImportVertexVectorSearch():
 
         Index interface:
         https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexes
+        https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexes/create
             interface Index {
             namespace: string;
             total_vector_count: number;
@@ -96,7 +97,8 @@ class ImportVertexVectorSearch():
             metric: 'Euclid' | 'Cosine' | 'Dot';
             }
         """
-
+        metric_dict = db_metric_to_standard_metric[DBNames.VERTEX_VECTOR_SEARCH]
+        distance = metric_dict[distance_measure_type]
         index = {
             "name": name,
             "display_name": display_name,
@@ -106,9 +108,7 @@ class ImportVertexVectorSearch():
                 "config": {
                     "dimensions": dimensions,
                     "approximateNeighborsCount": approximate_neighbors_count,
-                    "distanceMeasureType": db_metric_to_standard_metric[
-                        distance_measure_type
-                    ],
+                    "distanceMeasureType": distance,
                     "algorithm_config": {
                         "treeAhConfig": {
                             "leafNodeEmbeddingCount": leaf_node_embedding_count,
@@ -128,6 +128,8 @@ class ImportVertexVectorSearch():
             .indexes()
             .create(parent=self.parent, body=index)
         )
+        # fix the uri
+        create_client.uri = create_client.uri.replace("aip", f"{self.location}-aip")
 
         try:
             response = create_client.execute()
@@ -137,7 +139,7 @@ class ImportVertexVectorSearch():
                 "total_vector_count": 0,
                 "exported_vector_count": 0,
                 "dimensions": dimensions,
-                "model_name": DB_NAME_SLUG,
+                "model_name": DBNames.VERTEX_VECTOR_SEARCH,
                 "vector_columns": [],
                 "data_path": gcs_data_path,
                 "metric": distance_measure_type,
@@ -146,22 +148,93 @@ class ImportVertexVectorSearch():
         except HttpError as err:
             raise ConnectionError("Error creating index") from err
 
-    # def upsert_data(self):
-    #     client = self.get_client()
-    #     for index_name, index_meta in self.vdf_meta["indexes"].items():
-    #         print(f"Importing data for index '{index_name}'")
-    #         for namespace_meta in index_meta:
-    #             print(f"Importing data for namespace '{namespace_meta['namespace']}'")
-    #             data_path = namespace_meta["data_path"]
-    #             parquet_files = self.get_parquet_files(data_path)
-    #             for file in parquet_files:
-    #       x          print(f"Importing data from file '{file}'")
-    #                 with open(file, "rb") as f:
-    #                     try:
-    #                         client.projects().locations().indexEndpoints().importData(
-    #                             name=f"projects/{self.args['project_id']}/locations/{self.args['region']}/indexEndpoints/{index_name}",
-    #                             body={"inputConfig": {"gcsSource": {"uris": [file]}}},
-    #                         ).execute()
-    #                     except HttpError as e:
-    #                         print(f"Error importing data from file '{file}'", e)
-    #                         raise e
+    def delete_index(self, index_name: str) -> None:
+        """deletes an index
+
+        Args:
+            name: The name of the index to delete.
+        """
+
+        index_to_delete = f"{self.parent}/indexes/{index_name}"
+        delete_client = (
+            self.client.projects().locations().indexes().delete(name=index_to_delete)
+        )
+        # fix the uri
+        delete_client.uri = delete_client.uri.replace("aip", f"{self.location}-aip")
+
+        try:
+            response = delete_client.execute()
+            print(f"Index deleted: {response['name']}")
+        except HttpError as err:
+            raise ConnectionError("Error deleting index") from err
+
+
+    def upsert_data(self, index_names: str, data: List[Dict]) -> None:
+        """deletes an index
+
+        Args:
+            name: The name of the index to delete.
+        """
+        datapoints = []
+        for datapoint in data:
+            dp = {}
+            dp.update(
+                {
+                    "datapointId": datapoint["datapointId"],
+                    "featureVector": datapoint["featureVector"],
+                }
+            )
+            try:
+                dp.update({"restricts": datapoint["restricts"]})
+            except KeyError:
+                pass
+            try:
+                dp.update({"numericRestricts": datapoint["numericRestricts"]})
+            except KeyError:
+                pass
+            try:
+                dp.update({"crowdingTag": datapoint["crowdingTag"]})
+            except KeyError:
+                pass
+            datapoints.append(dp)
+        
+
+        datapoints = {
+            "datapoints": datapoints
+        }
+        index_to_upsert = f"{self.parent}/indexes/{index_names}"
+        upsert_client = (
+            self.client.projects()
+            .locations()
+            .indexes()
+            .upsertDatapoints(index=index_to_upsert, body=datapoints)
+        )
+        # fix the uri
+        upsert_client.uri = upsert_client.uri.replace("aip", f"{self.location}-aip")
+
+        try:
+            response = upsert_client.execute()
+            print(f"Upserted datapoints")
+        except HttpError as err:
+            raise ConnectionError("Error deleting index") from err
+
+
+# def upsert_data(self):
+#     client = self.get_client()
+#     for index_name, index_meta in self.vdf_meta["indexes"].items():
+#         print(f"Importing data for index '{index_name}'")
+#         for namespace_meta in index_meta:
+#             print(f"Importing data for namespace '{namespace_meta['namespace']}'")
+#             data_path = namespace_meta["data_path"]
+#             parquet_files = self.get_parquet_files(data_path)
+#             for file in parquet_files:
+#                 print(f"Importing data from file '{file}'")
+#                 with open(file, "rb") as f:
+#                     try:
+#                         client.projects().locations().indexEndpoints().importData(
+#                             name=f"projects/{self.args['project_id']}/locations/{self.args['region']}/indexEndpoints/{index_name}",
+#                             body={"inputConfig": {"gcsSource": {"uris": [file]}}},
+#                         ).execute()
+#                     except HttpError as e:
+#                         print(f"Error importing data from file '{file}'", e)
+#                         raise e

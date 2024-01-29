@@ -125,8 +125,8 @@ db_metric_to_standard_metric = {
     },
     DBNames.VERTEX_VECTOR_SEARCH: {
         "cosine": "COSINE_DISTANCE",
-        "euclidean": "SQUARED_L2_DISTANCE",
-        "dotproduct ": "DOT_PRODUCT_DISTANCE",
+        "euclidean": "L_2",
+        "dotproduct": "DOT_PRODUCT_DISTANCE",
         "l1": "L1_DISTANCE",
     },
 }
