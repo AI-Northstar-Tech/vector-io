@@ -106,7 +106,7 @@ def main():
             vdf_meta["indexes"].items(), desc=f"Iterating over indexes"
         ):
             new_vector_column = (
-                f"vector_{args['new_model_name'].replace('/', '_')}"
+                f"vec_{args['text_column']}_{args['new_model_name'].replace('/', '_')}"
             )
             overwrite_bool = False
             for namespace_meta in tqdm(index_meta, desc=f"Iterating over namespaces"):
@@ -117,7 +117,10 @@ def main():
                 parquet_files = get_parquet_files(final_data_path)
                 for file in tqdm(parquet_files, desc=f"Iterating over parquet files"):
                     file_path = os.path.join(final_data_path, file)
-                    if new_vector_column in namespace_meta["vector_columns"] and not overwrite_bool:
+                    if (
+                        new_vector_column in namespace_meta["vector_columns"]
+                        and not overwrite_bool
+                    ):
                         # ask user if they want to overwrite (y/n)
                         overwrite = input(
                             f"{new_vector_column} already exists in vector_columns. Overwrite? (y/n): "
@@ -129,7 +132,7 @@ def main():
                                 "Aborting reembedding."
                             )
                             exit()
-                    if "dimensions" in args:
+                    if "dimensions" in args and args["dimensions"] is not None:
                         new_vector_column += f"_{args['dimensions']}"
                     tqdm.write(f"Reembedding {file_path}")
                     # read parquet file
