@@ -213,11 +213,9 @@ class ImportVertexVectorSearch(ImportVDF):
             print(f"Upserted datapoints")
         except HttpError as err:
             raise ConnectionError("Error deleting index") from err
-        
-    def create_index_endpoint(self):
-        '''https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/create
 
-        '''
+    def create_index_endpoint(self):
+        """https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/create"""
         create_index_endpoint_client = (
             self.client.projects()
             .locations()
@@ -225,7 +223,9 @@ class ImportVertexVectorSearch(ImportVDF):
             .create(parent=self.parent)
         )
         # fix the uri
-        create_index_endpoint_client.uri = create_index_endpoint_client.uri.replace("aip", f"{self.location}-aip")
+        create_index_endpoint_client.uri = create_index_endpoint_client.uri.replace(
+            "aip", f"{self.location}-aip"
+        )
 
         try:
             response = create_index_endpoint_client.execute()
@@ -233,15 +233,12 @@ class ImportVertexVectorSearch(ImportVDF):
         except HttpError as err:
             raise ConnectionError("Error deleting index") from err
 
-    def deploy_index_to_endpoint(self, deployment_name: str, index_name: str, endpoint_name: str):
-        '''https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/deployIndex
-
-        '''
+    def deploy_index_to_endpoint(
+        self, deployment_name: str, index_name: str, endpoint_name: str
+    ):
+        """https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/deployIndex"""
         fqn_index = f"{self.parent}/indexes/{index_name}"
-        deployed_index = {"deployedIndex": {
-            "id": deployment_name,
-            "index": fqn_index
-        }}
+        deployed_index = {"deployedIndex": {"id": deployment_name, "index": fqn_index}}
         index_endpoint = f"{self.parent}/indexEndpoints/{endpoint_name}"
         deploy_index_endpoint_client = (
             self.client.projects()
@@ -250,12 +247,12 @@ class ImportVertexVectorSearch(ImportVDF):
             .deployIndex(indexEndpoint=index_endpoint, body=deployed_index)
         )
         # fix the uri
-        deploy_index_endpoint_client.uri = deploy_index_endpoint_client.uri.replace("aip", f"{self.location}-aip")
+        deploy_index_endpoint_client.uri = deploy_index_endpoint_client.uri.replace(
+            "aip", f"{self.location}-aip"
+        )
 
         try:
             response = deploy_index_endpoint_client.execute()
             print(f"Created Index Endpoint: {response['name']}")
         except HttpError as err:
             raise ConnectionError("Error deleting index") from err
-
-    
