@@ -18,14 +18,14 @@ SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
 
 class ImportVertexVectorSearch(ImportVDF):
-    DB_NAME_SLUG = DBNames.VERTEX_VECTOR_SEARCH
+    DB_NAME_SLUG = DBNames.VERTEXAI
 
     def __init__(self, args: Dict) -> None:
         # super duper call
         super().__init__(args)
         self.project_id = args["project_id"]
         self.location = args["location"]
-        self.DB_NAME_SLUG = DBNames.VERTEX_VECTOR_SEARCH
+        self.DB_NAME_SLUG = DBNames.VERTEXAI
         self.parent = f"projects/{self.project_id}/locations/{self.location}"
         self.client = self._get_client()
         # self.vdf_meta #TODO - this is where the vdf metadata sits, we will need to map this to the test import
@@ -97,7 +97,7 @@ class ImportVertexVectorSearch(ImportVDF):
             metric: 'Euclid' | 'Cosine' | 'Dot';
             }
         """
-        metric_dict = db_metric_to_standard_metric[DBNames.VERTEX_VECTOR_SEARCH]
+        metric_dict = db_metric_to_standard_metric[DBNames.VERTEXAI]
         distance = metric_dict[distance_measure_type]
         index = {
             "name": name,
@@ -139,7 +139,7 @@ class ImportVertexVectorSearch(ImportVDF):
                 "total_vector_count": 0,
                 "exported_vector_count": 0,
                 "dimensions": dimensions,
-                "model_name": DBNames.VERTEX_VECTOR_SEARCH,
+                "model_name": DBNames.VERTEXAI,
                 "vector_columns": [],
                 "data_path": gcs_data_path,
                 "metric": distance_measure_type,
