@@ -1,15 +1,17 @@
 import json
 import os
 from packaging.version import Version
-from util import expand_shorthand_path
+from src.util import expand_shorthand_path
 import abc
 
 
 class ImportVDF(abc.ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        if not hasattr(cls, 'DB_NAME_SLUG'):
-            raise TypeError(f"Class {cls.__name__} lacks required class variable 'DB_NAME_SLUG'")
+        if not hasattr(cls, "DB_NAME_SLUG"):
+            raise TypeError(
+                f"Class {cls.__name__} lacks required class variable 'DB_NAME_SLUG'"
+            )
 
     def __init__(self, args):
         self.args = args

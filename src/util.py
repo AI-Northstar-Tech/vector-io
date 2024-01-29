@@ -6,7 +6,7 @@ import json
 import os
 from qdrant_client.http.models import Distance
 
-from names import DBNames
+from src.names import DBNames
 
 
 def sort_recursive(d):
@@ -122,6 +122,12 @@ db_metric_to_standard_metric = {
         Distance.COSINE: Distance.COSINE,
         Distance.EUCLID: Distance.EUCLID,
         Distance.DOT: Distance.DOT,
+    },
+    DBNames.VERTEX_VECTOR_SEARCH: {
+        "cosine": "COSINE_DISTANCE",
+        "euclidean": "SQUARED_L2_DISTANCE",
+        "dotproduct ": "DOT_PRODUCT_DISTANCE",
+        "l1": "L1_DISTANCE",
     },
 }
 
