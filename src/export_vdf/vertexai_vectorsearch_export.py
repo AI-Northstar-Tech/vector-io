@@ -136,7 +136,7 @@ class ExportVertexAIVectorSearch(ExportVDB):
         # print(f"# of vectors = {len(vectors)}")
 
         num_vectors_exported = self.save_vectors_to_parquet(
-            vectors, metadata, self.file_ctr, vectors_directory
+            vectors, metadata, vectors_directory
         )
         pbar.update(len(vectors))
 
