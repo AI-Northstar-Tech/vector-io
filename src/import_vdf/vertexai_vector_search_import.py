@@ -1,3 +1,6 @@
+""" 
+import data to vertex ai vector search index
+"""
 import google.auth
 import google.auth.transport.requests
 
@@ -17,7 +20,7 @@ from googleapiclient.errors import HttpError
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
 
-class ImportVertexVectorSearch(ImportVDF):
+class ImportVertexAIVectorSearch(ImportVDF):
     DB_NAME_SLUG = DBNames.VERTEXAI
 
     def __init__(self, args: Dict) -> None:
@@ -212,7 +215,7 @@ class ImportVertexVectorSearch(ImportVDF):
             response = upsert_client.execute()
             print(f"Upserted datapoints")
         except HttpError as err:
-            raise ConnectionError("Error deleting index") from err
+            raise ConnectionError("Error upserting to index") from err
 
     def create_index_endpoint(self):
         """https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/create"""

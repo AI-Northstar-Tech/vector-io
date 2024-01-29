@@ -1,8 +1,7 @@
 import json
 import os
 from packaging.version import Version
-from util import expand_shorthand_path, get_final_data_path, get_parquet_files
-from src.util import expand_shorthand_path
+from src.util import expand_shorthand_path, get_final_data_path, get_parquet_files
 import abc
 
 

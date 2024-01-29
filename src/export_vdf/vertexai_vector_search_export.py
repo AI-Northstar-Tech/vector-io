@@ -1,8 +1,10 @@
-
+""" 
+export data from vertex ai vector search index
+"""
 import json
-from names import DBNames
-from util import standardize_metric
-from export_vdf.vdb_export_cls import ExportVDB
+from src.names import DBNames
+from src.util import standardize_metric
+from src.export_vdf.vdb_export_cls import ExportVDB
 
 import google.auth
 from google.cloud import aiplatform
@@ -136,7 +138,10 @@ class ExportVertexAIVectorSearch(ExportVDB):
         # print(f"# of vectors = {len(vectors)}")
 
         num_vectors_exported = self.save_vectors_to_parquet(
-            vectors, metadata, self.file_ctr, vectors_directory
+            vectors, 
+            metadata, 
+            # self.file_ctr,
+            vectors_directory,
         )
         pbar.update(len(vectors))
 
