@@ -23,8 +23,8 @@ class ImportVertexVectorSearch(ImportVDF):
     def __init__(self, args: Dict) -> None:
         # super duper call
         super().__init__(args)
-        self.project_id = args['project_id']
-        self.location = args['location']
+        self.project_id = args["project_id"]
+        self.location = args["location"]
         self.DB_NAME_SLUG = DBNames.VERTEX_VECTOR_SEARCH
         self.parent = f"projects/{self.project_id}/locations/{self.location}"
         self.client = self._get_client()
@@ -168,7 +168,6 @@ class ImportVertexVectorSearch(ImportVDF):
         except HttpError as err:
             raise ConnectionError("Error deleting index") from err
 
-
     def upsert_data(self, index_names: str, data: List[Dict]) -> None:
         """deletes an index
 
@@ -197,11 +196,8 @@ class ImportVertexVectorSearch(ImportVDF):
             except KeyError:
                 pass
             datapoints.append(dp)
-        
 
-        datapoints = {
-            "datapoints": datapoints
-        }
+        datapoints = {"datapoints": datapoints}
         index_to_upsert = f"{self.parent}/indexes/{index_names}"
         upsert_client = (
             self.client.projects()
@@ -217,24 +213,49 @@ class ImportVertexVectorSearch(ImportVDF):
             print(f"Upserted datapoints")
         except HttpError as err:
             raise ConnectionError("Error deleting index") from err
+        
+    def create_index_endpoint(self):
+        '''https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/create
 
+        '''
+        create_index_endpoint_client = (
+            self.client.projects()
+            .locations()
+            .indexEndpoints()
+            .create(parent=self.parent)
+        )
+        # fix the uri
+        create_index_endpoint_client.uri = create_index_endpoint_client.uri.replace("aip", f"{self.location}-aip")
 
-# def upsert_data(self):
-#     client = self.get_client()
-#     for index_name, index_meta in self.vdf_meta["indexes"].items():
-#         print(f"Importing data for index '{index_name}'")
-#         for namespace_meta in index_meta:
-#             print(f"Importing data for namespace '{namespace_meta['namespace']}'")
-#             data_path = namespace_meta["data_path"]
-#             parquet_files = self.get_parquet_files(data_path)
-#             for file in parquet_files:
-#                 print(f"Importing data from file '{file}'")
-#                 with open(file, "rb") as f:
-#                     try:
-#                         client.projects().locations().indexEndpoints().importData(
-#                             name=f"projects/{self.args['project_id']}/locations/{self.args['region']}/indexEndpoints/{index_name}",
-#                             body={"inputConfig": {"gcsSource": {"uris": [file]}}},
-#                         ).execute()
-#                     except HttpError as e:
-#                         print(f"Error importing data from file '{file}'", e)
-#                         raise e
+        try:
+            response = create_index_endpoint_client.execute()
+            print(f"Created Index Endpoint: {response['name']}")
+        except HttpError as err:
+            raise ConnectionError("Error deleting index") from err
+
+    def deploy_index_to_endpoint(self, deployment_name: str, index_name: str, endpoint_name: str):
+        '''https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.indexEndpoints/deployIndex
+
+        '''
+        fqn_index = f"{self.parent}/indexes/{index_name}"
+        deployed_index = {"deployedIndex": {
+            "id": deployment_name,
+            "index": fqn_index
+        }}
+        index_endpoint = f"{self.parent}/indexEndpoints/{endpoint_name}"
+        deploy_index_endpoint_client = (
+            self.client.projects()
+            .locations()
+            .indexEndpoints()
+            .deployIndex(indexEndpoint=index_endpoint, body=deployed_index)
+        )
+        # fix the uri
+        deploy_index_endpoint_client.uri = deploy_index_endpoint_client.uri.replace("aip", f"{self.location}-aip")
+
+        try:
+            response = deploy_index_endpoint_client.execute()
+            print(f"Created Index Endpoint: {response['name']}")
+        except HttpError as err:
+            raise ConnectionError("Error deleting index") from err
+
+    
