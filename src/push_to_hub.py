@@ -26,6 +26,9 @@ def push_to_hub(export_obj, args):
     else:
         os.environ["HF_USERNAME"] = args["HF_USERNAME"]
     hf_api = HfApi(token=os.environ["HUGGING_FACE_TOKEN"])
+    # put current working directory + vdf_directory in new variable
+    data_path = os.path.join(os.getcwd(), export_obj.vdf_directory)
+    export_obj.vdf_directory = os.path.basename(export_obj.vdf_directory)
     repo_id = f"{os.environ['HF_USERNAME']}/{export_obj.vdf_directory}"
     dataset_url = hf_api.create_repo(
         token=os.environ["HUGGING_FACE_TOKEN"],
@@ -37,7 +40,7 @@ def push_to_hub(export_obj, args):
     # for each file/folder in export_obj.vdf_directory, upload to hub
     hf_api.upload_folder(
         repo_id=repo_id,
-        folder_path=export_obj.vdf_directory,
+        folder_path=data_path,
         repo_type="dataset",
     )
     # create hf dataset card in temp README.md

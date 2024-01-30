@@ -29,41 +29,46 @@ def main():
     # Directory containing your parquet files
     parser = argparse.ArgumentParser(description="Consolidate Parquet files")
     parser.add_argument(
-        "directory", type=str, help="Directory containing your parquet files"
+        "--directory",
+        type=str,
+        help="Directory containing your parquet files",
+        default=None,
     )
     parser.add_argument(
-        "output_directory", type=str, help="Directory to save the combined files"
-    )
-    parser.add_argument(
-        "max_size_gb", type=int, help="Maximum size in GB for each combined file"
+        "--max_size_gb",
+        type=int,
+        help="Maximum size in GB for each combined file",
+        default=0.5,
     )
     args = parser.parse_args()
 
     directory = args.directory
-    output_directory = args.output_directory
+    output_directory = args.directory
     max_size_gb = args.max_size_gb
 
-    # Ensure output directory exists
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
-
-    
     # open VDF_META.json from parent of directory
     vdf_meta_path = os.path.join(directory, "..", "VDF_META.json")
     with open(vdf_meta_path, "r") as f:
         vdf_meta = json.load(f)
-    
+
     # Initialize variables
     pqwriter = None
     file_count = 1
 
-    # update file_structure by replacing 
+    # update file_structure by replacing
     old_file_structure = vdf_meta["file_structure"]
+    new_file_set = set()
     # add metadata to file_structure
-    for filename in os.listdir(directory):
+    old_files = os.listdir(directory)
+    for filename in old_files:
         if filename.endswith(".parquet"):
             filepath = os.path.join(directory, filename)
-
+            # remove filepath from old_file_structure which has last segment matching filename
+            old_file_structure = [
+                x
+                for x in old_file_structure
+                if not x.endswith('/'+filename)
+            ]
             # Read the parquet file as a PyArrow table
             table = pq.read_table(filepath)
 
@@ -79,13 +84,25 @@ def main():
             # Check if the current output file size is approaching the maximum size
             if get_file_size_in_gb(output_file) >= max_size_gb:
                 # Close the current writer and start a new file
+                new_file_set.add(output_file)
                 pqwriter.close()
                 pqwriter = None
                 file_count += 1
-
+    # delete old files
     # Close the last parquet writer if it's open
     if pqwriter:
+        new_file_set.add(output_file)
         pqwriter.close()
+    print("written files", new_file_set)
+    print("deleting old files", old_files)
+    for filename in old_files:
+        if filename.endswith(".parquet"):
+            filepath = os.path.join(directory, filename)
+            os.remove(filepath)
+    with open(vdf_meta_path, "w") as f:
+        vdf_meta["file_structure"] = old_file_structure
+        f.seek(0)
+        json.dump(vdf_meta, f, indent=4)
 
 
 if __name__ == "__main__":
