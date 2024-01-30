@@ -10,6 +10,7 @@ from util import set_arg_from_input, set_arg_from_password
 from import_vdf.pinecone_import import ImportPinecone
 from import_vdf.qdrant_import import ImportQdrant
 from import_vdf.milvus_import import ImportMilvus
+from import_vdf.vertexai_vector_search_import import ImportVertexAIVectorSearch
 from import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
@@ -100,7 +101,57 @@ def import_pinecone(args):
 
     pinecone_import = ImportPinecone(args)
     pinecone_import.upsert_data()
+    
+def import_vertexai_vectorsearch(args):
+    """
+    Import data to Vertex AI Vector Search
+    """
+    set_arg_from_input(
+        args, 
+        "project_id", 
+        "Enter the Google Cloud Project ID:"
+    )
+    set_arg_from_input(
+        args, 
+        "location", 
+        "Enter region to host your index "
+    )
+    set_arg_from_input(
+        args, 
+        "project_num", 
+        "Enter the Google Cloud Project Number "
+    )
+    set_arg_from_input(
+        args, 
+        "target_index_id", 
+        "Required. "projects/123/locations/us-central1/indexes/target_index_id"
+    )
+    set_arg_from_input(
+        args, 
+        "batch_size", 
+        "size of upsert batches",
+        default_value=100,
+        type_name=int
+    )
+    set_arg_from_input(
+        args, 
+        "filter_restricts", 
+        "Optional. List of dicts for each datapoint; used to perform restricted searches"
+    )
+    set_arg_from_input(
+        args, 
+        "numeric_restricts",
+        "Optional. List of dicts for each datapoint;"
 
+    )
+    set_arg_from_input(
+        args, 
+        "crowding_tag", 
+        "Optional. CrowdingTag of the datapoint",
+        type_name=str
+    )
+    vertexai_vectorsearch_import = ImportVertexAIVectorSearch(args)
+    vertex_import.upsert_data()
 
 def main():
     """
@@ -170,6 +221,32 @@ def main():
         DBNames.QDRANT, help="Import data to Qdrant"
     )
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
+    
+    # Vertex AI VectorSearch
+    parser_vertexai_vectorsearch = subparsers.add_parser(
+        DBNames.VERTEXAI, help="Import data to Vetex AI Vector Search"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-p", "--project-id", type=str, help="Google Cloud Project ID"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-pn", "--project-num", type=str, help="Google Cloud Project Number"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-i", "--target-index-id", type=str, help="Name of the index to import to"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-b", "--batch-size", type=str, help="size of upsert batches""
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-f", "--filter-restricts", type=str, help="string filters"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-n", "--numeric-restricts", type=str, help="numeric filters"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-c", "--crowding-tag", type=str, help="string value to enforce diversity in retrieval"
+    )
 
     args = parser.parse_args()
     args = vars(args)
@@ -198,6 +275,8 @@ def main():
         import_qdrant(args)  # Add the function to import data to Qdrant
     elif args["vector_database"] == DBNames.MILVUS:
         import_milvus(args)
+    elif args["vector_database"] == DBNames.VERTEXAI:
+        import_vertexai_vectorsearch(args)
     else:
         print(
             "Unrecognized DB. Please choose a vector database to export data from:",

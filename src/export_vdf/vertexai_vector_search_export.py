@@ -1,5 +1,5 @@
 """ 
-export data from vertex ai vector search index
+Export data from vertex ai vector search index
 """
 import json
 from src.names import DBNames

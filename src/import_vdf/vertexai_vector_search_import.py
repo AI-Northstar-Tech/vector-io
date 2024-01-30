@@ -182,8 +182,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
                     insert_datapoints_payload = []
                 
                     for idx, row in df.iterrows():
-                        # tmp_row_restrict_entry = {}
-                        # tmp_row_num_restrict_entry = {}
                         row = json.loads(row.to_json())
                         
                         total_ids.append(row["id"])
