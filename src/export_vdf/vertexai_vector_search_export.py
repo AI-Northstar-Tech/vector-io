@@ -80,9 +80,10 @@ class ExportVertexAIVectorSearch(ExportVDB):
 
     def get_index_endpoint_name(self, index_name):
         index = vs(index_name=index_name)
-        index_endpoints = [(deployed_index.index_endpoint, 
-                             deployed_index.deployed_index_id) 
-                           for deployed_index in index.deployed_indexes]
+        index_endpoints = [
+            (deployed_index.index_endpoint, deployed_index.deployed_index_id) 
+            for deployed_index in index.deployed_indexes
+        ]
 
         index_endpoint_name = None
         if len(index_endpoints) > 0:
@@ -98,7 +99,8 @@ class ExportVertexAIVectorSearch(ExportVDB):
         index_meta_list = []
         # get index endpoint resource id and deployed index id
         index_endpoint_name, deployed_index_id = (
-            self.get_index_endpoint_name(index_name=index_name))
+            self.get_index_endpoint_name(index_name=index_name)
+        )
         # print(f"index_endpoint_name = {index_endpoint_name}")
         # print(f"deployed_index_id   = {deployed_index_id}")
 
@@ -117,16 +119,19 @@ class ExportVertexAIVectorSearch(ExportVDB):
         # start exporting
         pbar = tqdm(total=total, desc=f"Exporting {index.display_name}")
         # find nearest neighbors as proxy to export all datapoint ids
-        neighbors = index_endpoint.find_neighbors(deployed_index_id=deployed_index_id,
-                                                  queries=[[0.0]*dim],
-                                                  num_neighbors=total,
-                                                  return_full_datapoint=False)
+        neighbors = index_endpoint.find_neighbors(
+            deployed_index_id=deployed_index_id,
+            queries=[[0.0]*dim],
+            num_neighbors=total,
+            return_full_datapoint=False
+        )
         # get full datapoint including metadata
         datapoints = None
         if len(neighbors) > 0:
             datapoint_ids = [p.id for p in neighbors[0]]
-            datapoints = index_endpoint.read_index_datapoints(deployed_index_id=deployed_index_id, 
-                                                              ids=datapoint_ids)
+            datapoints = index_endpoint.read_index_datapoints(
+                deployed_index_id=deployed_index_id, ids=datapoint_ids
+            )
         # print(f"# of neighbors = {len(neighbors)}")
 
         vectors = None

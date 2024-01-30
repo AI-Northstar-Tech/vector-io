@@ -99,7 +99,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
         # Index Client
         # =========================================================
         self.parent = f"projects/{self.project_id}/locations/{self.location}"
-        self.client = self._get_client()
 
         # set index client
         client_endpoint = f"{self.location}-aiplatform.googleapis.com"
@@ -120,33 +119,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
         index_config_dict = self.target_vertexai_index.to_dict()
         _index_meta_config = index_config_dict['metadata']['config']
         tqdm.write(json.dumps(_index_meta_config, indent=4))
-
-    def _get_client(self):
-        """Gets the Vertex AI Vector Search client.
-        Returns:
-            The Vertex AI Vector Search service.
-
-        Note this uses the default credentials from the environment.
-        https://google-auth.readthedocs.io/en/latest/reference/google.auth.html#google.auth.default
-
-            To enable application default credentials with the Cloud SDK run:
-
-            gcloud auth application-default login
-            If the Cloud SDK has an active project, the project ID is returned. 
-            The active project can be set using:
-
-            gcloud config set project
-
-        """
-        creds, _ = google.auth.default()
-
-        try:
-            service = build("aiplatform", "v1", credentials=creds)
-            return service
-        except HttpError as err:
-            raise ConnectionError(
-                "Error getting Vertex AI Vector Search client"
-            ) from err
             
     def upsert_data(self):
         
