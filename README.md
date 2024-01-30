@@ -15,13 +15,13 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | GCP Vertex AI Vector Search    | 🔜     | 🔜     |
 | KDB.AI                         | 🔜     | 🔜     |
 | Rockset                        | 🔜     | 🔜     |
+| Vespa                          | ⏳     | ⏳     |
 | Weaviate                       | ⏳     | ⏳     |
 | MongoDB Atlas                  | ⏳     | ⏳     |
 | Epsilla                        | ⏳     | ⏳     |
 | txtai                          | ⏳     | ⏳     |
 | Redis Search                   | ⏳     | ⏳     |
 | OpenSearch                     | ⏳     | ⏳     |
-| Vespa                          | ❌     | ❌     |
 | Activeloop Deep Lake           | ❌     | ❌     |
 | Anari AI                       | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
@@ -34,7 +34,6 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | LanceDB                        | ❌     | ❌     |
 | Marqo                          | ❌     | ❌     |
 | Meilisearch                    | ❌     | ❌     |
-| Milvus                         | ❌     | ❌     |
 | MyScale                        | ❌     | ❌     |
 | Neo4j                          | ❌     | ❌     |
 | Nuclia DB                      | ❌     | ❌     |
