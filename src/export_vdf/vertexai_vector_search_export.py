@@ -95,6 +95,7 @@ class ExportVertexAIVectorSearch(ExportVDB):
 
 
     def get_data_for_index(self, index_name):
+        index_meta_list = []
         # get index endpoint resource id and deployed index id
         index_endpoint_name, deployed_index_id = (
             self.get_index_endpoint_name(index_name=index_name))
@@ -131,9 +132,14 @@ class ExportVertexAIVectorSearch(ExportVDB):
         vectors = None
         metadata = None
         if len(datapoints) > 0:
-            vectors = {pt.datapoint_id:list(pt.feature_vector) for pt in datapoints}
-            metadata = {pt.datapoint_id:{md.namespace:list(md.allow_list) for md in pt.restricts} 
-                        for pt in datapoints if pt.restricts}
+            vectors = {
+                pt.datapoint_id:list(pt.feature_vector) for pt in datapoints
+            }
+            metadata = {
+                pt.datapoint_id:{
+                    md.namespace:list(md.allow_list) for md in pt.restricts
+                } for pt in datapoints if pt.restricts
+            }
 
         # print(f"# of vectors = {len(vectors)}")
 
@@ -147,7 +153,7 @@ class ExportVertexAIVectorSearch(ExportVDB):
 
         namespace_meta = {
             "index_name": index.display_name,
-            "namespace": "",
+            "namespace": "namespace",
             "total_vector_count": total,
             "exported_vector_count": num_vectors_exported,
             "metric": standardize_metric(
@@ -159,5 +165,8 @@ class ExportVertexAIVectorSearch(ExportVDB):
             "vector_columns": ["vector"],
             "data_path": vectors_directory,
         }
-
-        return {"": [namespace_meta]}
+        index_meta_list.append(namespace_meta)
+        
+        return index_meta_list
+        # return {f"{index.display_name}": index_meta_list}
+        # return {f"{index.display_name}": [namespace_meta]}
