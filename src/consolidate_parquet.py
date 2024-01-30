@@ -5,6 +5,8 @@ import pyarrow.parquet as pq
 import os
 import argparse
 
+from tqdm import tqdm
+
 
 def get_file_size_in_gb(file_path):
     """
@@ -60,14 +62,12 @@ def main():
     new_file_set = set()
     # add metadata to file_structure
     old_files = os.listdir(directory)
-    for filename in old_files:
+    for filename in tqdm(old_files):
         if filename.endswith(".parquet"):
             filepath = os.path.join(directory, filename)
             # remove filepath from old_file_structure which has last segment matching filename
             old_file_structure = [
-                x
-                for x in old_file_structure
-                if not x.endswith('/'+filename)
+                x for x in old_file_structure if not x.endswith("/" + filename)
             ]
             # Read the parquet file as a PyArrow table
             table = pq.read_table(filepath)
