@@ -4,7 +4,7 @@ import data to vertex ai vector search index
 import google.auth
 import google.auth.transport.requests
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 from src.names import DBNames
 from os import listdir
 
@@ -17,13 +17,29 @@ from googleapiclient.errors import HttpError
 # gcloud config set project $PROJECT_ID - users
 import os
 import json
+import itertools
 import pandas as pd
 from tqdm import tqdm
 from google.cloud import aiplatform as aip
 import google.cloud.aiplatform_v1 as aipv1
 
+from dataclasses import dataclass, field
+
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
+# @dataclass
+# class Namespace:
+#     name: str
+#     allow_tokens: list = field(default_factory=list)
+#     deny_tokens: list = field(default_factory=list)
+
+# @dataclass
+# class NumericNamespace:
+#     name: str
+#     value_int: Optional[int] = None
+#     value_float: Optional[float] = None
+#     value_double: Optional[float] = None
+#     op: Optional[str] = None
 
 class ImportVertexAIVectorSearch(ImportVDF):
     DB_NAME_SLUG = DBNames.VERTEXAI
@@ -38,7 +54,64 @@ class ImportVertexAIVectorSearch(ImportVDF):
         self.target_index_id = args["target_index_id"]
         self.target_index_resource_name = f"projects/{self.project_num}/locations/{self.location}/indexes/{self.target_index_id}"
         
-        # clients
+        # =========================================================
+        # filters: restricts and crowding
+        # =========================================================
+        filter_restricts = args["filter_restricts"]
+        numeric_restricts = args["numeric_restricts"]
+        crowding_tag = args["crowding_tag"]
+        self.filter_restricts = filter_restricts if filter_restricts is not None else None
+        self.numeric_restricts = numeric_restricts if numeric_restricts is not None else None
+        self.crowding_tag = crowding_tag if crowding_tag is not None else None
+        
+        if self.filter_restricts:
+            # String filters: allows and denies
+            allows = []
+            denies = []
+            list_of_ns_restrict_entries = []
+            for name in self.filter_restricts:
+                name_space_filter_entry = {}
+                all_allows = []
+                all_denies = []
+                allows = []
+                denies = []
+                name_space_filter_entry['namespace'] = name.get('namespace')
+                if name.get("allow_list") is not None:
+                    allow_items = name.get("allow_list")
+                    allows.append(allow_items)
+                    # allows.append([a for a in allow_items])
+                if name.get("deny_list") is not None:
+                    deny_items = name.get("deny_list")
+                    denies.append(deny_items)
+
+                if allows:
+                    all_allows = list(itertools.chain.from_iterable(allows))
+                    name_space_filter_entry['allow_list'] = all_allows
+
+                if denies:
+                    all_denies = list(itertools.chain.from_iterable(denies))
+                    name_space_filter_entry['deny_list'] = all_denies
+
+                list_of_ns_restrict_entries.append(name_space_filter_entry)
+        
+        self.list_of_ns_restrict_entries = list_of_ns_restrict_entries if self.filter_restricts is not None else None
+        print(f"list_of_ns_restrict_entries : {self.list_of_ns_restrict_entries}")
+        
+        if self.numeric_restricts:
+            # Numeric filters:
+            list_of_numeric_entries = []
+            for name in self.numeric_restricts:
+                name_space_filter_entry = {}
+                name_space_filter_entry['namespace'] = name.get('namespace')
+                name_space_filter_entry['data_type'] = name.get('data_type')
+                list_of_numeric_entries.append(name_space_filter_entry)
+            
+        self.list_of_numeric_entries = list_of_numeric_entries if self.numeric_restricts is not None else None
+        print(f"list_of_numeric_entries : {self.list_of_numeric_entries}")
+        
+        # =========================================================
+        # Index Client
+        # =========================================================
         self.parent = f"projects/{self.project_id}/locations/{self.location}"
         self.client = self._get_client()
 
@@ -121,17 +194,74 @@ class ImportVertexAIVectorSearch(ImportVDF):
                     
                     data_rows = []
                     insert_datapoints_payload = []
-                    
+                
                     for idx, row in df.iterrows():
+                        # tmp_row_restrict_entry = {}
+                        # tmp_row_num_restrict_entry = {}
                         row = json.loads(row.to_json())
                         
                         total_ids.append(row["id"])
-                        
                         row[vector_column_name] = [float(emb) for emb in row[vector_column_name]]
+                        
+                        restrict_entry_list = []
+                        allow_values = []
+                        deny_values = []
+                        
+                        if self.list_of_ns_restrict_entries:
+                            for entry in self.list_of_ns_restrict_entries:
+                                restrict_entry = {}
+
+                                restrict_entry["namespace"] = entry.get("namespace")
+
+                                if entry.get("allow_list"):
+                                    for col in entry.get("allow_list"):
+                                        allow_values.append(row[col])
+                                        restrict_entry["allow_list"] = [str(a) for a in allow_values]
+
+                                if entry.get("deny_list"):
+                                    for col in entry.get("deny_list"):
+                                        deny_values.append(row[col])
+                                        restrict_entry["deny_list"] = [str(d) for d in deny_values]
+
+                                restrict_entry_list.append(restrict_entry)
+
+                            # tmp_row_restrict_entry.update(
+                            #     {
+                            #         "restricts" : restrict_entry_list
+                            #     }
+                            # )
+                        if self.list_of_numeric_entries:
+                            numeric_restrict_entry_list = []
+                            for entry in self.list_of_numeric_entries:
+                                numeric_restrict_entry = {}
+
+                                data_type = entry.get("data_type")
+                                col_name = entry.get("namespace")
+                                numeric_restrict_entry["namespace"] = entry.get("namespace")
+                                numeric_restrict_entry[data_type] = row[col_name]
+                                numeric_restrict_entry_list.append(numeric_restrict_entry)
+
+                            # tmp_row_num_restrict_entry.update(
+                            #     {
+                            #         "numeric_restricts" : numeric_restrict_entry_list
+                            #     }
+                            # )
+                            
+                        if self.crowding_tag:
+                            crowding_tag_col = self.crowding_tag
+                            crowding_tag_val = row[crowding_tag_col]
+
+                        ####
+                        
                         insert_datapoints_payload.append(
                             aipv1.IndexDatapoint(
                                 datapoint_id=row["id"],
                                 feature_vector=row[vector_column_name],
+                                restricts=restrict_entry_list,
+                                numeric_restricts=numeric_restrict_entry_list,
+                                crowding_tag=aipv1.IndexDatapoint.CrowdingTag(
+                                    crowding_attribute=crowding_tag_val
+                                )
                             )
                         )
                         if idx % self.batch_size == 0:
