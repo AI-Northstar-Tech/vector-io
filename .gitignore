@@ -1,14 +1,31 @@
-*.cpython-310.pyc
-*checkpoint*
-*.ipynb_checkpoints/*
-*.ipynb_checkpoints.ipynb
-*WIP*
-*/old_jt/*
-*.parquet
-# .gcloudignore
-# .git
-# .github
-# *__pycache__
-# *cpython-37.pyc
-# .gitignore
-# .DS_Store
+__pycache__/
+.DS_Store
+.env
+VDF_dataset*/
+vdf_2*/
+notebooks/results*.csv
+vector-io.code-workspace
+notebooks/data/*
+data/*
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.csv
+output.txt
