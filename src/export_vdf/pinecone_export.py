@@ -148,7 +148,6 @@ class ExportPinecone(ExportVDB):
             tqdm.write(
                 "The ids are not integers. Please provide a range of ids using --id_list_file if you want to export a subset of vectors."
             )
-            return []
         else:
             random_results_ids = [
                 int(x) for x in random_results_ids_strs if x.isdigit()

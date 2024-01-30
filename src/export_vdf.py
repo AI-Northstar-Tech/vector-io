@@ -10,8 +10,8 @@ from export_vdf.qdrant_export import ExportQdrant
 from export_vdf.milvus_export import ExportMilvus
 from export_vdf.vertexai_vectorsearch_export import ExportVertexAIVectorSearch
 from export_vdf.vdb_export_cls import ExportVDB
-from export_vdf.push_to_hub import push_to_hub
 from names import DBNames
+from push_to_hub import push_to_hub
 from util import set_arg_from_input, set_arg_from_password
 from getpass import getpass
 import warnings

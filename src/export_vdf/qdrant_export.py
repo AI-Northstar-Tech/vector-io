@@ -84,8 +84,6 @@ class ExportQdrant(ExportVDB):
         vectors_directory = os.path.join(self.vdf_directory, collection_name)
         os.makedirs(vectors_directory, exist_ok=True)
 
-        vectors = {}
-        metadata = {}
         total = self.client.get_collection(collection_name).vectors_count
 
         num_vectors_exported = 0
