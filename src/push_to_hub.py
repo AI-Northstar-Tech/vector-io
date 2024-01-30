@@ -44,7 +44,7 @@ def push_to_hub(export_obj, args):
         repo_type="dataset",
     )
     # create hf dataset card in temp README.md
-    readme_path = os.path.join(export_obj.vdf_directory, "README.md")
+    readme_path = os.path.join(data_path, "README.md")
     with open(readme_path, "w") as f:
         f.write(
             """
