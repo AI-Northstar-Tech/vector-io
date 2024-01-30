@@ -5,9 +5,6 @@ import hashlib
 import json
 import os
 from qdrant_client.http.models import Distance
-
-# TODO - fix / consolidate below
-# from names import DBNames
 from src.names import DBNames
 
 def sort_recursive(d):

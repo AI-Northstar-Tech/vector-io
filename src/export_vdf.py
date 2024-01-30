@@ -139,6 +139,12 @@ def export_vertexai_vectorsearch(args):
         "gcloud_credentials_file", 
         "Enter path to service account credentials file (hit return to use application default credentials): ", 
     )
+    # max_vectors
+    set_arg_from_input(
+        args, 
+        "max_vectors", 
+        "Optional: max_vectors to export; can be larger than actual vector count", 
+    )
     vertexai_vectorsearch_export = ExportVertexAIVectorSearch(args)
     vertexai_vectorsearch_export.get_data()
     return vertexai_vectorsearch_export
@@ -282,6 +288,9 @@ def main():
     )
     parser_vertexai_vectorsearch.add_argument(
         "-c", "--gcloud-credentials-file", type=str, help="Path to Google Cloud service account credentials file", default=None
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-m", "--max_vectors", type=str, help="Optional: max vectors to retrieve", default=None
     )
 
     args = parser.parse_args()

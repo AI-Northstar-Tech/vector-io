@@ -26,6 +26,8 @@ class ExportVertexAIVectorSearch(ExportVDB):
         """
         # call super class constructor
         super().__init__(args)
+        max_vectors = args["max_vectors"]
+        self.max_vectors = max_vectors if max_vectors is not None else None
 
         try:
             # set gcloud credentials by loading credentials file if provided 
@@ -113,7 +115,10 @@ class ExportVertexAIVectorSearch(ExportVDB):
 
         # get index metadata
         index_meta = index.to_dict()
-        total = int(index_meta.get('indexStats', {}).get('vectorsCount'))        
+        total = int(index_meta.get('indexStats', {}).get('vectorsCount'))
+        if self.max_vectors:
+            total = self.max_vectors
+            
         dim = int(index_meta.get('metadata', {}).get('config', {}).get('dimensions', 0))
 
         # start exporting
