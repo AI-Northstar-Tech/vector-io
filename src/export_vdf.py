@@ -107,6 +107,12 @@ def export_kdbai(args):
         "Enter the name of table to export:",
         str,
     )
+    set_arg_from_input(
+        args,
+        "model",
+        "Enter the embedding model used:",
+        str,
+    )
     set_arg_from_password(
         args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
     )
@@ -135,7 +141,9 @@ def main():
             -c, --collections (str): Names of collections to export (comma-separated).
 
         KDB.AI:
+            -u, --endpoint (str): KDB.AI cloud instance endpoint.
             -t, --kdbai_table (str): Name of the KDB.AI table to export.
+            -m, --model (str): Embedding model used
 
     Examples:
         Export data from Pinecone:
@@ -145,7 +153,7 @@ def main():
         python export.py qdrant -u http://localhost:6333 -c my_collection
 
         Export data from KDBAI:
-        python export.py kdbai -u https://cloud.kdb.ai/instance/xyz -t my_table
+        python export.py kdbai -u https://cloud.kdb.ai/instance/xyz -t my_table -m my_model
     """
     parser = argparse.ArgumentParser(
         description="Export data from various vector databases to the VDF format for vector datasets"
@@ -186,6 +194,9 @@ def main():
     )
     parser_kdbai.add_argument(
         "-t", "--kdbai_table", type=str, help="KDB.AI table to export"
+    )
+    parser_kdbai.add_argument(
+        "-m", "--model", type=str, help="Embedding model used"
     )
 
     # Pinecone
