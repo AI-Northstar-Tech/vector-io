@@ -5,11 +5,11 @@ import google.auth
 import google.auth.transport.requests
 
 from typing import Dict, List, Optional
-from src.names import DBNames
+from names import DBNames
 from os import listdir
 
-from src.import_vdf.vdf_import_cls import ImportVDF
-from src.util import db_metric_to_standard_metric
+from import_vdf.vdf_import_cls import ImportVDF
+from util import db_metric_to_standard_metric
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError

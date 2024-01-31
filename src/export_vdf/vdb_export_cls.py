@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import abc
 
-from src.util import extract_data_hash
+from util import extract_data_hash
 
 
 class ExportVDB(abc.ABC):

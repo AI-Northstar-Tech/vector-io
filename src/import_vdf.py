@@ -15,6 +15,7 @@ from import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
 
+
 def import_milvus(args):
     """
     Import data to Milvus
@@ -31,6 +32,7 @@ def import_milvus(args):
     )
     milvus_import = ImportMilvus(args)
     milvus_import.upsert_data()
+
 
 def import_qdrant(args):
     """
@@ -101,57 +103,38 @@ def import_pinecone(args):
 
     pinecone_import = ImportPinecone(args)
     pinecone_import.upsert_data()
-    
+
+
 def import_vertexai_vectorsearch(args):
     """
     Import data to Vertex AI Vector Search
     """
+    set_arg_from_input(args, "project_id", "Enter the Google Cloud Project ID:")
+    set_arg_from_input(args, "location", "Enter region to host your index ")
+    set_arg_from_input(args, "project_num", "Enter the Google Cloud Project Number ")
     set_arg_from_input(
-        args, 
-        "project_id", 
-        "Enter the Google Cloud Project ID:"
+        args,
+        "target_index_id",
+        "Enter the name of the index to import to",
+        default_value="projects/123/locations/us-central1/indexes/target_index_id",
     )
     set_arg_from_input(
-        args, 
-        "location", 
-        "Enter region to host your index "
+        args, "batch_size", "size of upsert batches", default_value=100, type_name=int
     )
     set_arg_from_input(
-        args, 
-        "project_num", 
-        "Enter the Google Cloud Project Number "
+        args,
+        "filter_restricts",
+        "Optional. List of dicts for each datapoint; used to perform restricted searches",
     )
     set_arg_from_input(
-        args, 
-        "target_index_id", 
-        "Required. "projects/123/locations/us-central1/indexes/target_index_id"
+        args, "numeric_restricts", "Optional. List of dicts for each datapoint;"
     )
     set_arg_from_input(
-        args, 
-        "batch_size", 
-        "size of upsert batches",
-        default_value=100,
-        type_name=int
-    )
-    set_arg_from_input(
-        args, 
-        "filter_restricts", 
-        "Optional. List of dicts for each datapoint; used to perform restricted searches"
-    )
-    set_arg_from_input(
-        args, 
-        "numeric_restricts",
-        "Optional. List of dicts for each datapoint;"
-
-    )
-    set_arg_from_input(
-        args, 
-        "crowding_tag", 
-        "Optional. CrowdingTag of the datapoint",
-        type_name=str
+        args, "crowding_tag", "Optional. CrowdingTag of the datapoint", type_name=str
     )
     vertexai_vectorsearch_import = ImportVertexAIVectorSearch(args)
-    vertex_import.upsert_data()
+    vertexai_vectorsearch_import.upsert_data()
+
 
 def main():
     """
@@ -185,16 +168,10 @@ def main():
         action=argparse.BooleanOptionalAction,
     )
     # Milvus
-    parser_milvus = subparsers.add_parser(
-        DBNames.MILVUS, help="Import data to Milvus"
-    )
-    parser_milvus.add_argument(
-        "-u", "--uri", type=str, help="URI of Milvus instance"
-    )
-    parser_milvus.add_argument(
-        "-t", "--token", type=str, help="Milvus token"
-    )
-    
+    parser_milvus = subparsers.add_parser(DBNames.MILVUS, help="Import data to Milvus")
+    parser_milvus.add_argument("-u", "--uri", type=str, help="URI of Milvus instance")
+    parser_milvus.add_argument("-t", "--token", type=str, help="Milvus token")
+
     # Pinecone
     parser_pinecone = subparsers.add_parser(
         DBNames.PINECONE, help="Import data to Pinecone"
@@ -217,14 +194,12 @@ def main():
     )
 
     # Qdrant
-    parser_qdrant = subparsers.add_parser(
-        DBNames.QDRANT, help="Import data to Qdrant"
-    )
+    parser_qdrant = subparsers.add_parser(DBNames.QDRANT, help="Import data to Qdrant")
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
-    
+
     # Vertex AI VectorSearch
     parser_vertexai_vectorsearch = subparsers.add_parser(
-        DBNames.VERTEXAI, help="Import data to Vetex AI Vector Search"
+        DBNames.VERTEXAI, help="Import data to Vertex AI Vector Search"
     )
     parser_vertexai_vectorsearch.add_argument(
         "-p", "--project-id", type=str, help="Google Cloud Project ID"
@@ -236,7 +211,7 @@ def main():
         "-i", "--target-index-id", type=str, help="Name of the index to import to"
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-b", "--batch-size", type=str, help="size of upsert batches""
+        "-b", "--batch-size", type=str, help="size of upsert batches"
     )
     parser_vertexai_vectorsearch.add_argument(
         "-f", "--filter-restricts", type=str, help="string filters"
@@ -245,7 +220,10 @@ def main():
         "-n", "--numeric-restricts", type=str, help="numeric filters"
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-c", "--crowding-tag", type=str, help="string value to enforce diversity in retrieval"
+        "-c",
+        "--crowding-tag",
+        type=str,
+        help="string value to enforce diversity in retrieval",
     )
 
     args = parser.parse_args()

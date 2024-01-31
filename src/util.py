@@ -5,7 +5,8 @@ import hashlib
 import json
 import os
 from qdrant_client.http.models import Distance
-from src.names import DBNames
+from names import DBNames
+
 
 def sort_recursive(d):
     """
