@@ -7,9 +7,9 @@ from tqdm import tqdm
 
 from pymilvus import connections, utility, Collection
 
-from export_vdf.vdb_export_cls import ExportVDB
-from util import standardize_metric
-from names import DBNames
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.util import standardize_metric
+from vdf_io.names import DBNames
 
 
 MAX_FETCH_SIZE = 1_000

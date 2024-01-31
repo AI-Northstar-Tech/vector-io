@@ -1,7 +1,4 @@
 import datetime
-from names import DBNames
-from util import standardize_metric
-from export_vdf.vdb_export_cls import ExportVDB
 from pinecone import Pinecone, Vector
 import os
 import json
@@ -9,6 +6,10 @@ import numpy as np
 import json
 import pandas as pd
 from tqdm import tqdm
+from vdf_io.names import DBNames
+from vdf_io.util import standardize_metric
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
+
 
 PINECONE_MAX_K = 10_000
 MAX_TRIES_OVERALL = 150

@@ -3,9 +3,9 @@ from qdrant_client import QdrantClient
 import os
 from tqdm import tqdm
 from dotenv import load_dotenv
-from export_vdf.vdb_export_cls import ExportVDB
-from names import DBNames
-from util import standardize_metric
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.names import DBNames
+from vdf_io.util import standardize_metric
 
 load_dotenv()
 

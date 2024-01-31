@@ -3,7 +3,7 @@
 import os
 import pandas as pd
 
-from util import expand_shorthand_path
+from vdf_io.util import expand_shorthand_path
 
 # script to get list of ids from directory of parquet files
 

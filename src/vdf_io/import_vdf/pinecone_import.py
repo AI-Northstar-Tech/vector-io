@@ -1,11 +1,11 @@
 import pandas as pd
 from tqdm import tqdm
-from names import DBNames
-from util import standardize_metric_reverse
-from import_vdf.vdf_import_cls import ImportVDF
 from pinecone import Pinecone, ServerlessSpec, PodSpec, Vector
 import os
 from dotenv import load_dotenv
+from vdf_io.names import DBNames
+from vdf_io.util import standardize_metric_reverse
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
 

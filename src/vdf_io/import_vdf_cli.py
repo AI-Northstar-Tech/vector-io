@@ -6,13 +6,14 @@ import time
 from dotenv import load_dotenv
 from names import DBNames
 
-from util import set_arg_from_input, set_arg_from_password
-from import_vdf.pinecone_import import ImportPinecone
-from import_vdf.qdrant_import import ImportQdrant
-from import_vdf.milvus_import import ImportMilvus
-from import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.util import set_arg_from_input, set_arg_from_password
+from vdf_io.import_vdf.pinecone_import import ImportPinecone
+from vdf_io.import_vdf.qdrant_import import ImportQdrant
+from vdf_io.import_vdf.milvus_import import ImportMilvus
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
+
 
 def import_milvus(args):
     """
@@ -30,6 +31,7 @@ def import_milvus(args):
     )
     milvus_import = ImportMilvus(args)
     milvus_import.upsert_data()
+
 
 def import_qdrant(args):
     """
@@ -134,16 +136,10 @@ def main():
         action=argparse.BooleanOptionalAction,
     )
     # Milvus
-    parser_milvus = subparsers.add_parser(
-        DBNames.MILVUS, help="Import data to Milvus"
-    )
-    parser_milvus.add_argument(
-        "-u", "--uri", type=str, help="URI of Milvus instance"
-    )
-    parser_milvus.add_argument(
-        "-t", "--token", type=str, help="Milvus token"
-    )
-    
+    parser_milvus = subparsers.add_parser(DBNames.MILVUS, help="Import data to Milvus")
+    parser_milvus.add_argument("-u", "--uri", type=str, help="URI of Milvus instance")
+    parser_milvus.add_argument("-t", "--token", type=str, help="Milvus token")
+
     # Pinecone
     parser_pinecone = subparsers.add_parser(
         DBNames.PINECONE, help="Import data to Pinecone"
@@ -166,9 +162,7 @@ def main():
     )
 
     # Qdrant
-    parser_qdrant = subparsers.add_parser(
-        DBNames.QDRANT, help="Import data to Qdrant"
-    )
+    parser_qdrant = subparsers.add_parser(DBNames.QDRANT, help="Import data to Qdrant")
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
 
     args = parser.parse_args()

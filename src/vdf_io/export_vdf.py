@@ -4,16 +4,16 @@ import argparse
 import os
 import sys
 import time
-from dotenv import load_dotenv
-from export_vdf.pinecone_export import ExportPinecone
-from export_vdf.qdrant_export import ExportQdrant
-from export_vdf.milvus_export import ExportMilvus
-from export_vdf.vdb_export_cls import ExportVDB
-from names import DBNames
-from push_to_hub import push_to_hub
-from util import set_arg_from_input, set_arg_from_password
-from getpass import getpass
 import warnings
+from getpass import getpass
+from dotenv import load_dotenv
+from vdf_io.export_vdf.pinecone_export import ExportPinecone
+from vdf_io.export_vdf.qdrant_export import ExportQdrant
+from vdf_io.export_vdf.milvus_export import ExportMilvus
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.names import DBNames
+from vdf_io.push_to_hub import push_to_hub
+from vdf_io.util import set_arg_from_input, set_arg_from_password
 
 # Suppress specific warnings
 warnings.simplefilter("ignore", ResourceWarning)
@@ -168,7 +168,7 @@ def main():
         type=bool,
         help="Push to hub",
         default=False,
-        action=argparse.BooleanOptionalAction
+        action=argparse.BooleanOptionalAction,
     )
     parser.add_argument(
         "--public",
@@ -207,14 +207,14 @@ def main():
         type=bool,
         help="Allow modifying data to search",
         default=False,
-        action=argparse.BooleanOptionalAction
+        action=argparse.BooleanOptionalAction,
     )
     parser_pinecone.add_argument(
         "--subset",
         type=bool,
         help="Export a subset of data (default: False)",
         default=False,
-        action=argparse.BooleanOptionalAction
+        action=argparse.BooleanOptionalAction,
     )
     db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
     # Qdrant
@@ -227,9 +227,7 @@ def main():
     )
     # Milvus
     parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
-    parser_milvus.add_argument(
-        "-u", "--uri", type=str, help="Milvus connection URI"
-    )
+    parser_milvus.add_argument("-u", "--uri", type=str, help="Milvus connection URI")
     parser_milvus.add_argument(
         "-t", "--token", type=str, required=False, help="Milvus connection token"
     )

@@ -8,12 +8,12 @@ setup(
     license="Apache 2.0",
     author="Dhruv Anand",
     author_email="dhruv.anand@ainorthstartech.com",
-    packages=find_packages(where='src'),
+    packages=find_packages(where="src"),
     package_dir={"": "src"},
     entry_points={
         "console_scripts": [
-            "export_vdf=vdf_io.export_vdf:main",
-            "import_vdf=vdf_io.import_vdf:main",
+            "export_vdf=vdf_io.export_vdf_cli:main",
+            "import_vdf=vdf_io.import_vdf_cli:main",
         ],
     },
     install_requires=open("requirements.txt").read().splitlines(),

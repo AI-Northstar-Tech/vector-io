@@ -3,10 +3,11 @@ from dotenv import load_dotenv
 import pandas as pd
 from qdrant_client import QdrantClient
 import tqdm
-from names import DBNames
-from util import extract_numerical_hash
-from import_vdf.vdf_import_cls import ImportVDF
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, UpdateStatus
+from vdf_io.names import DBNames
+from vdf_io.util import extract_numerical_hash
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+
 
 load_dotenv()
 

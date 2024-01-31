@@ -14,9 +14,9 @@ from pymilvus import (
     DataType,
 )
 
-from names import DBNames
-from util import standardize_metric_reverse
-from import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.names import DBNames
+from vdf_io.util import standardize_metric_reverse
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 
 
 load_dotenv()
@@ -139,7 +139,10 @@ class ImportMilvus(ImportVDF):
                         )
                         data_rows.append(row)
                     BATCH_SIZE = 100
-                    for i in tqdm(range(0, len(data_rows), BATCH_SIZE), desc="Upserting in Batches"):
+                    for i in tqdm(
+                        range(0, len(data_rows), BATCH_SIZE),
+                        desc="Upserting in Batches",
+                    ):
                         mr = collection.insert(data_rows[i : i + BATCH_SIZE])
                         num_inserted += mr.succ_count
 
