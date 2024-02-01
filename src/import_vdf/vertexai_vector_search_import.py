@@ -36,6 +36,20 @@ class ImportVertexAIVectorSearch(ImportVDF):
         self.project_id = args["project_id"]
         self.location = args["location"]
         self.batch_size = args['batch_size']
+        
+        # =========================================================
+        # set index client
+        # =========================================================
+        self.parent = f"projects/{self.project_id}/locations/{self.location}"
+        
+        client_endpoint = f"{self.location}-aiplatform.googleapis.com"
+        self.index_client = aipv1.IndexServiceClient(
+            client_options=dict(api_endpoint=client_endpoint)
+        )
+        aip.init(
+            project=self.project_id,
+            location=self.location,
+        )
         # =========================================================
         # Find index: check by display name for deployed/undeployed
         # =========================================================
@@ -57,7 +71,10 @@ class ImportVertexAIVectorSearch(ImportVDF):
         if not indexes_display_test:
             print(f"No undeployed indexes named: {target_index_id}\n")
             print(f"Checking deployed indexes...\n")
-            all_index_names = [index.resource_name for index in aip.MatchingEngineIndex.list()]
+            
+            all_index_names = [
+                index.resource_name for index in aip.MatchingEngineIndex.list()
+            ]
             d_ids = []
             for index in all_index_names:
                 test_index = aip.MatchingEngineIndex(index_name=index)
@@ -71,7 +88,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 )
             ]
             if indexes_deployed_test:
-                target_index_endpoint = aip.MatchingEngineIndexEndpoint(indexes_deployed_test[0].index_endpoint)
+                target_index_endpoint = aip.MatchingEngineIndexEndpoint(
+                    indexes_deployed_test[0].index_endpoint
+                )
                 for d in target_index_endpoint.deployed_indexes:
                     if d.id == target_index_id:
                         target_index = aip.MatchingEngineIndex(index_name=d.index)
@@ -82,7 +101,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
                     f"{target_index_id} not found. "
                     "Please provide a valid index name for your project"
                 )
-        
         self.target_index_resource_name = target_index.resource_name
         
         # =========================================================
@@ -99,7 +117,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
             # String filters: allows and denies
             allows = []
             denies = []
-            list_of_ns_restrict_entries = []
+            list_restrict_entries = []
             for name in self.filter_restricts:
                 name_space_filter_entry = {}
                 all_allows = []
@@ -123,10 +141,10 @@ class ImportVertexAIVectorSearch(ImportVDF):
                     all_denies = list(itertools.chain.from_iterable(denies))
                     name_space_filter_entry['deny_list'] = all_denies
 
-                list_of_ns_restrict_entries.append(name_space_filter_entry)
+                list_restrict_entries.append(name_space_filter_entry)
         
-        self.list_of_ns_restrict_entries = list_of_ns_restrict_entries if self.filter_restricts is not None else None
-        print(f"list_of_ns_restrict_entries : {self.list_of_ns_restrict_entries}")
+        self.list_restrict_entries = list_restrict_entries if self.filter_restricts is not None else None
+        print(f"list_restrict_entries : {self.list_restrict_entries}")
         
         if self.numeric_restricts:
             # Numeric filters:
@@ -139,21 +157,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
             
         self.list_of_numeric_entries = list_of_numeric_entries if self.numeric_restricts is not None else None
         print(f"list_of_numeric_entries : {self.list_of_numeric_entries}")
-        
-        # =========================================================
-        # Index Client
-        # =========================================================
-        self.parent = f"projects/{self.project_id}/locations/{self.location}"
-
-        # set index client
-        client_endpoint = f"{self.location}-aiplatform.googleapis.com"
-        self.index_client = aipv1.IndexServiceClient(
-            client_options=dict(api_endpoint=client_endpoint)
-        )
-        aip.init(
-            project=self.project_id,
-            location=self.location,
-        )
         
         # init target index to import vectors to
         self.target_vertexai_index = aip.MatchingEngineIndex(self.target_index_resource_name)
@@ -214,8 +217,8 @@ class ImportVertexAIVectorSearch(ImportVDF):
                         #     # sanity check
                         #     print(f"row['id'] : {row['id']}")
                         
-                        if self.list_of_ns_restrict_entries:
-                            for entry in self.list_of_ns_restrict_entries:
+                        if self.list_restrict_entries:
+                            for entry in self.list_restrict_entries:
                                 restrict_entry = {}
 
                                 restrict_entry["namespace"] = entry.get("namespace")
