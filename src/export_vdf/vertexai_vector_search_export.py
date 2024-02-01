@@ -50,22 +50,36 @@ class ExportVertexAIVectorSearch(ExportVDB):
         return index_names
 
     def get_data(self):
-        index_names = []
-        if "index" not in self.args or self.args["index"] is None:
-            index_names = self.get_all_index_names()
-        else:
-            indexes = self.args["index"].split(",")
-            for index in indexes:
-                filter_by = f'display_name="{index}"'
-                fetched_index = [
-                    index.resource_name for index in vs.list(filter=filter_by)
-                ]
-                index_names.extend(fetched_index)
+        index_endpoint_names = []
+        all_index_names = self.get_all_index_names()
+        
+        d_ids = []
+        for index_id in all_index_names:
+            index = aiplatform.MatchingEngineIndex(index_name=index_id)
+            if index.deployed_indexes:
+                d_ids.extend(index.deployed_indexes)
+                
+        for i_name in [self.args["index"]]:
+            indexes = [
+                d_id for d_id in d_ids if (
+                    d_id.display_name == i_name 
+                    or d_id.deployed_index_id == i_name
+                )
+            ]
+            index_endpoint = indexes[0].index_endpoint
+            deployed_index_id = indexes[0].deployed_index_id
+            index_endpoint_names.append(
+                (index_endpoint, deployed_index_id)
+            )
+        print(f"index_endpoint_names: {index_endpoint_names}")
 
         index_metas = {}
-        for index_name in tqdm(index_names, desc="Fetching indexes"):
-            index_meta = self.get_data_for_index(index_name)
-            index_metas[index_name] = index_meta
+        for endpoint_name, deployed_index_id in tqdm(
+            index_endpoint_names, 
+            desc="Fetching indexes"
+        ):
+            index_meta = self.get_data_for_index(endpoint_name, deployed_index_id)
+            index_metas[deployed_index_id] = index_meta
 
         # Create and save internal metadata JSON
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
@@ -100,87 +114,83 @@ class ExportVertexAIVectorSearch(ExportVDB):
 
         return index_endpoint_name, deployed_index_id
 
-    def get_data_for_index(self, index_name):
+    def get_data_for_index(self, endpoint_name, deployed_index_id):
         index_meta_list = []
-        # get index endpoint resource id and deployed index id
-        index_endpoint_name, deployed_index_id = self.get_index_endpoint_name(
-            index_name=index_name
-        )
-        # print(f"index_endpoint_name = {index_endpoint_name}")
-        # print(f"deployed_index_id   = {deployed_index_id}")
+        
+        index_endpoint = vsep(endpoint_name)
+        for dep_id in index_endpoint.to_dict()['deployedIndexes']:
+            if dep_id['id'] == deployed_index_id:
+                
+                index = vs(index_name=dep_id['index'])
 
-        # define index and index endpoint
-        index = vs(index_name=index_name)
-        index_endpoint = vsep(index_endpoint_name)
+                vectors_directory = os.path.join(self.vdf_directory, deployed_index_id)
+                os.makedirs(vectors_directory, exist_ok=True)
 
-        vectors_directory = os.path.join(self.vdf_directory, index.display_name)
-        os.makedirs(vectors_directory, exist_ok=True)
+                # get index metadata
+                index_meta = index.to_dict()
+                total = int(index_meta.get("indexStats", {}).get("vectorsCount"))
+                if self.max_vectors:
+                    total = self.max_vectors
 
-        # get index metadata
-        index_meta = index.to_dict()
-        total = int(index_meta.get("indexStats", {}).get("vectorsCount"))
-        if self.max_vectors:
-            total = self.max_vectors
+                dim = int(index_meta.get("metadata", {}).get("config", {}).get("dimensions", 0))
 
-        dim = int(index_meta.get("metadata", {}).get("config", {}).get("dimensions", 0))
+                # start exporting
+                pbar = tqdm(total=total, desc=f"Exporting {index.display_name}")
+                # find nearest neighbors as proxy to export all datapoint ids
+                neighbors = index_endpoint.find_neighbors(
+                    deployed_index_id=deployed_index_id,
+                    queries=[[0.0] * dim],
+                    num_neighbors=total,
+                    return_full_datapoint=False,
+                )
+                # get full datapoint including metadata
+                datapoints = None
+                if len(neighbors) > 0:
+                    datapoint_ids = [p.id for p in neighbors[0]]
+                    datapoints = index_endpoint.read_index_datapoints(
+                        deployed_index_id=deployed_index_id, ids=datapoint_ids
+                    )
+                # print(f"# of neighbors = {len(neighbors)}")
 
-        # start exporting
-        pbar = tqdm(total=total, desc=f"Exporting {index.display_name}")
-        # find nearest neighbors as proxy to export all datapoint ids
-        neighbors = index_endpoint.find_neighbors(
-            deployed_index_id=deployed_index_id,
-            queries=[[0.0] * dim],
-            num_neighbors=total,
-            return_full_datapoint=False,
-        )
-        # get full datapoint including metadata
-        datapoints = None
-        if len(neighbors) > 0:
-            datapoint_ids = [p.id for p in neighbors[0]]
-            datapoints = index_endpoint.read_index_datapoints(
-                deployed_index_id=deployed_index_id, ids=datapoint_ids
-            )
-        # print(f"# of neighbors = {len(neighbors)}")
+                vectors = None
+                metadata = None
+                if len(datapoints) > 0:
+                    vectors = {pt.datapoint_id: list(pt.feature_vector) for pt in datapoints}
+                    metadata = {
+                        pt.datapoint_id: {
+                            md.namespace: list(md.allow_list) for md in pt.restricts
+                        }
+                        for pt in datapoints
+                        if pt.restricts
+                    }
 
-        vectors = None
-        metadata = None
-        if len(datapoints) > 0:
-            vectors = {pt.datapoint_id: list(pt.feature_vector) for pt in datapoints}
-            metadata = {
-                pt.datapoint_id: {
-                    md.namespace: list(md.allow_list) for md in pt.restricts
+                # print(f"# of vectors = {len(vectors)}")
+
+                num_vectors_exported = self.save_vectors_to_parquet(
+                    vectors,
+                    metadata,
+                    # self.file_ctr,
+                    vectors_directory,
+                )
+                pbar.update(len(vectors))
+
+                namespace_meta = {
+                    "index_name": index.display_name,
+                    "namespace": "namespace",
+                    "total_vector_count": total,
+                    "exported_vector_count": num_vectors_exported,
+                    "metric": standardize_metric(
+                        index_meta.get("metadata", {})
+                        .get("config", {})
+                        .get("distanceMeasureType"),
+                        self.DB_NAME_SLUG,
+                    ),
+                    "dimensions": dim,
+                    "model_name": self.args["model_name"],
+                    "vector_columns": ["vector"],
+                    "data_path": vectors_directory,
                 }
-                for pt in datapoints
-                if pt.restricts
-            }
-
-        # print(f"# of vectors = {len(vectors)}")
-
-        num_vectors_exported = self.save_vectors_to_parquet(
-            vectors,
-            metadata,
-            # self.file_ctr,
-            vectors_directory,
-        )
-        pbar.update(len(vectors))
-
-        namespace_meta = {
-            "index_name": index.display_name,
-            "namespace": "namespace",
-            "total_vector_count": total,
-            "exported_vector_count": num_vectors_exported,
-            "metric": standardize_metric(
-                index_meta.get("metadata", {})
-                .get("config", {})
-                .get("distanceMeasureType"),
-                self.DB_NAME_SLUG,
-            ),
-            "dimensions": dim,
-            "model_name": self.args["model_name"],
-            "vector_columns": ["vector"],
-            "data_path": vectors_directory,
-        }
-        index_meta_list.append(namespace_meta)
+                index_meta_list.append(namespace_meta)
 
         return index_meta_list
         # return {f"{index.display_name}": index_meta_list}

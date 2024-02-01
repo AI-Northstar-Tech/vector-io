@@ -157,7 +157,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
                         row = json.loads(row.to_json())
                         
                         total_ids.append(row["id"])
-                        row[vector_column_name] = [float(emb) for emb in row[vector_column_name]]
+                        row[vector_column_name] = [
+                            float(emb) for emb in row[vector_column_name]
+                        ]
                         
                         restrict_entry_list = []
                         allow_values = []
@@ -241,4 +243,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
                         self.index_client.upsert_datapoints(request=upsert_request)
                     
         print(f"Index import complete")
-        print(f"Updated {self.target_vertexai_index.display_name} with {len(total_ids)} vectors")
+        print(
+            f"Updated {self.target_vertexai_index.display_name} with {len(total_ids)} vectors"
+        )
