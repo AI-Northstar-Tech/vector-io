@@ -3,9 +3,9 @@ Export data from vertex ai vector search index
 """
 
 import json
-from names import DBNames
-from util import standardize_metric
-from export_vdf.vdb_export_cls import ExportVDB
+from src.names import DBNames
+from src.util import standardize_metric
+from src.export_vdf.vdb_export_cls import ExportVDB
 
 import google.auth
 from google.cloud import aiplatform
@@ -66,52 +66,61 @@ class ExportVertexAIVectorSearch(ExportVDB):
         all_index_r_names = self.get_all_index_r_names() # was all_index_names
         all_index_d_names = self.get_all_index_d_names()
         
-        if "index" not in self.args or self.args["index"] is None:
-            index_names = all_index_r_names
-            print(
-                f"No index provided; exporting from all {index_names} indexes"
-            )
-        else:
-            i_arg = self.args["index"]
-            if isinstance(i_arg, str):
-                indexes = i_arg.split(",")
+        try:
+            # find index from user input args
+            if "index" not in self.args or self.args["index"] is None:
+                index_names = all_index_r_names
+                print(
+                    f"No index provided; exporting from all {index_names} indexes"
+                )
             else:
-                indexes = i_arg
-            
-            print(f"indexes: {indexes}")
-            for index_arg in indexes:
-                d_ids = []
-                if index_arg in all_index_d_names:
-                    # display name given
-                    i_arg_d_list = [
-                        index.resource_name for index in MatchingEngineIndex.list(
-                            filter=f"display_name={index_arg}",
-                        ) if index.display_name == index_arg
-                    ]            
-                    index_names.append(i_arg_d_list[0])
+                i_arg = self.args["index"]
+                if isinstance(i_arg, str):
+                    indexes = i_arg.split(",")
                 else:
-                    for index_r in all_index_r_names:
-                        test_index = MatchingEngineIndex(index_name=index_r)
-                        if test_index.deployed_indexes:
-                            # grabbing all deployed indexes
-                            d_ids.extend(test_index.deployed_indexes)
+                    indexes = i_arg
 
-                # returning only those that match
-                indexes_deployed_test = [
-                    d_id for d_id in d_ids if (
-                        d_id.display_name == index_arg 
-                        or d_id.deployed_index_id == index_arg
-                    )
-                ]
-                if indexes_deployed_test:
-                    target_endpoint = MatchingEngineIndexEndpoint(
-                        indexes_deployed_test[0].index_endpoint
-                    )
-                    for d in target_endpoint.deployed_indexes:
-                        if (
-                            d.id == index_arg or d.display_name == index_arg
-                        ):
-                            index_names.append(d.index) 
+                print(f"indexes: {indexes}")
+                for index_arg in indexes:
+                    d_ids = []
+                    if index_arg in all_index_r_names:
+                        # resource_name given
+                        index_names.append(index_arg)
+                    elif index_arg in all_index_d_names:
+                        # display name given
+                        i_arg_d_list = [
+                            index.resource_name for index in MatchingEngineIndex.list(
+                                filter=f"display_name={index_arg}",
+                            ) if index.display_name == index_arg
+                        ]            
+                        index_names.append(i_arg_d_list[0])
+                    else:
+                        for index_r in all_index_r_names:
+                            test_index = MatchingEngineIndex(index_name=index_r)
+                            if test_index.deployed_indexes:
+                                # grabbing all deployed indexes
+                                d_ids.extend(test_index.deployed_indexes)
+
+                    # returning only those that match
+                    indexes_deployed_test = [
+                        d_id for d_id in d_ids if (
+                            d_id.display_name == index_arg 
+                            or d_id.deployed_index_id == index_arg
+                        )
+                    ]
+                    if indexes_deployed_test:
+                        target_endpoint = MatchingEngineIndexEndpoint(
+                            indexes_deployed_test[0].index_endpoint
+                        )
+                        for d in target_endpoint.deployed_indexes:
+                            if (
+                                d.id == index_arg or d.display_name == index_arg
+                            ):
+                                index_names.append(d.index)
+                
+        except ValueError as ve:
+            print("Could not find given index value")
+            raise ve
 
         index_metas = {}
         for index_name in tqdm(index_names, desc="Fetching indexes"):
