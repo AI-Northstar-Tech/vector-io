@@ -3,6 +3,7 @@
 import argparse
 import os
 import time
+from typing import Any
 from dotenv import load_dotenv
 from names import DBNames
 
@@ -13,6 +14,7 @@ from import_vdf.milvus_import import ImportMilvus
 from import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
+
 
 def import_milvus(args):
     """
@@ -31,6 +33,7 @@ def import_milvus(args):
     milvus_import = ImportMilvus(args)
     milvus_import.upsert_data()
 
+
 def import_qdrant(args):
     """
     Import data to Qdrant
@@ -38,9 +41,37 @@ def import_qdrant(args):
     set_arg_from_input(
         args,
         "url",
-        "Enter the url of Qdrant instance (default: 'http://localhost:6333'): ",
+        "Enter the URL of Qdrant instance (default: 'http://localhost:6334'): ",
         str,
-        "http://localhost:6333",
+        "http://localhost:6334",
+    )
+    set_arg_from_input(
+        args,
+        "prefer_grpc",
+        "Whether to use GRPC. Recommended. (default: True): ",
+        bool,
+        True,
+    )
+    set_arg_from_input(
+        args,
+        "parallel",
+        "Enter the batch size for upserts (default: 64): ",
+        int,
+        1,
+    )
+    set_arg_from_input(
+        args,
+        "batch-size",
+        "Enter the number of parallel processes of upload (default: 1): ",
+        int,
+        1,
+    )
+    set_arg_from_input(
+        args,
+        "max-retries",
+        "Enter the maximum number of retries in case of a failure (default: 3): ",
+        int,
+        3,
     )
     set_arg_from_password(
         args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
@@ -134,16 +165,10 @@ def main():
         action=argparse.BooleanOptionalAction,
     )
     # Milvus
-    parser_milvus = subparsers.add_parser(
-        DBNames.MILVUS, help="Import data to Milvus"
-    )
-    parser_milvus.add_argument(
-        "-u", "--uri", type=str, help="URI of Milvus instance"
-    )
-    parser_milvus.add_argument(
-        "-t", "--token", type=str, help="Milvus token"
-    )
-    
+    parser_milvus = subparsers.add_parser(DBNames.MILVUS, help="Import data to Milvus")
+    parser_milvus.add_argument("-u", "--uri", type=str, help="URI of Milvus instance")
+    parser_milvus.add_argument("-t", "--token", type=str, help="Milvus token")
+
     # Pinecone
     parser_pinecone = subparsers.add_parser(
         DBNames.PINECONE, help="Import data to Pinecone"
@@ -166,10 +191,30 @@ def main():
     )
 
     # Qdrant
-    parser_qdrant = subparsers.add_parser(
-        DBNames.QDRANT, help="Import data to Qdrant"
-    )
+    parser_qdrant = subparsers.add_parser(DBNames.QDRANT, help="Import data to Qdrant")
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
+    parser_qdrant.add_argument(
+        "--prefer_grpc", type=bool, help="Whether to use Qdrant's GRPC interface"
+    )
+    parser_qdrant.add_argument(
+        "--batch-size", type=int, help="Batch size for upserts (default: 64)."
+    )
+    parser_qdrant.add_argument(
+        "--parallel",
+        type=int,
+        help="Number of parallel processes of upload (default: 1).",
+    )
+    parser_qdrant.add_argument(
+        "--max-retries",
+        type=int,
+        help="Maximum number of retries in case of a failure (default: 3).",
+    )
+    parser_qdrant.add_argument(
+        "--shard-key-selector",
+        type=int | str | list[str | int] | None,
+        help="Shard to be queried (default: None)",
+        default=None,
+    )
 
     args = parser.parse_args()
     args = vars(args)

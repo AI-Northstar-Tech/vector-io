@@ -20,12 +20,11 @@ class ExportQdrant(ExportVDB):
         Initialize the class
         """
         super().__init__(args)
-        try:
-            self.client = QdrantClient(
-                url=self.args["url"], api_key=self.args["qdrant_api_key"]
-            )
-        except:
-            self.client = QdrantClient(url=self.args["url"])
+        self.client = QdrantClient(
+            url=self.args["url"],
+            api_key=self.args.get("qdrant_api_key", None),
+            prefer_grpc=self.args.get("prefer_grpc", True),
+        )
 
     def get_all_collection_names(self):
         """
@@ -69,6 +68,7 @@ class ExportQdrant(ExportVDB):
                 limit=fetch_size,
                 with_payload=True,
                 with_vectors=True,
+                shard_key_selector=self.args.get("shard-key-selector", None),
             )
             return records, next_offset, fetch_size
         except Exception as e:

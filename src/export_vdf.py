@@ -76,9 +76,16 @@ def export_qdrant(args):
     set_arg_from_input(
         args,
         "url",
-        "Enter the url of Qdrant instance (hit return for 'http://localhost:6333'): ",
+        "Enter the URL of Qdrant instance (default: 'http://localhost:6334'): ",
         str,
-        "http://localhost:6333",
+        "http://localhost:6334",
+    )
+    set_arg_from_input(
+        args,
+        "prefer_grpc",
+        "Whether to use GRPC. Recommended. (default: True): ",
+        bool,
+        True,
     )
     set_arg_from_input(
         args,
@@ -168,7 +175,7 @@ def main():
         type=bool,
         help="Push to hub",
         default=False,
-        action=argparse.BooleanOptionalAction
+        action=argparse.BooleanOptionalAction,
     )
     parser.add_argument(
         "--public",
@@ -207,14 +214,14 @@ def main():
         type=bool,
         help="Allow modifying data to search",
         default=False,
-        action=argparse.BooleanOptionalAction
+        action=argparse.BooleanOptionalAction,
     )
     parser_pinecone.add_argument(
         "--subset",
         type=bool,
         help="Export a subset of data (default: False)",
         default=False,
-        action=argparse.BooleanOptionalAction
+        action=argparse.BooleanOptionalAction,
     )
     db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
     # Qdrant
@@ -227,9 +234,7 @@ def main():
     )
     # Milvus
     parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
-    parser_milvus.add_argument(
-        "-u", "--uri", type=str, help="Milvus connection URI"
-    )
+    parser_milvus.add_argument("-u", "--uri", type=str, help="Milvus connection URI")
     parser_milvus.add_argument(
         "-t", "--token", type=str, required=False, help="Milvus connection token"
     )

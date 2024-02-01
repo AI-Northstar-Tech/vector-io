@@ -6,7 +6,9 @@ import tqdm
 from names import DBNames
 from util import extract_numerical_hash
 from import_vdf.vdf_import_cls import ImportVDF
-from qdrant_client.http.models import VectorParams, Distance, PointStruct, UpdateStatus
+from qdrant_client.http.models import VectorParams, Distance, PointStruct
+from grpc import RpcError
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 load_dotenv()
 
@@ -18,7 +20,9 @@ class ImportQdrant(ImportVDF):
         # call super class constructor
         super().__init__(args)
         self.client = QdrantClient(
-            url=self.args["url"], api_key=self.args["qdrant_api_key"]
+            url=self.args["url"],
+            api_key=self.args.get("qdrant_api_key", None),
+            prefer_grpc=self.args.get("prefer_grpc", True),
         )
 
     def upsert_data(self):
@@ -87,21 +91,26 @@ class ImportQdrant(ImportVDF):
                         }
                     )
                 vectors = {k: v.tolist() for k, v in vectors.items()}
-                response = self.client.upsert(
-                    collection_name=new_collection_name,
-                    points=[
-                        PointStruct(
-                            id=int(idx)
-                            if idx.isdigit()
-                            else extract_numerical_hash(idx),
-                            vector=vectors[idx],
-                            payload=metadata.get(idx, {}),
-                        )
-                        for idx in vectors.keys()
-                    ],
-                    wait=True,
-                )
-                if response.status != UpdateStatus.COMPLETED:
+                points = [
+                    PointStruct(
+                        id=int(idx) if idx.isdigit() else extract_numerical_hash(idx),
+                        vector=vectors[idx],
+                        payload=metadata.get(idx, {}),
+                    )
+                    for idx in vectors.keys()
+                ]
+
+                try:
+                    self.client.upload_points(
+                        collection_name=new_collection_name,
+                        points=points,
+                        batch_size=self.args.get("batch-size", 64),
+                        parallel=self.args.get("parallel", 1),
+                        max_retries=self.args.get("max-retries", 3),
+                        shard_key_selector=self.args.get("shard-key-selector", None),
+                        wait=True,
+                    )
+                except (UnexpectedResponse, RpcError, ValueError):
                     tqdm.write(
                         f"Failed to upsert data for collection '{new_collection_name}'"
                     )
