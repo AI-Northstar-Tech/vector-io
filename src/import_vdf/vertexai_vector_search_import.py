@@ -37,8 +37,54 @@ class ImportVertexAIVectorSearch(ImportVDF):
         self.project_num = args["project_num"]
         self.location = args["location"]
         self.batch_size = args['batch_size']
-        self.target_index_id = args["target_index_id"]
-        self.target_index_resource_name = f"projects/{self.project_num}/locations/{self.location}/indexes/{self.target_index_id}"
+        # =========================================================
+        # Find index: check by display name for deployed/undeployed
+        # =========================================================
+        target_index_id = args["target_index_id"]
+        
+        print(f"Checking undeployed indexes...\n")
+        indexes_display_test = [
+            # search by index display name
+            index.resource_name for index in aip.MatchingEngineIndex.list(
+                filter=f'display_name={target_index_id}',
+            )
+            if index.display_name == target_index_id
+        ]
+        if indexes_display_test:
+            print(f"Found undeployed index:")
+            target_index = aip.MatchingEngineIndex(index_name=indexes_display_test[0])
+            print(f"target_index: {target_index.display_name}\n")
+
+        if not indexes_display_test:
+            print(f"No undeployed indexes named: {target_index_id}\n")
+            print(f"Checking deployed indexes...\n")
+            all_index_names = [index.resource_name for index in aip.MatchingEngineIndex.list()]
+            d_ids = []
+            for index in all_index_names:
+                test_index = aip.MatchingEngineIndex(index_name=index)
+                if test_index.deployed_indexes:
+                    d_ids.extend(test_index.deployed_indexes)
+
+            indexes_deployed_test = [
+                d_id for d_id in d_ids if (
+                    d_id.display_name == target_index_id 
+                    or d_id.deployed_index_id == target_index_id
+                )
+            ]
+            if indexes_deployed_test:
+                target_index_endpoint = aip.MatchingEngineIndexEndpoint(indexes_deployed_test[0].index_endpoint)
+                for d in target_index_endpoint.deployed_indexes:
+                    if d.id == target_index_id:
+                        target_index = aip.MatchingEngineIndex(index_name=d.index)
+                        print(f"Found target_index: {target_index.display_name}")
+                        print(f"currently deployed to {target_index_endpoint.display_name}")
+            else:
+                raise Exception(
+                    f"{target_index_id} not found. "
+                    "Please provide a valid index name for your project"
+                )
+        
+        self.target_index_resource_name = target_index.resource_name
         
         # =========================================================
         # filters: restricts and crowding

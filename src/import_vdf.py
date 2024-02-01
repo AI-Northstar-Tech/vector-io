@@ -115,11 +115,11 @@ def import_vertexai_vectorsearch(args):
     set_arg_from_input(
         args,
         "target_index_id",
-        "Enter the name of the index to import to",
-        default_value="projects/123/locations/us-central1/indexes/target_index_id",
+        "Enter the name of the index to import to:",
+        default_value=None,
     )
     set_arg_from_input(
-        args, "batch_size", "size of upsert batches", default_value=100, type_name=int
+        args, "batch_size", "Enter size of upsert batches:", default_value=100, type_name=int
     )
     set_arg_from_input(
         args,
