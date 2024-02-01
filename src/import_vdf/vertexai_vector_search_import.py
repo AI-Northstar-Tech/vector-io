@@ -63,8 +63,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
             )
             if index.display_name == target_index_id
         ]
+
         if indexes_display_test:
-            print(f"Found undeployed index:")
+            print(f"Found index")
             target_index = aip.MatchingEngineIndex(index_name=indexes_display_test[0])
             print(f"target_index: {target_index.display_name}\n")
 
@@ -72,11 +73,11 @@ class ImportVertexAIVectorSearch(ImportVDF):
             print(f"No undeployed indexes named: {target_index_id}\n")
             print(f"Checking deployed indexes...\n")
             
-            all_index_names = [
+            all_index_r_names = [
                 index.resource_name for index in aip.MatchingEngineIndex.list()
             ]
             d_ids = []
-            for index in all_index_names:
+            for index in all_index_r_names:
                 test_index = aip.MatchingEngineIndex(index_name=index)
                 if test_index.deployed_indexes:
                     d_ids.extend(test_index.deployed_indexes)
@@ -97,7 +98,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
                         print(f"Found target_index: {target_index.display_name}")
                         print(f"currently deployed to {target_index_endpoint.display_name}")
             else:
-                raise Exception(
+                raise ValueError(
                     f"{target_index_id} not found. "
                     "Please provide a valid index name for your project"
                 )
