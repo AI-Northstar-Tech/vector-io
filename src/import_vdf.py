@@ -55,16 +55,16 @@ def import_qdrant(args):
     set_arg_from_input(
         args,
         "parallel",
-        "Enter the batch size for upserts (default: 64): ",
+        "Enter the batch size for upserts (default: 1): ",
         int,
         1,
     )
     set_arg_from_input(
         args,
         "batch-size",
-        "Enter the number of parallel processes of upload (default: 1): ",
+        "Enter the number of parallel processes of upload (default: 64): ",
         int,
-        1,
+        64,
     )
     set_arg_from_input(
         args,
