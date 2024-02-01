@@ -111,7 +111,6 @@ def import_vertexai_vectorsearch(args):
     """
     set_arg_from_input(args, "project_id", "Enter the Google Cloud Project ID:")
     set_arg_from_input(args, "location", "Enter region to host your index ")
-    set_arg_from_input(args, "project_num", "Enter the Google Cloud Project Number ")
     set_arg_from_input(
         args,
         "target_index_id",
@@ -205,13 +204,10 @@ def main():
         "-p", "--project-id", type=str, help="Google Cloud Project ID"
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-pn", "--project-num", type=str, help="Google Cloud Project Number"
-    )
-    parser_vertexai_vectorsearch.add_argument(
         "-i", "--target-index-id", type=str, help="Name of the index to import to"
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-b", "--batch-size", type=str, help="size of upsert batches"
+        "-b", "--batch-size", type=str, help="Enter size of upsert batches:"
     )
     parser_vertexai_vectorsearch.add_argument(
         "-f", "--filter-restricts", type=str, help="string filters"

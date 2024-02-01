@@ -34,7 +34,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
         super().__init__(args)
         self.DB_NAME_SLUG = DBNames.VERTEXAI
         self.project_id = args["project_id"]
-        self.project_num = args["project_num"]
         self.location = args["location"]
         self.batch_size = args['batch_size']
         # =========================================================
