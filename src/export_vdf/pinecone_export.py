@@ -193,7 +193,12 @@ class ExportPinecone(ExportVDB):
                         ids_checked.update([int(x) for x in ids_to_fetch_strs])
                     if try_count >= MAX_TRIES_OVERALL:
                         tqdm.write(
-                            f"Could not collect all ids after {MAX_TRIES_OVERALL} tries. Please provide range of ids instead. Exporting the ids collected so far."
+                            f"CAUTION!!: Could not collect all ids after {MAX_TRIES_OVERALL} tries.\n"
+                            "Due to the way Pinecone's API is built, there is no way to find all the ids of points that are stored in an index.\n"
+                            "Reference: https://community.pinecone.io/t/how-to-retrieve-list-of-ids-in-an-index/380/20\n"
+                            "This library uses a random search method to collect ids, but it is not guaranteed to collect all ids.\n"
+                            "Please provide range of ids instead. Exporting the ids collected so far."
+                            
                         )
                     else:
                         tqdm.write(
@@ -430,10 +435,12 @@ class ExportPinecone(ExportVDB):
                         vectors, metadata, vectors_directory
                     )
                 i += fetch_size
-                pbar.update(total_size - prev_total_size)
+                pbar.update(len(batch_ids))
+                batch_ctr += 1
             total_size += self.save_vectors_to_parquet(
                 vectors, metadata, vectors_directory
             )
+            pbar.update(total_size - prev_total_size)
             namespace_meta = {
                 "namespace": namespace,
                 "total_vector_count": namespace_info["vector_count"],
