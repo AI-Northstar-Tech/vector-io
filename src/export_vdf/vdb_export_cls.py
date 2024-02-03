@@ -32,9 +32,6 @@ class ExportVDB(abc.ABC):
 
     def save_vectors_to_parquet(self, vectors, metadata, vectors_directory):
         vectors_df = pd.DataFrame(list(vectors.items()), columns=["id", "vector"])
-        # Store the vector in values as a column in the parquet file, and store the metadata as columns in the parquet file
-        # Convert metadata to a dataframe with each of metadata_keys as a column
-        # Convert metadata to a list of dictionaries
         if metadata:
             metadata_list = [{**{"id": k}, **v} for k, v in metadata.items()]
             # Convert the list to a DataFrame
