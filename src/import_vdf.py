@@ -110,27 +110,120 @@ def import_vertexai_vectorsearch(args):
     Import data to Vertex AI Vector Search
     """
     set_arg_from_input(args, "project_id", "Enter the Google Cloud Project ID:")
-    set_arg_from_input(args, "location", "Enter region to host your index ")
+    set_arg_from_input(args, "location", "Enter the region hosting your index: ")
     set_arg_from_input(
         args,
-        "target_index_id",
+        "target_index_name",
         "Enter the name of the index to import to:",
         default_value=None,
     )
     set_arg_from_input(
-        args, "batch_size", "Enter size of upsert batches:", default_value=100, type_name=int
+        args, "batch_size", "Enter size of upsert batches (default: 100):", default_value=100, type_name=int
     )
     set_arg_from_input(
         args,
         "filter_restricts",
-        "Optional. List of dicts for each datapoint; used to perform restricted searches",
+        "Optional. Enter list of dicts describing string filters for each data point: ",
     )
     set_arg_from_input(
-        args, "numeric_restricts", "Optional. List of dicts for each datapoint;"
+        args, "numeric_restricts", "Optional. Enter list of dicts for each datapoint: "
     )
     set_arg_from_input(
-        args, "crowding_tag", "Optional. CrowdingTag of the datapoint", type_name=str
+        args, "crowding_tag", "Optional. CrowdingTag of the datapoint: ", type_name=str
     )
+    if args["create_new_index"] is True:
+        set_arg_from_input(
+            args,
+            "gcs_bucket",
+            "Required. Valid gcs bucket name: ",
+            type_name=str,
+            # required=True
+        )
+        set_arg_from_input(
+            args,
+            "dimensions",
+            "Required. The number of dimensions of the input vectors: ",
+            type_name=int,
+            # required=True
+        )
+        set_arg_from_input(
+            args,
+            "approx_nn_count",
+            "Optional. The default number of neighbors to find via approximate search (default: 150): ",
+            type_name=int,
+            default_value=150
+        )
+        set_arg_from_input(
+            args,
+            "leaf_node_emb_count",
+            "Optional. Number of embeddings on each leaf node (default: 1000): ",
+            type_name=int,
+            default_value=1000
+        )
+        set_arg_from_input(
+            args,
+            "leaf_nodes_percent",
+            "Optional. The default percentage of leaf nodes that any query may be searched (default: 10 [10%]): ",
+            type_name=int,
+            default_value=10,
+            # choices=range(1, 101)
+        )
+        set_arg_from_input(
+            args,
+            "distance_measure",
+            "Optional. The distance measure used in nearest neighbor search: ",
+            type_name=str,
+            default_value="DOT_PRODUCT_DISTANCE",
+            # choices=[
+            #     "DOT_PRODUCT_DISTANCE", 
+            #     "COSINE_DISTANCE", 
+            #     "L1_DISTANCE", 
+            #     "SQUARED_L2_DISTANCE"
+            # ],
+        )
+        set_arg_from_input(
+            args,
+            "shard_size",
+            "Optional. Size of the shards (default: `SHARD_SIZE_MEDIUM`): ",
+            type_name=str,
+            default_value="SHARD_SIZE_MEDIUM",
+            # choices=[
+            #     "SHARD_SIZE_SMALL",
+            #     "SHARD_SIZE_MEDIUM",
+            #     "SHARD_SIZE_LARGE",
+            # ],
+        )
+    if args["deploy_new_index"] is True:
+        set_arg_from_input(
+            args,
+            "machine_type",
+            "Optional. The type of machine (default: `e2-standard-16`): ",
+            type_name=str,
+            default_value="e2-standard-16",
+            # choices=[
+            #     "n1-standard-16",
+            #     "n1-standard-32",
+            #     "e2-standard-2",
+            #     "e2-standard-16",
+            #     "e2-highmem-16",
+            #     "n2d-standard-32",
+            # ],
+        )
+        set_arg_from_input(
+            args,
+            "min_replicas",
+            "Optional. The minimum number of machine replicas for deployed index (default: 1): ",
+            type_name=int,
+            default_value=1
+        )
+        set_arg_from_input(
+            args,
+            "max_replicas",
+            "Optional. The maximum number of machine replicas for deployed index (default: 1): ",
+            type_name=int,
+            default_value=1
+        )
+        
     vertexai_vectorsearch_import = ImportVertexAIVectorSearch(args)
     vertexai_vectorsearch_import.upsert_data()
 
@@ -204,10 +297,13 @@ def main():
         "-p", "--project-id", type=str, help="Google Cloud Project ID"
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-i", "--target-index-id", type=str, help="Name of the index to import to"
+        "-l", "--location", type=str, help="Google Cloud Project ID"
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-b", "--batch-size", type=str, help="Enter size of upsert batches:"
+        "-i", "--target-index-name", type=str, help="Name of the index to import to"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-b", "--batch-size", type=str, help="Enter size of upsert batches:", default=100,
     )
     parser_vertexai_vectorsearch.add_argument(
         "-f", "--filter-restricts", type=str, help="string filters"
@@ -220,6 +316,20 @@ def main():
         "--crowding-tag",
         type=str,
         help="string value to enforce diversity in retrieval",
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "--create_new_index",
+        type=bool,
+        help="create new index (default: False)",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "--deploy_new_index",
+        type=bool,
+        help="deploy new index (default: False)",
+        default=False,
+        action=argparse.BooleanOptionalAction,
     )
 
     args = parser.parse_args()

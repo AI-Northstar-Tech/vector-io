@@ -162,7 +162,7 @@ optional arguments:
 
 ```bash
 src/export_vdf.py vertexai_vectorsearch --help
-usage: export.py vertexai_vectorsearch [-h] [-p PROJECT_ID] [-i INDEX]
+usage: export_vdf.py vertexai_vectorsearch [-h] [-p PROJECT_ID] [-i INDEX]
                           [-c GCLOUD_CREDENTIALS_FILE]
 
 options:
@@ -209,6 +209,17 @@ options:
   -h, --help         show this help message and exit
   -u URL, --url URL  Qdrant url
 
+src/import_vdf.py vertexai_vectorsearch --help
+usage: import_vdf.py vertexai_vectorsearch [-h] [-p PROJECT_ID] [-l REGION] [-i INDEX]
+
+options:
+  -h, --help            show this help message and exit
+  -p PROJECT_ID, --project-id PROJECT_ID
+                        Google Cloud Project ID
+  -l REGION, --location REGION
+                        Google Cloud region hosting index
+  -i INDEX, --index INDEX
+                        Name of index to import
 ```
 
 ## Re-embed script
