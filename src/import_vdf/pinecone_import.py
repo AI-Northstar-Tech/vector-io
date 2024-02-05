@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BATCH_SIZE = 100  # Set the desired batch size
+BATCH_SIZE = 1000  # Set the desired batch size
 
 
 class ImportPinecone(ImportVDF):
@@ -65,7 +65,7 @@ class ImportPinecone(ImportVDF):
                             ),
                         )
                 except Exception as e:
-                    tqdm.write(e)
+                    tqdm.write(f"{e}")
                     raise Exception(f"Invalid index name '{index_name}'", e)
             index = self.pc.Index(index_name)
             current_batch_size = BATCH_SIZE
