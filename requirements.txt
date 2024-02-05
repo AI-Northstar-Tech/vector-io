@@ -13,3 +13,5 @@ google-cloud-aiplatform
 google-api-python-client
 google-auth-httplib2 
 google-auth-oauthlib
+ratelimit
+backoff
