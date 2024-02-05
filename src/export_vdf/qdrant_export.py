@@ -9,7 +9,7 @@ from util import standardize_metric
 
 load_dotenv()
 
-MAX_FETCH_SIZE = 10_000
+MAX_FETCH_SIZE = 1_000
 
 
 class ExportQdrant(ExportVDB):
@@ -68,7 +68,7 @@ class ExportQdrant(ExportVDB):
                 limit=fetch_size,
                 with_payload=True,
                 with_vectors=True,
-                shard_key_selector=self.args.get("shard-key-selector", None),
+                shard_key_selector=self.args.get("shard_key_selector", None),
             )
             return records, next_offset, fetch_size
         except Exception as e:
@@ -76,7 +76,7 @@ class ExportQdrant(ExportVDB):
             if isinstance(e, KeyboardInterrupt):
                 raise e
             tqdm.write(
-                "Failed to fetch data, reducing fetch size to", (fetch_size * 2) // 3
+                f"Failed to fetch data, reducing fetch size to{(fetch_size * 2) // 3}"
             )
             return self.try_scroll((fetch_size * 2) // 3, collection_name, next_offset)
 
@@ -124,7 +124,7 @@ class ExportQdrant(ExportVDB):
             "data_path": "/".join(vectors_directory.split("/")[1:]),
         }
 
-        return {"": [namespace_meta]}
+        return namespace_meta
 
     def save_from_records(self, records, vectors_directory):
         num_vectors_exported = 0

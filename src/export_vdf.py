@@ -243,6 +243,13 @@ def main():
     parser_qdrant.add_argument(
         "-c", "--collections", type=str, help="Names of collections to export"
     )
+    parser_qdrant.add_argument(
+        "--prefer_grpc",
+        type=bool,
+        help="Whether to use GRPC. Recommended. (default: True)",
+        default=True,
+        action=argparse.BooleanOptionalAction,
+    )
     # Milvus
     parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
     parser_milvus.add_argument("-u", "--uri", type=str, help="Milvus connection URI")

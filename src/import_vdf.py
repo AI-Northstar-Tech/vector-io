@@ -61,14 +61,14 @@ def import_qdrant(args):
     )
     set_arg_from_input(
         args,
-        "batch-size",
+        "batch_size",
         "Enter the number of parallel processes of upload (default: 1): ",
         int,
         64,
     )
     set_arg_from_input(
         args,
-        "max-retries",
+        "max_retries",
         "Enter the maximum number of retries in case of a failure (default: 3): ",
         int,
         3,
@@ -194,23 +194,31 @@ def main():
     parser_qdrant = subparsers.add_parser(DBNames.QDRANT, help="Import data to Qdrant")
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
     parser_qdrant.add_argument(
-        "--prefer_grpc", type=bool, help="Whether to use Qdrant's GRPC interface"
+        "--prefer_grpc",
+        type=bool,
+        help="Whether to use Qdrant's GRPC interface",
+        default=True,
     )
     parser_qdrant.add_argument(
-        "--batch-size", type=int, help="Batch size for upserts (default: 64)."
+        "--batch_size",
+        type=int,
+        help="Batch size for upserts (default: 64).",
+        default=64,
     )
     parser_qdrant.add_argument(
         "--parallel",
         type=int,
         help="Number of parallel processes of upload (default: 1).",
+        default=1,
     )
     parser_qdrant.add_argument(
-        "--max-retries",
+        "--max_retries",
         type=int,
         help="Maximum number of retries in case of a failure (default: 3).",
+        default=3,
     )
     parser_qdrant.add_argument(
-        "--shard-key-selector",
+        "--shard_key_selector",
         type=Any,
         help="Shard to be queried (default: None)",
         default=None,
