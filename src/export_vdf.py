@@ -12,7 +12,6 @@ from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
 from push_to_hub import push_to_hub
 from util import set_arg_from_input, set_arg_from_password
-from getpass import getpass
 import warnings
 
 # Suppress specific warnings
@@ -43,6 +42,12 @@ def export_pinecone(args):
         "modify_to_search",
         "Allow modifying data to search, enter Y or N: ",
         bool,
+    )
+    set_arg_from_input(
+        args,
+        "namespaces",
+        "Enter the name of namespace(s) to export (comma-separated) (hit return to export all):",
+        str,
     )
     if args["subset"] is True:
         if "id_list_file" not in args or args["id_list_file"] is None:
@@ -222,6 +227,12 @@ def main():
         help="Export a subset of data (default: False)",
         default=False,
         action=argparse.BooleanOptionalAction,
+    )
+    parser_pinecone.add_argument(
+        "--namespaces",
+        type=str,
+        help="Name of namespace(s) to export (comma-separated)",
+        default=None,
     )
     db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
     # Qdrant

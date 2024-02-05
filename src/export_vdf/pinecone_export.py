@@ -6,8 +6,6 @@ from pinecone import Pinecone, Vector
 import os
 import json
 import numpy as np
-import json
-import pandas as pd
 from tqdm import tqdm
 
 PINECONE_MAX_K = 10_000
@@ -31,12 +29,10 @@ class ExportPinecone(ExportVDB):
     def get_all_index_names(self):
         return self.pc.list_indexes().names()
 
-    def get_ids_from_vector_query(
-        self, index, input_vector, namespace, all_ids, hash_value
-    ):
+    def get_ids_from_vector_query(self, input_vector, namespace, all_ids, hash_value):
         if self.args.get("modify_to_search"):
             marker_key = "exported_vectorio_" + hash_value
-            results = index.query(
+            results = self.index.query(
                 vector=input_vector,
                 filters={marker_key: {"$ne": True}},
                 top_k=PINECONE_MAX_K,
@@ -58,7 +54,7 @@ class ExportPinecone(ExportVDB):
             while i < len(ids_to_mark):
                 batch_ids = ids_to_mark[i : i + mark_batch_size]
                 try:
-                    data = index.fetch(batch_ids)
+                    data = self.index.fetch(batch_ids, namespace=namespace)
                 except Exception as e:
                     tqdm.write(
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size)"
@@ -87,7 +83,7 @@ class ExportPinecone(ExportVDB):
                     upsert_data.append(cur_vec)
                 # upsert the vectors
                 try:
-                    resp = index.upsert(vectors=upsert_data, namespace=namespace)
+                    resp = self.index.upsert(vectors=upsert_data, namespace=namespace)
                 except Exception as e:
                     tqdm.write(
                         f"Error upserting vectors: {e}. Trying with a smaller batch size (--batch_size)"
@@ -101,7 +97,7 @@ class ExportPinecone(ExportVDB):
             self.collected_ids_by_modifying = True
             tqdm.write(f"Marked {len(ids_to_mark)} vectors as exported.")
         else:
-            results = index.query(
+            results = self.index.query(
                 vector=input_vector,
                 include_values=False,
                 top_k=PINECONE_MAX_K,
@@ -110,9 +106,7 @@ class ExportPinecone(ExportVDB):
         ids = set(result["id"] for result in results["matches"])
         return ids
 
-    def get_all_ids_from_index(
-        self, index, num_dimensions, namespace="", hash_value=""
-    ):
+    def get_all_ids_from_index(self, num_dimensions, namespace="", hash_value=""):
         if (
             self.args["id_range_start"] is not None
             and self.args["id_range_end"] is not None
@@ -132,11 +126,11 @@ class ExportPinecone(ExportVDB):
         if self.args["id_list_file"]:
             with open(self.args["id_list_file"]) as f:
                 return [line.strip() for line in f.readlines()]
-        num_vectors = index.describe_index_stats()["namespaces"][namespace][
+        num_vectors = self.index.describe_index_stats()["namespaces"][namespace][
             "vector_count"
         ]
         # do small random search and check if ids are int
-        random_results = index.query(
+        random_results = self.index.query(
             vector=np.random.rand(num_dimensions).tolist(),
             include_values=False,
             top_k=100,
@@ -146,7 +140,9 @@ class ExportPinecone(ExportVDB):
         all_ids = set()
         if not all(x.isdigit() for x in random_results_ids_strs):
             tqdm.write(
-                "The ids are not integers. Please provide a range of ids using --id_list_file if you want to export a subset of vectors."
+                "The ids are not integers. Since a list of ids has not been provided"
+                " using --id_list_file, we will use random search to collect ids."
+                " This may take a while."
             )
         else:
             random_results_ids = [
@@ -183,7 +179,7 @@ class ExportPinecone(ExportVDB):
                         ids_to_fetch_strs = [
                             str(x) for x in ids_to_fetch[i : i + fetch_size]
                         ]
-                        newly_fetched = index.fetch(
+                        newly_fetched = self.index.fetch(
                             ids_to_fetch_strs, namespace=namespace
                         )
                         pbar.update(len(newly_fetched["vectors"]))
@@ -195,7 +191,11 @@ class ExportPinecone(ExportVDB):
                         ids_checked.update([int(x) for x in ids_to_fetch_strs])
                     if try_count >= MAX_TRIES_OVERALL:
                         tqdm.write(
-                            f"Could not collect all ids after {MAX_TRIES_OVERALL} tries. Please provide range of ids instead. Exporting the ids collected so far."
+                            f"CAUTION!!: Could not collect all ids after {MAX_TRIES_OVERALL} tries.\n"
+                            "Due to the way Pinecone's API is built, there is no way to find all the ids of points that are stored in an index.\n"
+                            "Reference: https://community.pinecone.io/t/how-to-retrieve-list-of-ids-in-an-index/380/20\n"
+                            "This library uses a random search method to collect ids, but it is not guaranteed to collect all ids.\n"
+                            "Please provide range of ids instead. Exporting the ids collected so far."
                         )
                     else:
                         tqdm.write(
@@ -215,7 +215,7 @@ class ExportPinecone(ExportVDB):
                 # fetch 10 random vectors from all_ids
                 if len(all_ids) > 10:
                     vector_range_min, vector_range_max = self.update_range(
-                        index, all_ids, vector_range_min, vector_range_max
+                        all_ids, vector_range_min, vector_range_max, namespace
                     )
                 input_vector = (
                     np.random.rand(num_dimensions)
@@ -223,7 +223,7 @@ class ExportPinecone(ExportVDB):
                     + vector_range_min
                 )
                 ids = self.get_ids_from_vector_query(
-                    index, input_vector.tolist(), namespace, all_ids, hash_value
+                    input_vector.tolist(), namespace, all_ids, hash_value
                 )
                 prev_size = len(all_ids)
                 all_ids.update(ids)
@@ -234,7 +234,7 @@ class ExportPinecone(ExportVDB):
                 if len(new_ids) > 0:
                     # fetch 1 random vector from new_ids
                     self.update_range_from_new_ids(
-                        index, vector_range_min, vector_range_max, new_ids
+                        vector_range_min, vector_range_max, new_ids, namespace
                     )
                 curr_size = len(all_ids)
                 if curr_size > prev_size:
@@ -255,15 +255,23 @@ class ExportPinecone(ExportVDB):
         return all_ids
 
     def update_range_from_new_ids(
-        self, index, vector_range_min, vector_range_max, new_ids
+        self, vector_range_min, vector_range_max, new_ids, namespace
     ):
         # use update_range to update the range of the vectors
-        self.update_range(index, new_ids, vector_range_min, vector_range_max, size=1)
+        self.update_range(
+            new_ids, vector_range_min, vector_range_max, namespace, size=1
+        )
 
-    def update_range(self, index, all_ids, vector_range_min, vector_range_max, size=10):
+    def update_range(
+        self, all_ids, vector_range_min, vector_range_max, namespace, size=10
+    ):
         random_ids = np.random.choice(list(all_ids), size=size).tolist()
+
         random_vectors = [
-            x["values"] for x in index.fetch(random_ids)["vectors"].values()
+            x["values"]
+            for x in self.index.fetch(random_ids, namespace=namespace)[
+                "vectors"
+            ].values()
         ]
         # extend the range of the vectors
         random_vectors_np = np.array(random_vectors)
@@ -287,7 +295,7 @@ class ExportPinecone(ExportVDB):
 
     def unmark_vectors_as_exported(self, all_ids, namespace, hash_value):
         if (
-            self.args.get("modify_to_search") == False
+            self.args.get("modify_to_search") is False
             or not self.collected_ids_by_modifying
         ):
             return
@@ -298,7 +306,7 @@ class ExportPinecone(ExportVDB):
             range(0, len(all_ids), MAX_FETCH_SIZE), desc="Step 2/3: Unmarking vectors"
         ):
             batch_ids = all_ids[i : i + MAX_FETCH_SIZE]
-            data = self.index.fetch(batch_ids)
+            data = self.index.fetch(batch_ids, namespace=namespace)
             batch_vectors = data["vectors"]
             # verify that the ids are the same
             assert set(batch_ids) == set(batch_vectors.keys())
@@ -317,7 +325,7 @@ class ExportPinecone(ExportVDB):
                     cur_vec.sparse_values = vector_data["sparseValues"]
                 upsert_data.append(cur_vec)
             # upsert the vectors
-            resp = self.index.upsert(vectors=upsert_data, namespace=namespace)
+            self.index.upsert(vectors=upsert_data, namespace=namespace)
         tqdm.write(f"Unmarked {len(all_ids)} vectors as exported.")
 
     def get_data(self):
@@ -361,7 +369,12 @@ class ExportPinecone(ExportVDB):
         index_info = self.index.describe_index_stats()
         # Fetch the actual data from the Pinecone index
         index_meta = []
-        for namespace in tqdm(index_info["namespaces"], desc="Fetching namespaces"):
+        namespaces_to_be_exported = (
+            index_info["namespaces"]
+            if ("namespaces" not in self.args or not self.args["namespaces"])
+            else self.args["namespaces"].split(",")
+        )
+        for namespace in tqdm(namespaces_to_be_exported, desc="Fetching namespaces"):
             namespace_info = index_info["namespaces"][namespace]
             tqdm.write(f"Iterating namespace '{namespace}'")
             vectors_directory = os.path.join(
@@ -373,9 +386,6 @@ class ExportPinecone(ExportVDB):
 
             all_ids = list(
                 self.get_all_ids_from_index(
-                    index=self.pc.Index(
-                        index_name,
-                    ),
                     num_dimensions=index_info["dimension"],
                     namespace=namespace,
                     hash_value=self.hash_value,
@@ -394,30 +404,8 @@ class ExportPinecone(ExportVDB):
             pbar = tqdm(total=len(all_ids), desc="Final Step: Fetching vectors")
             while i < len(all_ids):
                 batch_ids = all_ids[i : i + fetch_size]
-                import signal
-
-                # Define your exception for the timeout event
-                class TimeoutException(Exception):
-                    pass
-
-                # Define your signal handler
-                def signal_handler(signum, frame):
-                    raise TimeoutException()
-
-                # Set the signal handler
-                signal.signal(signal.SIGALRM, signal_handler)
-
-                TIMEOUT = 10  # Set your timeout value here
-
                 try:
-                    # Start the timer
-                    signal.alarm(TIMEOUT)
-
-                    # Try to fetch the data
-                    data = self.index.fetch(batch_ids)
-
-                    # If the fetch is successful, cancel the timer
-                    signal.alarm(0)
+                    data = self.index.fetch(batch_ids, namespace=namespace)
                 except Exception as e:
                     tqdm.write(
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size): {fetch_size}"
@@ -444,10 +432,12 @@ class ExportPinecone(ExportVDB):
                         vectors, metadata, vectors_directory
                     )
                 i += fetch_size
-                pbar.update(total_size - prev_total_size)
+                pbar.update(len(batch_ids))
+                batch_ctr += 1
             total_size += self.save_vectors_to_parquet(
                 vectors, metadata, vectors_directory
             )
+            pbar.update(total_size - prev_total_size)
             namespace_meta = {
                 "namespace": namespace,
                 "total_vector_count": namespace_info["vector_count"],

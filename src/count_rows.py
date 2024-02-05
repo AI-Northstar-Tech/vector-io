@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import json
 import pyarrow.parquet as pq
 import os
 import argparse
