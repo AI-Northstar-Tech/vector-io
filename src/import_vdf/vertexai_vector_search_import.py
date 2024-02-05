@@ -198,16 +198,19 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 index_name = self.index_name,
                 contents_delta_uri = self.contents_delta_uri,
                 dimensions = self.args["dimensions"],
-                approximate_neighbors_count = self.args["approx_nn_count"],      # self.approx_nn_count,
-                leaf_node_embedding_count = self.args["leaf_node_emb_count"],    # self.leaf_node_emb_count,
-                leaf_nodes_to_search_percent = self.args["leaf_nodes_percent"],  # self.leaf_nodes_percent,
-                distance_measure_type = self.args["distance_measure"],           # self.distance_measure,
-                shard_size = self.args["shard_size"],                            # self.shard_size,
+                approximate_neighbors_count = self.args["approx_nn_count"],
+                leaf_node_embedding_count = self.args["leaf_node_emb_count"],
+                leaf_nodes_to_search_percent = self.args["leaf_nodes_percent"],
+                distance_measure_type = self.args["distance_measure"],
+                shard_size = self.args["shard_size"],
             )
-            self.index_endpoint_name = f"{self.index_name}_endpoint" 
+            self.index_endpoint_name = f"{self.index_name}_endpoint"
             self.index_endpoint = self._create_index_endpoint(endpoint_name=self.index_endpoint_name)
             
             if self.deploy_new_index:
+                
+                # Note: Don't need to deploy index to upsert vectors to index
+
                 # optional; used if deploy_new_index = True
                 self.machine_type = self.args["machine_type"] if (
                     self.args["machine_type"] is not None else "e2-standard-16"
@@ -218,7 +221,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 self.max_replicas = self.args["max_replicas"] if (
                     self.args["max_replicas"] is not None else 1
                 )
-                                          
+
                 self._deploy_index(
                     index_name = self.index_name,
                     endpoint_name = self.index_endpoint.display_name,
@@ -230,19 +233,19 @@ class ImportVertexAIVectorSearch(ImportVDF):
             self.target_index = self._get_index()
             if self.target_index is None:
                 raise ValueError(f"{self.index_name} not found; create_new_index = False")
-                
+
         self.target_index_resource_name = self.target_index.name
 
         # init target index to import vectors to
         self.target_vertexai_index = aip.MatchingEngineIndex(self.target_index_resource_name)
-        print(f"Importing to index : {self.target_vertexai_index.display_name}")
-        print(f"Full resource name : {self.target_vertexai_index.resource_name}")
+        print(f"Importing to index: {self.target_vertexai_index.display_name}")
+        print(f"Full resource name: {self.target_vertexai_index.resource_name}")
         print(f"Target index config:")
 
         index_config_dict = self.target_vertexai_index.to_dict()
         _index_meta_config = index_config_dict["metadata"]["config"]
         tqdm.write(json.dumps(_index_meta_config, indent=4))
-            
+
     # =========================================================
     # VectorSearch helpers
     # =========================================================
@@ -282,9 +285,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
 
             all_indexes = [index for index in self.list_indexes()]
 
-            print(f"checking if {self.index_name} already exists...")
+            print(f"Checking if {self.index_name} already exists...")
             try:
-                print(f"checking existing display_names and resource_names")
+                print(f"Checking existing Index display_names and resource_names...")
                 indexes = [
                     index.name for index in all_indexes
                     if index.display_name == self.index_name
@@ -330,7 +333,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
             return None
         else:
             index_id = indexes[0]
-            print(f"found existing index: {index_id}")
+            print(f"Found existing index")
             request = aipv1.GetIndexRequest(name=index_id)
             index = self.index_client.get_index(request=request)
             return index
@@ -344,7 +347,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
         all_index_endpoints = [response for response in self.list_index_endpoints()]
 
         if self.index_endpoint_name is not None:
-            print(f"checking if {self.index_endpoint_name} already exists...")
+            print(f"Checking if {self.index_endpoint_name} already exists...")
             try:
                 index_endpoints = [
                     response.name for response in all_index_endpoints
@@ -482,16 +485,16 @@ class ImportVertexAIVectorSearch(ImportVDF):
             }
         )
         return metadata
-        
+
     def _create_index(
         self,
         contents_delta_uri: str,
-        dimensions: int,                   # 768
-        approximate_neighbors_count: int,  # 150
-        leaf_node_embedding_count: int,    # 500
-        leaf_nodes_to_search_percent: int, #7 == 7%
-        distance_measure_type: str,         # DOT_PRODUCT_DISTANCE
-        shard_size: str,                    # "SHARD_SIZE_SMALL"
+        dimensions: int,
+        approximate_neighbors_count: int,
+        leaf_node_embedding_count: int,
+        leaf_nodes_to_search_percent: int,
+        distance_measure_type: str,
+        shard_size: str,
         index_name: str = None,
     ) -> Index:
         """
@@ -501,7 +504,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
         :param dimensions:
         :return:
         """
-        
+
         if index_name is not None:
             index_name = self.args["target_index_name"]
             self._set_index_name(index_name=index_name)
@@ -511,7 +514,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
         index = self._get_index()
         # Create index if does not exists
         if index:
-            print(f"Index {self.index_name} already exists with resource_name:\n {index.name}")
+            print(f"Index {self.index_name} exists with resource_name:\n {index.name}")
         else:
             print(f"Index {self.index_name} does not exists. Creating index ...")
 
@@ -603,7 +606,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
             raise e
 
         return index_endpoint
-        
+
     def _deploy_index(
         self,
         index_name: str = None,
@@ -669,11 +672,11 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 time.sleep(60)
                 print(".", end="")
 
-            print(f"\nDeployed index {self.index_name} to endpoint {self.index_endpoint_name}")
+            print(f"\nDeployed {self.index_name} to endpoint {self.index_endpoint_name}")
 
         except Exception as e:
             print(
-                f"Failed to deploy index {self.index_name} to the index endpoint {self.index_endpoint_name}"
+                f"Failed to deploy {self.index_name} to endpoint: {self.index_endpoint_name}"
             )
             raise e
 

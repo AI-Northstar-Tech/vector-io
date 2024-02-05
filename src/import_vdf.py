@@ -297,7 +297,7 @@ def main():
         "-p", "--project-id", type=str, help="Google Cloud Project ID"
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-l", "--location", type=str, help="Google Cloud Project ID"
+        "-l", "--location", type=str, help="Google Cloud region hosting your index"
     )
     parser_vertexai_vectorsearch.add_argument(
         "-i", "--target-index-name", type=str, help="Name of the index to import to"
