@@ -6,8 +6,6 @@ from pinecone import Pinecone, Vector
 import os
 import json
 import numpy as np
-import json
-import pandas as pd
 from tqdm import tqdm
 
 PINECONE_MAX_K = 10_000
