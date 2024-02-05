@@ -24,7 +24,7 @@ class ExportQdrant(ExportVDB):
             self.client = QdrantClient(
                 url=self.args["url"], api_key=self.args["qdrant_api_key"]
             )
-        except:
+        except Exception:
             self.client = QdrantClient(url=self.args["url"])
 
     def get_all_collection_names(self):
