@@ -123,19 +123,19 @@ db_metric_to_standard_metric = {
         "IP": Distance.DOT,
         "L2": Distance.EUCLID,
     },
-  # TODO - consolidate / resolve below
+    # TODO - consolidate / resolve below
     DBNames.VERTEXAI: {
         "DOT_PRODUCT_DISTANCE": Distance.DOT,
         "SQUARED_L2_DISTANCE": Distance.EUCLID,
         "COSINE_DISTANCE": Distance.COSINE,
-        "L1_DISTANCE": Distance.MANHATTAN
+        "L1_DISTANCE": Distance.MANHATTAN,
     },
-#     DBNames.VERTEX_VECTOR_SEARCH: {
-#         "cosine": "COSINE_DISTANCE",
-#         "euclidean": "L_2",
-#         "dotproduct": "DOT_PRODUCT_DISTANCE",
-#         "l1": "L1_DISTANCE",
-#     },
+    #     DBNames.VERTEX_VECTOR_SEARCH: {
+    #         "cosine": "COSINE_DISTANCE",
+    #         "euclidean": "L_2",
+    #         "dotproduct": "DOT_PRODUCT_DISTANCE",
+    #         "l1": "L1_DISTANCE",
+    #     },
 }
 
 

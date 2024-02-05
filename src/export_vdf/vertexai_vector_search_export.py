@@ -9,13 +9,14 @@ from export_vdf.vdb_export_cls import ExportVDB
 
 import google.auth
 from google.cloud import aiplatform
-from google.cloud.aiplatform import MatchingEngineIndex # as vs
-from google.cloud.aiplatform import MatchingEngineIndexEndpoint # as vsep
+from google.cloud.aiplatform import MatchingEngineIndex  # as vs
+from google.cloud.aiplatform import MatchingEngineIndexEndpoint  # as vsep
 
 import os
 import json
 import pandas as pd
 from tqdm import tqdm
+
 
 class ExportVertexAIVectorSearch(ExportVDB):
     DB_NAME_SLUG = DBNames.VERTEXAI
@@ -39,40 +40,33 @@ class ExportVertexAIVectorSearch(ExportVDB):
                 )
             # initialize vertex ai client
             aiplatform.init(
-                project=self.args.get("project_id"), 
-                credentials=self.credentials
+                project=self.args.get("project_id"), credentials=self.credentials
             )
         except Exception as e:
             raise Exception("Failed to initialize Vertex AI Client") from e
 
     def get_all_index_r_names(self):
         # get all index resource_names
-        index_names = [
-            index.resource_name for index in MatchingEngineIndex.list()
-        ]
+        index_names = [index.resource_name for index in MatchingEngineIndex.list()]
         return index_names
-    
+
     def get_all_index_d_names(self):
         # get all index display_names
-        index_names = [
-            index.display_name for index in MatchingEngineIndex.list()
-        ]
+        index_names = [index.display_name for index in MatchingEngineIndex.list()]
         return index_names
 
     def get_data(self):
         index_names = []
         # index_endpoint_names = [] # todo - rm
-        
-        all_index_r_names = self.get_all_index_r_names() # was all_index_names
+
+        all_index_r_names = self.get_all_index_r_names()  # was all_index_names
         all_index_d_names = self.get_all_index_d_names()
-        
+
         try:
             # find index from user input args
             if "index" not in self.args or self.args["index"] is None:
                 index_names = all_index_r_names
-                print(
-                    f"No index provided; exporting from all {index_names} indexes"
-                )
+                print(f"No index provided; exporting from all {index_names} indexes")
             else:
                 i_arg = self.args["index"]
                 if isinstance(i_arg, str):
@@ -89,10 +83,12 @@ class ExportVertexAIVectorSearch(ExportVDB):
                     elif index_arg in all_index_d_names:
                         # display name given
                         i_arg_d_list = [
-                            index.resource_name for index in MatchingEngineIndex.list(
+                            index.resource_name
+                            for index in MatchingEngineIndex.list(
                                 filter=f"display_name={index_arg}",
-                            ) if index.display_name == index_arg
-                        ]            
+                            )
+                            if index.display_name == index_arg
+                        ]
                         index_names.append(i_arg_d_list[0])
                     else:
                         for index_r in all_index_r_names:
@@ -103,8 +99,10 @@ class ExportVertexAIVectorSearch(ExportVDB):
 
                     # returning only those that match
                     indexes_deployed_test = [
-                        d_id for d_id in d_ids if (
-                            d_id.display_name == index_arg 
+                        d_id
+                        for d_id in d_ids
+                        if (
+                            d_id.display_name == index_arg
                             or d_id.deployed_index_id == index_arg
                         )
                     ]
@@ -113,11 +111,9 @@ class ExportVertexAIVectorSearch(ExportVDB):
                             indexes_deployed_test[0].index_endpoint
                         )
                         for d in target_endpoint.deployed_indexes:
-                            if (
-                                d.id == index_arg or d.display_name == index_arg
-                            ):
+                            if d.id == index_arg or d.display_name == index_arg:
                                 index_names.append(d.index)
-                
+
         except ValueError as ve:
             print("Could not find given index value")
             raise ve
@@ -163,13 +159,13 @@ class ExportVertexAIVectorSearch(ExportVDB):
     def get_data_for_index(self, index_name):
         index_meta_list = []
         # get index endpoint resource id and deployed index id
-        index_endpoint_name, deployed_index_id = (
-            self.get_index_endpoint_name(index_name=index_name)
+        index_endpoint_name, deployed_index_id = self.get_index_endpoint_name(
+            index_name=index_name
         )
         # define index and index endpoint
         index = MatchingEngineIndex(index_name=index_name)
         index_endpoint = MatchingEngineIndexEndpoint(index_endpoint_name)
-                
+
         vectors_directory = os.path.join(self.vdf_directory, index.display_name)
         os.makedirs(vectors_directory, exist_ok=True)
 

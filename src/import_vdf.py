@@ -118,7 +118,11 @@ def import_vertexai_vectorsearch(args):
         default_value=None,
     )
     set_arg_from_input(
-        args, "batch_size", "Enter size of upsert batches (default: 100):", default_value=100, type_name=int
+        args,
+        "batch_size",
+        "Enter size of upsert batches (default: 100):",
+        default_value=100,
+        type_name=int,
     )
     set_arg_from_input(
         args,
@@ -151,14 +155,14 @@ def import_vertexai_vectorsearch(args):
             "approx_nn_count",
             "Optional. The default number of neighbors to find via approximate search (default: 150): ",
             type_name=int,
-            default_value=150
+            default_value=150,
         )
         set_arg_from_input(
             args,
             "leaf_node_emb_count",
             "Optional. Number of embeddings on each leaf node (default: 1000): ",
             type_name=int,
-            default_value=1000
+            default_value=1000,
         )
         set_arg_from_input(
             args,
@@ -175,9 +179,9 @@ def import_vertexai_vectorsearch(args):
             type_name=str,
             default_value="DOT_PRODUCT_DISTANCE",
             # choices=[
-            #     "DOT_PRODUCT_DISTANCE", 
-            #     "COSINE_DISTANCE", 
-            #     "L1_DISTANCE", 
+            #     "DOT_PRODUCT_DISTANCE",
+            #     "COSINE_DISTANCE",
+            #     "L1_DISTANCE",
             #     "SQUARED_L2_DISTANCE"
             # ],
         )
@@ -214,16 +218,16 @@ def import_vertexai_vectorsearch(args):
             "min_replicas",
             "Optional. The minimum number of machine replicas for deployed index (default: 1): ",
             type_name=int,
-            default_value=1
+            default_value=1,
         )
         set_arg_from_input(
             args,
             "max_replicas",
             "Optional. The maximum number of machine replicas for deployed index (default: 1): ",
             type_name=int,
-            default_value=1
+            default_value=1,
         )
-        
+
     vertexai_vectorsearch_import = ImportVertexAIVectorSearch(args)
     vertexai_vectorsearch_import.upsert_data()
 
@@ -303,7 +307,11 @@ def main():
         "-i", "--target-index-name", type=str, help="Name of the index to import to"
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-b", "--batch-size", type=str, help="Enter size of upsert batches:", default=100,
+        "-b",
+        "--batch-size",
+        type=str,
+        help="Enter size of upsert batches:",
+        default=100,
     )
     parser_vertexai_vectorsearch.add_argument(
         "-f", "--filter-restricts", type=str, help="string filters"

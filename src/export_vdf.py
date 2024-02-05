@@ -130,26 +130,22 @@ def export_vertexai_vectorsearch(args):
     """
     Export data from Vertex AI Vector Search
     """
-    set_arg_from_input(
-        args, 
-        "project_id", 
-        "Enter the Google Cloud Project ID: "
-    )
+    set_arg_from_input(args, "project_id", "Enter the Google Cloud Project ID: ")
     set_arg_from_input(
         args,
         "index",
         "Enter name of index to export (hit return to export all. Comma separated for multiple indexes): ",
     )
     set_arg_from_input(
-        args, 
-        "gcloud_credentials_file", 
-        "Enter path to service account credentials file (hit return to use application default credentials): ", 
+        args,
+        "gcloud_credentials_file",
+        "Enter path to service account credentials file (hit return to use application default credentials): ",
     )
     # max_vectors
     set_arg_from_input(
-        args, 
-        "max_vectors", 
-        "Optional: max_vectors to export; can be larger than actual vector count", 
+        args,
+        "max_vectors",
+        "Optional: max_vectors to export; can be larger than actual vector count",
     )
     vertexai_vectorsearch_export = ExportVertexAIVectorSearch(args)
     vertexai_vectorsearch_export.get_data()
@@ -180,7 +176,7 @@ def main():
             -p, --project-id (str): Google Cloud Project ID.
             -i, --index (str): Name of indexes to export (comma-separated).
             -c, --gcloud-credentials-file: Path to Goofle Cloud Service Account credentials
-            
+
     Examples:
         Export data from Pinecone:
         python export_vdf.py pinecone -e my_env -i my_index
@@ -297,10 +293,18 @@ def main():
         "-i", "--index", type=str, help="Name of the index or indexes to export"
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-c", "--gcloud-credentials-file", type=str, help="Path to Google Cloud service account credentials file", default=None
+        "-c",
+        "--gcloud-credentials-file",
+        type=str,
+        help="Path to Google Cloud service account credentials file",
+        default=None,
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-m", "--max_vectors", type=str, help="Optional: max vectors to retrieve", default=None
+        "-m",
+        "--max_vectors",
+        type=str,
+        help="Optional: max vectors to retrieve",
+        default=None,
     )
 
     args = parser.parse_args()

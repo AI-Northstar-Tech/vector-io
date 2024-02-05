@@ -143,7 +143,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
         self.index_name = self.args["target_index_name"]
 
         if self.create_new_index:
-
             # optional; used if create_new_index = True
             self.approx_nn_count = (
                 self.args["approx_nn_count"]
@@ -221,7 +220,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
             )
 
             if self.deploy_new_index:
-
                 # Note: Don't need to deploy index to upsert vectors to index
 
                 # optional; used if deploy_new_index = True
@@ -302,7 +300,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
         d_ids = []
         indexes = []
         if self.index_name is not None:
-
             all_indexes = [index for index in self.list_indexes()]
 
             print(f"Checking if {self.index_name} already exists...")
@@ -703,15 +700,12 @@ class ImportVertexAIVectorSearch(ImportVDF):
         return index_endpoint
 
     def upsert_data(self):
-
         for index_name, index_meta in self.vdf_meta["indexes"].items():
-
             # load data
             print(f"Importing data from: {index_name}")
             print(f"index_meta: {index_meta}")
 
             for namespace_meta in index_meta:
-
                 # get data path
                 data_path = namespace_meta["data_path"]
                 print(f"data_path: {data_path}")
@@ -732,7 +726,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
                     df = pd.read_parquet(file_path)
                     df["id"] = df["id"].apply(lambda x: str(x))
 
-                    data_rows = []
                     insert_datapoints_payload = []
 
                     for idx, row in df.iterrows():
@@ -825,7 +818,6 @@ class ImportVertexAIVectorSearch(ImportVDF):
                             insert_datapoints_payload = []
 
                     if len(insert_datapoints_payload) > 0:
-
                         upsert_request = aipv1.UpsertDatapointsRequest(
                             index=self.target_vertexai_index.resource_name,
                             datapoints=insert_datapoints_payload,
