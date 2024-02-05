@@ -55,14 +55,14 @@ def import_qdrant(args):
     set_arg_from_input(
         args,
         "parallel",
-        "Enter the batch size for upserts (default: 1): ",
+        "Enter the batch size for upserts (default: 64): ",
         int,
         1,
     )
     set_arg_from_input(
         args,
         "batch-size",
-        "Enter the number of parallel processes of upload (default: 64): ",
+        "Enter the number of parallel processes of upload (default: 1): ",
         int,
         64,
     )
@@ -211,7 +211,7 @@ def main():
     )
     parser_qdrant.add_argument(
         "--shard-key-selector",
-        type=int | str | list[str | int] | None,
+        type=Any,
         help="Shard to be queried (default: None)",
         default=None,
     )
