@@ -4,7 +4,9 @@ This library uses a universal format for vector datasets to easily export and im
 
 See the [Contributing](#contributing) section to add support for your favorite vector database.
 
-## Supported Vector Databases
+## Supported Vector Databases 
+
+### (Request support for a VectorDB by voting/commenting here: https://github.com/AI-Northstar-Tech/vector-io/discussions/38)
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
