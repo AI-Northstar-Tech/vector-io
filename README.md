@@ -210,7 +210,7 @@ options:
   -u URL, --url URL  Qdrant url
 
 src/import_vdf.py vertexai_vectorsearch --help
-usage: import_vdf.py vertexai_vectorsearch [-h] [-p PROJECT_ID] [-l REGION] [-i INDEX]
+usage: import_vdf.py vertexai_vectorsearch [-h] [-p PROJECT_ID] [-l REGION]
 
 options:
   -h, --help            show this help message and exit
@@ -218,8 +218,6 @@ options:
                         Google Cloud Project ID
   -l REGION, --location REGION
                         Google Cloud region hosting index
-  -i INDEX, --index INDEX
-                        Name of index to import
 ```
 
 ## Re-embed script
