@@ -39,7 +39,7 @@ class ImportKDBAI(ImportVDF):
         ]
 
         # Extract information from JSON
-        namespace = indexes_content[index_names[0]][""][0]["namespace"]
+        #namespace = indexes_content[index_names[0]][""][0]["namespace"]
         vector_columns = indexes_content[index_names[0]][""][0]["vector_columns"]
 
         # Define the schema
@@ -79,7 +79,7 @@ class ImportKDBAI(ImportVDF):
         # First ensure the table does not already exist
         try:
             self.session.table(index_names).drop()
-            time.sleep(5)
+            #time.sleep(5)
         except kdbai.KDBAIException:
             pass
 
