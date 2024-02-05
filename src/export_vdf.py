@@ -12,7 +12,6 @@ from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
 from push_to_hub import push_to_hub
 from util import set_arg_from_input, set_arg_from_password
-from getpass import getpass
 import warnings
 
 # Suppress specific warnings
