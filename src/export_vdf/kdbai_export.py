@@ -4,8 +4,7 @@ import os
 from dotenv import load_dotenv
 from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
-from util import standardize_metric_reverse, standardize_metric
-
+from util import standardize_metric
 
 
 load_dotenv()
@@ -44,7 +43,9 @@ class ExportKDBAI(ExportVDB):
             if "vectorIndex" in tab_schema["columns"][i].keys():
                 embedding_name = tab_schema["columns"][i]["name"]
                 embedding_dims = tab_schema["columns"][i]["vectorIndex"]["dims"]
-                embedding_dist = standardize_metric(tab_schema["columns"][i]["vectorIndex"]["metric"], self.DB_NAME_SLUG)
+                embedding_dist = standardize_metric(
+                    tab_schema["columns"][i]["vectorIndex"]["metric"], self.DB_NAME_SLUG
+                )
 
         namespace_meta = {
             "namespace": "",

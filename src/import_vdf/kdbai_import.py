@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import kdbai_client as kdbai
 from names import DBNames
 from import_vdf.vdf_import_cls import ImportVDF
-from util import standardize_metric_reverse, standardize_metric
+from util import standardize_metric_reverse
 import json
 import pyarrow.parquet as pq
 
@@ -51,7 +51,10 @@ class ImportKDBAI(ImportVDF):
                 "name": vector_columns,
                 "vectorIndex": {
                     "dims": indexes_content[index_names[0]][""][0]["dimensions"],
-                    "metric": standardize_metric_reverse(indexes_content[index_names[0]][""][0]["metric"],self.DB_NAME_SLUG),
+                    "metric": standardize_metric_reverse(
+                        indexes_content[index_names[0]][""][0]["metric"],
+                        self.DB_NAME_SLUG,
+                    ),
                     "type": self.index.lower(),
                 },
             }
