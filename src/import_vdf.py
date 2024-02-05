@@ -67,7 +67,7 @@ def import_kdbai(args):
     set_arg_from_input(
         args,
         "ind",
-        "Enter the index type used: ",
+        "Enter the index type used (Flat, IVF, IVFPQ, HNSW): ",
         str,
     )
     kdbai_import = ImportKDBAI(args)
