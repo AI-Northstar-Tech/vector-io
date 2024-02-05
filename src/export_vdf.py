@@ -174,7 +174,7 @@ def main():
         type=bool,
         help="Push to hub",
         default=False,
-        action=argparse.BooleanOptionalAction
+        action=argparse.BooleanOptionalAction,
     )
     parser.add_argument(
         "--public",
@@ -213,20 +213,20 @@ def main():
         type=bool,
         help="Allow modifying data to search",
         default=False,
-        action=argparse.BooleanOptionalAction
+        action=argparse.BooleanOptionalAction,
     )
     parser_pinecone.add_argument(
         "--subset",
         type=bool,
         help="Export a subset of data (default: False)",
         default=False,
-        action=argparse.BooleanOptionalAction
+        action=argparse.BooleanOptionalAction,
     )
     parser_pinecone.add_argument(
         "--namespaces",
         type=str,
         help="Name of namespace(s) to export (comma-separated)",
-        default=None
+        default=None,
     )
     db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
     # Qdrant
@@ -239,9 +239,7 @@ def main():
     )
     # Milvus
     parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
-    parser_milvus.add_argument(
-        "-u", "--uri", type=str, help="Milvus connection URI"
-    )
+    parser_milvus.add_argument("-u", "--uri", type=str, help="Milvus connection URI")
     parser_milvus.add_argument(
         "-t", "--token", type=str, required=False, help="Milvus connection token"
     )

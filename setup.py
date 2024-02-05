@@ -8,7 +8,7 @@ setup(
     license="Apache 2.0",
     author="Dhruv Anand",
     author_email="dhruv.anand@ainorthstartech.com",
-    packages=find_packages(where='src'),
+    packages=find_packages(where="src"),
     package_dir={"": "src"},
     entry_points={
         "console_scripts": [
