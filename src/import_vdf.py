@@ -119,8 +119,8 @@ def import_vertexai_vectorsearch(args):
         type_name=int,
     )
     set_arg_from_input(
-        args, 
-        "requests_per_minute", 
+        args,
+        "requests_per_minute",
         "Optional. Enter desired requests per minute for rate limit (default: 6000): ",
         default_value=6000,
         type_name=int,

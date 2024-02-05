@@ -28,7 +28,7 @@ from google.protobuf import struct_pb2
 from google.cloud.aiplatform_v1.types.index import Index
 from google.cloud.aiplatform_v1.types.index_endpoint import IndexEndpoint
 from google.cloud.aiplatform_v1.types.index_endpoint import DeployedIndex
-from ratelimit import limits, RateLimitException, sleep_and_retry
+from ratelimit import limits, sleep_and_retry
 from backoff import on_exception, expo
 import google.api_core.exceptions as google_exceptions
 
@@ -694,16 +694,14 @@ class ImportVertexAIVectorSearch(ImportVDF):
         return index_endpoint
 
     def upsert_data(self):
-
         MINUTE = 60
         CALLS_PER_PRD = self.args.get("requests_per_minute", 6000)
+
         # rate is 1 QPS
-        @sleep_and_retry # If there are more requests than rate, sleep shortly
+        @sleep_and_retry  # If there are more requests than rate, sleep shortly
         @on_exception(
-            expo, 
-            google_exceptions.ResourceExhausted, 
-            max_tries=10
-        ) # if we receive exceptions from Google API, retry
+            expo, google_exceptions.ResourceExhausted, max_tries=10
+        )  # if we receive exceptions from Google API, retry
         @limits(calls=CALLS_PER_PRD, period=MINUTE)
         def upsert_in_rate(self, upsert_request):
             """
@@ -839,7 +837,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
                                 datapoints=insert_datapoints_payload,
                             )
                             # self.index_client.upsert_datapoints(request=upsert_request)
-                            upsert_in_rate(self, upsert_request = upsert_request)
+                            upsert_in_rate(self, upsert_request=upsert_request)
                             insert_datapoints_payload = []
 
                         if len(total_ids) % CALLS_PER_PRD == 0:
@@ -852,7 +850,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
                         )
 
                         # self.index_client.upsert_datapoints(request=upsert_request)
-                        upsert_in_rate(self, upsert_request = upsert_request)
+                        upsert_in_rate(self, upsert_request=upsert_request)
 
         print("Index import complete")
         print(
