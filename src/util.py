@@ -32,7 +32,7 @@ def sort_recursive(d):
     if not isinstance(d, dict):
         try:
             d = dict(d)
-        except Exception as e:
+        except Exception:
             d = {"": str(d)}
 
     sorted_dict = OrderedDict()
@@ -124,9 +124,9 @@ db_metric_to_standard_metric = {
         "L2": Distance.EUCLID,
     },
     DBNames.KDBAI: {
-	   "L2":Distance.EUCLID,
-	   "CS":Distance.COSINE,
-	   "IP":Distance.DOT,
+        "L2": Distance.EUCLID,
+        "CS": Distance.COSINE,
+        "IP": Distance.DOT,
     },
 }
 

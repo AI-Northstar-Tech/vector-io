@@ -103,19 +103,19 @@ def main():
     with open(os.path.join(args["dir"], "VDF_META.json"), "r+") as f:
         vdf_meta = json.load(f)
         for _, index_meta in tqdm(
-            vdf_meta["indexes"].items(), desc=f"Iterating over indexes"
+            vdf_meta["indexes"].items(), desc="Iterating over indexes"
         ):
             new_vector_column = (
                 f"vec_{args['text_column']}_{args['new_model_name'].replace('/', '_')}"
             )
             overwrite_bool = False
-            for namespace_meta in tqdm(index_meta, desc=f"Iterating over namespaces"):
+            for namespace_meta in tqdm(index_meta, desc="Iterating over namespaces"):
                 data_path = namespace_meta["data_path"]
                 final_data_path = get_final_data_path(
                     os.getcwd(), args["dir"], data_path
                 )
                 parquet_files = get_parquet_files(final_data_path)
-                for file in tqdm(parquet_files, desc=f"Iterating over parquet files"):
+                for file in tqdm(parquet_files, desc="Iterating over parquet files"):
                     file_path = os.path.join(final_data_path, file)
                     if (
                         new_vector_column in namespace_meta["vector_columns"]

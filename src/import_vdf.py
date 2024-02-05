@@ -51,6 +51,7 @@ def import_qdrant(args):
     qdrant_import = ImportQdrant(args)
     qdrant_import.upsert_data()
 
+
 def import_kdbai(args):
     """
     Import data to KDB.AI
@@ -72,6 +73,7 @@ def import_kdbai(args):
     )
     kdbai_import = ImportKDBAI(args)
     kdbai_import.upsert_data()
+
 
 def import_pinecone(args):
     """
@@ -188,10 +190,10 @@ def main():
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
 
     # KDB.AI
-    parser_kdbai = subparsers.add_parser(
-        DBNames.KDBAI, help="Import data to KDB.AI"
+    parser_kdbai = subparsers.add_parser(DBNames.KDBAI, help="Import data to KDB.AI")
+    parser_kdbai.add_argument(
+        "-u", "--endpoint", type=str, help="KDB.AI Cloud instance Endpoint url"
     )
-    parser_kdbai.add_argument("-u", "--endpoint", type=str, help="KDB.AI Cloud instance Endpoint url")
     parser_kdbai.add_argument("-i", "--index", type=str, help="Index used")
 
     args = parser.parse_args()

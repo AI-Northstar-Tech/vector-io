@@ -1,5 +1,5 @@
 class DBNames:
-  PINECONE = "pinecone"
-  QDRANT = "qdrant"
-  MILVUS = "milvus"
-  KDBAI = "kdbai"
+    PINECONE = "pinecone"
+    QDRANT = "qdrant"
+    MILVUS = "milvus"
+    KDBAI = "kdbai"

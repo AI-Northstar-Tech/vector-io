@@ -13,7 +13,6 @@ from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
 from push_to_hub import push_to_hub
 from util import set_arg_from_input, set_arg_from_password
-from getpass import getpass
 import warnings
 
 # Suppress specific warnings
@@ -100,6 +99,7 @@ def export_qdrant(args):
     qdrant_export.get_data()
     return qdrant_export
 
+
 def export_kdbai(args):
     """
     Export data from KDBAI
@@ -128,6 +128,7 @@ def export_kdbai(args):
     kdbai_export = ExportKDBAI(args)
     kdbai_export.get_data()
     return kdbai_export
+
 
 def export_milvus(args):
     """
@@ -226,19 +227,15 @@ def main():
         dest="vector_database",
     )
 
-    #KDB.AI
-    parser_kdbai = subparsers.add_parser(
-        "kdbai", help="Export data from KDB.AI"
-    )
+    # KDB.AI
+    parser_kdbai = subparsers.add_parser("kdbai", help="Export data from KDB.AI")
     parser_kdbai.add_argument(
         "-u", "--endpoint", type=str, help="KDB.AI cloud endpoint to connect"
     )
     parser_kdbai.add_argument(
         "-t", "--kdbai_table", type=str, help="KDB.AI table to export"
     )
-    parser_kdbai.add_argument(
-        "-m", "--model", type=str, help="Embedding model used"
-    )
+    parser_kdbai.add_argument("-m", "--model", type=str, help="Embedding model used")
 
     # Pinecone
     parser_pinecone = subparsers.add_parser(

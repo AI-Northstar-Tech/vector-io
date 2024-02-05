@@ -4,11 +4,10 @@ import os
 from dotenv import load_dotenv
 from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
-from util import standardize_metric
-from pathlib import Path
 
 
 load_dotenv()
+
 
 class ExportKDBAI(ExportVDB):
     DB_NAME_SLUG = DBNames.KDBAI
@@ -30,33 +29,33 @@ class ExportKDBAI(ExportVDB):
 
         table = self.session.table(table_name)
         table_res = table.query()
-        save_path = vectors_directory+'/'+table_name+'.parquet'
+        save_path = vectors_directory + "/" + table_name + ".parquet"
         table_res.to_parquet(save_path, index=False)
-        
+
         embedding_name = None
         embedding_dims = None
         embedding_dist = None
         tab_schema = table.schema()
-        
-        for i in range(len(tab_schema['columns'])):
-            if 'vectorIndex' in tab_schema['columns'][i].keys():
-                embedding_name = tab_schema['columns'][i]['name']
-                embedding_dims = tab_schema['columns'][i]['vectorIndex']['dims']
-                embedding_dist = tab_schema['columns'][i]['vectorIndex']['metric']
-        
+
+        for i in range(len(tab_schema["columns"])):
+            if "vectorIndex" in tab_schema["columns"][i].keys():
+                embedding_name = tab_schema["columns"][i]["name"]
+                embedding_dims = tab_schema["columns"][i]["vectorIndex"]["dims"]
+                embedding_dist = tab_schema["columns"][i]["vectorIndex"]["metric"]
+
         namespace_meta = {
             "namespace": "",
             "total_vector_count": len(table_res.index),
-            "exported_vector_count": len(table_res.index),            
+            "exported_vector_count": len(table_res.index),
             "dimensions": embedding_dims,
             "model_name": model,
             "vector_columns": embedding_name,
             "data_path": save_path,
             "metric": embedding_dist,
         }
-        
+
         internal_metadata = {
-            #"version": self.args["library_version"],
+            # "version": self.args["library_version"],
             "version": "0.0.6",
             "file_structure": self.file_structure,
             "author": os.environ.get("USER"),
@@ -65,5 +64,5 @@ class ExportKDBAI(ExportVDB):
         }
 
         internal_metadata_path = os.path.join(self.vdf_directory, "VDF_META.json")
-        with open(internal_metadata_path, 'w') as json_file:
+        with open(internal_metadata_path, "w") as json_file:
             json.dump(internal_metadata, json_file, indent=4)
