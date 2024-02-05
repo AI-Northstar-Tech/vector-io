@@ -28,6 +28,9 @@ from google.protobuf import struct_pb2
 from google.cloud.aiplatform_v1.types.index import Index
 from google.cloud.aiplatform_v1.types.index_endpoint import IndexEndpoint
 from google.cloud.aiplatform_v1.types.index_endpoint import DeployedIndex
+from ratelimit import limits, RateLimitException, sleep_and_retry
+from backoff import on_exception, expo
+import google.api_core.exceptions as google_exceptions
 
 
 # exceptions
@@ -691,6 +694,24 @@ class ImportVertexAIVectorSearch(ImportVDF):
         return index_endpoint
 
     def upsert_data(self):
+
+        MINUTE = 60
+        CALLS_PER_PRD = self.args.get("requests_per_minute", 6000)
+        # rate is 1 QPS
+        @sleep_and_retry # If there are more requests than rate, sleep shortly
+        @on_exception(
+            expo, 
+            google_exceptions.ResourceExhausted, 
+            max_tries=10
+        ) # if we receive exceptions from Google API, retry
+        @limits(calls=CALLS_PER_PRD, period=MINUTE)
+        def upsert_in_rate(self, upsert_request):
+            """
+            Upserts vectors and applies rate limits.
+            """
+            return self.index_client.upsert_datapoints(request=upsert_request)
+
+        # upsert for each index
         for new_index_name, (index_name, index_meta) in zip(
             self.index_names, self.vdf_meta["indexes"].items()
         ):
@@ -710,7 +731,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
             for namespace_meta in index_meta:
                 # get data path
                 data_path = namespace_meta["data_path"]
-                final_data_path = self.get_final_data_path(data_path)
+                print(f"data_path: {data_path}")
 
                 # get col names
                 vector_metadata_names, vector_column_name = self.get_vector_column_name(
@@ -720,11 +741,11 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 print(f"vector_metadata_names : {vector_metadata_names}")
 
                 # Load the data from the parquet files
-                parquet_files = self.get_parquet_files(final_data_path)
+                parquet_files = self.get_parquet_files(data_path)
 
                 total_ids = []
                 for file in tqdm(parquet_files, desc="Inserting data"):
-                    file_path = os.path.join(final_data_path, file)
+                    file_path = os.path.join(data_path, file)
                     df = pd.read_parquet(file_path)
                     df["id"] = df["id"].apply(lambda x: str(x))
 
@@ -811,13 +832,18 @@ class ImportVertexAIVectorSearch(ImportVDF):
                                 ),
                             )
                         )
+
                         if idx % self.batch_size == 0:
                             upsert_request = aipv1.UpsertDatapointsRequest(
                                 index=self.target_vertexai_index.resource_name,
                                 datapoints=insert_datapoints_payload,
                             )
-                            self.index_client.upsert_datapoints(request=upsert_request)
+                            # self.index_client.upsert_datapoints(request=upsert_request)
+                            upsert_in_rate(self, upsert_request = upsert_request)
                             insert_datapoints_payload = []
+
+                        if len(total_ids) % CALLS_PER_PRD == 0:
+                            print(f"{len(total_ids)} total vectors upserted")
 
                     if len(insert_datapoints_payload) > 0:
                         upsert_request = aipv1.UpsertDatapointsRequest(
@@ -825,7 +851,8 @@ class ImportVertexAIVectorSearch(ImportVDF):
                             datapoints=insert_datapoints_payload,
                         )
 
-                        self.index_client.upsert_datapoints(request=upsert_request)
+                        # self.index_client.upsert_datapoints(request=upsert_request)
+                        upsert_in_rate(self, upsert_request = upsert_request)
 
         print("Index import complete")
         print(

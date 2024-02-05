@@ -119,6 +119,13 @@ def import_vertexai_vectorsearch(args):
         type_name=int,
     )
     set_arg_from_input(
+        args, 
+        "requests_per_minute", 
+        "Optional. Enter desired requests per minute for rate limit (default: 6000): ",
+        default_value=6000,
+        type_name=int,
+    )
+    set_arg_from_input(
         args,
         "filter_restricts",
         "Optional. Enter list of dicts describing string filters for each data point: ",
@@ -301,6 +308,9 @@ def main():
     )
     parser_vertexai_vectorsearch.add_argument(
         "-n", "--numeric-restricts", type=str, help="numeric filters"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-r", "--requests-per-minute", type=int, help="rate limiter"
     )
     parser_vertexai_vectorsearch.add_argument(
         "-c",
