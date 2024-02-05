@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 from names import DBNames
 
 from util import set_arg_from_input, set_arg_from_password
-#from import_vdf.pinecone_import import ImportPinecone
-#from import_vdf.qdrant_import import ImportQdrant
+from import_vdf.pinecone_import import ImportPinecone
+from import_vdf.qdrant_import import ImportQdrant
 from import_vdf.kdbai_import import ImportKDBAI
-#from import_vdf.milvus_import import ImportMilvus
+from import_vdf.milvus_import import ImportMilvus
 from import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
