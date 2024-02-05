@@ -84,8 +84,6 @@ class ExportQdrant(ExportVDB):
         vectors_directory = os.path.join(self.vdf_directory, collection_name)
         os.makedirs(vectors_directory, exist_ok=True)
 
-        vectors = {}
-        metadata = {}
         total = self.client.get_collection(collection_name).vectors_count
 
         num_vectors_exported = 0
@@ -123,7 +121,7 @@ class ExportQdrant(ExportVDB):
             "dimensions": dim,
             "model_name": self.args["model_name"],
             "vector_columns": ["vector"],
-            "data_path": vectors_directory,
+            "data_path": "/".join(vectors_directory.split("/")[1:]),
         }
 
         return {"": [namespace_meta]}
@@ -136,7 +134,6 @@ class ExportQdrant(ExportVDB):
             vectors[point.id] = point.vector
             metadata[point.id] = point.payload
         num_vectors_exported += self.save_vectors_to_parquet(
-            vectors, metadata, self.file_ctr, vectors_directory
+            vectors, metadata, vectors_directory
         )
-        self.file_ctr += 1
         return num_vectors_exported

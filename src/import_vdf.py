@@ -10,9 +10,28 @@ from util import set_arg_from_input, set_arg_from_password
 from import_vdf.pinecone_import import ImportPinecone
 from import_vdf.qdrant_import import ImportQdrant
 from import_vdf.kdbai_import import ImportKDBAI
+from import_vdf.milvus_import import ImportMilvus
 from import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
+
+
+def import_milvus(args):
+    """
+    Import data to Milvus
+    """
+    set_arg_from_input(
+        args,
+        "uri",
+        "Enter the Milvus URI (default: 'http://localhost:19530'): ",
+        str,
+        "http://localhost:19530",
+    )
+    set_arg_from_password(
+        args, "token", "Enter your Milvus token (hit enter to skip): ", "Milvus Token"
+    )
+    milvus_import = ImportMilvus(args)
+    milvus_import.upsert_data()
 
 
 def import_qdrant(args):
@@ -138,6 +157,11 @@ def main():
         default=False,
         action=argparse.BooleanOptionalAction,
     )
+    # Milvus
+    parser_milvus = subparsers.add_parser(DBNames.MILVUS, help="Import data to Milvus")
+    parser_milvus.add_argument("-u", "--uri", type=str, help="URI of Milvus instance")
+    parser_milvus.add_argument("-t", "--token", type=str, help="Milvus token")
+
     # Pinecone
     parser_pinecone = subparsers.add_parser(
         DBNames.PINECONE, help="Import data to Pinecone"
@@ -160,9 +184,7 @@ def main():
     )
 
     # Qdrant
-    parser_qdrant = subparsers.add_parser(
-        DBNames.QDRANT, help="Import data to Qdrant"
-    )
+    parser_qdrant = subparsers.add_parser(DBNames.QDRANT, help="Import data to Qdrant")
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
 
     # KDB.AI
@@ -199,6 +221,8 @@ def main():
         import_qdrant(args)  # Add the function to import data to Qdrant
     elif args["vector_database"] == DBNames.KDBAI:
         import_kdbai(args)
+    elif args["vector_database"] == DBNames.MILVUS:
+        import_milvus(args)
     else:
         print(
             "Unrecognized DB. Please choose a vector database to export data from:",

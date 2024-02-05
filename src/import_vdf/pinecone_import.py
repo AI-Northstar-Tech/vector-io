@@ -65,7 +65,7 @@ class ImportPinecone(ImportVDF):
                             ),
                         )
                 except Exception as e:
-                    tqdm.write(e)
+                    tqdm.write(f"{e}")
                     raise Exception(f"Invalid index name '{index_name}'", e)
             index = self.pc.Index(index_name)
             current_batch_size = BATCH_SIZE
@@ -77,26 +77,10 @@ class ImportPinecone(ImportVDF):
                 data_path = namespace_meta["data_path"]
 
                 # Check if the data path exists
-                final_data_path = os.path.join(
-                    self.args["cwd"], self.args["dir"], data_path
-                )
-                if not os.path.isdir(final_data_path):
-                    raise Exception(
-                        f"Invalid data path for index '{index_name},\n"
-                        f"data_path: {data_path}',\n"
-                        f"Joined path: {final_data_path}'"
-                        f"Current working directory: {self.args['cwd']}'\n"
-                        f"Command line arg (dir): {self.args['dir']}'"
-                    )
+                final_data_path = self.get_final_data_path(data_path)
 
                 # Load the data from the parquet files
-                parquet_files = sorted(
-                    [
-                        file
-                        for file in os.listdir(final_data_path)
-                        if file.endswith(".parquet")
-                    ]
-                )
+                parquet_files = self.get_parquet_files(final_data_path)
 
                 vectors = {}
                 metadata = {}

@@ -8,7 +8,10 @@ from dotenv import load_dotenv
 from export_vdf.pinecone_export import ExportPinecone
 from export_vdf.qdrant_export import ExportQdrant
 from export_vdf.kdbai_export import ExportKDBAI
+from export_vdf.milvus_export import ExportMilvus
 from export_vdf.vdb_export_cls import ExportVDB
+from names import DBNames
+from push_to_hub import push_to_hub
 from util import set_arg_from_input, set_arg_from_password
 from getpass import getpass
 import warnings
@@ -41,6 +44,12 @@ def export_pinecone(args):
         "modify_to_search",
         "Allow modifying data to search, enter Y or N: ",
         bool,
+    )
+    set_arg_from_input(
+        args,
+        "namespaces",
+        "Enter the name of namespace(s) to export (comma-separated) (hit return to export all):",
+        str,
     )
     if args["subset"] is True:
         if "id_list_file" not in args or args["id_list_file"] is None:
@@ -120,6 +129,31 @@ def export_kdbai(args):
     kdbai_export.get_data()
     return kdbai_export
 
+def export_milvus(args):
+    """
+    Export data from Milvus
+    """
+    set_arg_from_input(
+        args,
+        "uri",
+        "Enter the uri of Milvus (hit return for 'http://localhost:19530'): ",
+        str,
+        "http://localhost:19530",
+    )
+    set_arg_from_input(
+        args,
+        "collections",
+        "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
+        str,
+    )
+    set_arg_from_password(
+        args, "token", "Enter your Milvus Token (hit return to skip): ", "Milvus Token"
+    )
+    milvus_export = ExportMilvus(args)
+    milvus_export.get_data()
+    return milvus_export
+
+
 def main():
     """
     Export data from various vector databases to the VDF format for vector datasets.
@@ -179,6 +213,13 @@ def main():
         default=False,
         action=argparse.BooleanOptionalAction,
     )
+    parser.add_argument(
+        "--public",
+        type=bool,
+        help="Make dataset public (default: False)",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+    )
     subparsers = parser.add_subparsers(
         title="Vector Databases",
         description="Choose the vectors database to export data from",
@@ -232,6 +273,12 @@ def main():
         default=False,
         action=argparse.BooleanOptionalAction,
     )
+    parser_pinecone.add_argument(
+        "--namespaces",
+        type=str,
+        help="Name of namespace(s) to export (comma-separated)",
+        default=None,
+    )
     db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
     # Qdrant
     parser_qdrant = subparsers.add_parser("qdrant", help="Export data from Qdrant")
@@ -239,6 +286,15 @@ def main():
         "-u", "--url", type=str, help="Location of Qdrant instance"
     )
     parser_qdrant.add_argument(
+        "-c", "--collections", type=str, help="Names of collections to export"
+    )
+    # Milvus
+    parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
+    parser_milvus.add_argument("-u", "--uri", type=str, help="Milvus connection URI")
+    parser_milvus.add_argument(
+        "-t", "--token", type=str, required=False, help="Milvus connection token"
+    )
+    parser_milvus.add_argument(
         "-c", "--collections", type=str, help="Names of collections to export"
     )
 
@@ -257,12 +313,14 @@ def main():
     ):
         print("Please choose a vector database to export data from:", db_choices)
         return
-    if args["vector_database"] == "pinecone":
+    if args["vector_database"] == DBNames.PINECONE:
         export_obj = export_pinecone(args)
-    elif args["vector_database"] == "qdrant":
+    elif args["vector_database"] == DBNames.QDRANT:
         export_obj = export_qdrant(args)
     elif args["vector_database"] == "kdbai":
         export_obj = export_kdbai(args)
+    elif args["vector_database"] == DBNames.MILVUS:
+        export_obj = export_milvus(args)
     else:
         print("Invalid vector database")
         args["vector_database"] = input("Enter the name of vector database to export: ")
@@ -277,58 +335,7 @@ def main():
     )
 
     if args["push_to_hub"]:
-        print("Pushing to HuggingFace Hub...")
-        from huggingface_hub import HfApi, HfFolder, Repository
-
-        # Log in to Hugging Face
-        if (
-            "HUGGING_FACE_TOKEN" not in os.environ
-            or os.environ["HUGGING_FACE_TOKEN"] is None
-        ):
-            # set HUGGINGFACEHUB_API_TOKEN env var
-            os.environ["HUGGING_FACE_TOKEN"] = getpass(
-                prompt="Enter your HuggingFace API token (with write access): "
-            )
-        if "HF_USERNAME" not in os.environ or os.environ["HF_USERNAME"] is None:
-            # set HF_USERNAME env var
-            os.environ["HF_USERNAME"] = input("Enter your HuggingFace username: ")
-        hf_api = HfApi(token=os.environ["HUGGING_FACE_TOKEN"])
-        repo_id = f"{os.environ['HF_USERNAME']}/{export_obj.vdf_directory}"
-        dataset_url = hf_api.create_repo(
-            token=os.environ["HUGGING_FACE_TOKEN"],
-            repo_id=repo_id,
-            private=True,
-            repo_type="dataset",
-        )
-        # for each file/folder in export_obj.vdf_directory, upload to hub
-        hf_api.upload_folder(
-            repo_id=repo_id,
-            folder_path=export_obj.vdf_directory,
-            repo_type="dataset",
-        )
-        # create hf dataset card in temp README.md
-        readme_path = os.path.join(export_obj.vdf_directory, "README.md")
-        with open(readme_path, "w") as f:
-            f.write(
-                """
----
-tags:
-- vdf
-- vector-io
-- vector-dataset
-- vector-embeddings
----
-
-This is a dataset created using [vector-io](https://github.com/ai-northstar-tech/vector-io)
-"""
-            )
-        hf_api.upload_file(
-            repo_id=repo_id,
-            path_or_fileobj=readme_path,
-            path_in_repo="README.md",
-            repo_type="dataset",
-        )
-        print(f"Created a private HuggingFace dataset repo at {dataset_url}")
+        push_to_hub(export_obj, args)
 
 
 if __name__ == "__main__":
