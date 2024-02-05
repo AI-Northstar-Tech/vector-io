@@ -50,7 +50,6 @@ class ImportKDBAI(ImportVDF):
             "vectorIndex": {
                 "dims": indexes_content[index_names[0]][''][0]['dimensions'],
                 "metric": indexes_content[index_names[0]][''][0]['metric'],
-                #"type": "hnsw"
                 "type": self.index,
             }
         })
