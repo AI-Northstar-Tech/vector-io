@@ -113,12 +113,6 @@ def import_vertexai_vectorsearch(args):
     set_arg_from_input(args, "location", "Enter the region hosting your index: ")
     set_arg_from_input(
         args,
-        "target_index_name",
-        "Enter the name of the index to import to:",
-        default_value=None,
-    )
-    set_arg_from_input(
-        args,
         "batch_size",
         "Enter size of upsert batches (default: 100):",
         default_value=100,
@@ -135,20 +129,12 @@ def import_vertexai_vectorsearch(args):
     set_arg_from_input(
         args, "crowding_tag", "Optional. CrowdingTag of the datapoint: ", type_name=str
     )
-    if args["create_new_index"] is True:
+    if args["create_new"] is True:
         set_arg_from_input(
             args,
             "gcs_bucket",
-            "Required. Valid gcs bucket name: ",
+            "Optional. Enter valid gcs bucket name (or one will be created per index_name): ",
             type_name=str,
-            # required=True
-        )
-        set_arg_from_input(
-            args,
-            "dimensions",
-            "Required. The number of dimensions of the input vectors: ",
-            type_name=int,
-            # required=True
         )
         set_arg_from_input(
             args,
@@ -175,7 +161,7 @@ def import_vertexai_vectorsearch(args):
         set_arg_from_input(
             args,
             "distance_measure",
-            "Optional. The distance measure used in nearest neighbor search: ",
+            "Optional. The distance measure used in nearest neighbor search (default: `DOT_PRODUCT_DISTANCE`): ",
             type_name=str,
             default_value="DOT_PRODUCT_DISTANCE",
             # choices=[
@@ -304,9 +290,6 @@ def main():
         "-l", "--location", type=str, help="Google Cloud region hosting your index"
     )
     parser_vertexai_vectorsearch.add_argument(
-        "-i", "--target-index-name", type=str, help="Name of the index to import to"
-    )
-    parser_vertexai_vectorsearch.add_argument(
         "-b",
         "--batch-size",
         type=str,
@@ -324,13 +307,6 @@ def main():
         "--crowding-tag",
         type=str,
         help="string value to enforce diversity in retrieval",
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "--create_new_index",
-        type=bool,
-        help="create new index (default: False)",
-        default=False,
-        action=argparse.BooleanOptionalAction,
     )
     parser_vertexai_vectorsearch.add_argument(
         "--deploy_new_index",

@@ -132,99 +132,130 @@ class ImportVertexAIVectorSearch(ImportVDF):
         # =========================================================
         # set index args
         # =========================================================
-        self.index_name = self.args["target_index_name"]
-
-        if self.create_new_index:
-            # optional; used if create_new_index = True
-            self.approx_nn_count = self.args.get("approx_nn_count", 150)
-            self.leaf_node_emb_count = self.args.get("leaf_node_emb_count", 1000)
-            self.leaf_nodes_percent = self.args.get("leaf_nodes_percent", 7)
-            self.distance_measure = self.args.get(
-                "distance_measure", "DOT_PRODUCT_DISTANCE"
-            )
-            self.shard_size = self.args.get("shard_size", "SHARD_SIZE_MEDIUM")
-
-            unique_id = uuid.uuid4()
-
-            if self.index_name is None:
-                self.index_name = f"my_vvs_index_{unique_id}"
-                print(f"Creating new index: {self.index_name} ...")
-
-            if self.args["gcs_bucket"] is None:
-                raise ValueError("Please set valid gcs_bucket name; exclude `gs://`")
-            elif self.args["dimensions"] is None:
-                raise ValueError("Please set `dimensions`")
-            else:
-                self.gcs_bucket = self.args["gcs_bucket"]
-                self.gcs_folder = "init_index"
-                self.local_file_name = "embeddings_0.json"
-                self.contents_delta_uri = f"gs://{self.gcs_bucket}/{self.gcs_folder}"
-
-                # dummy embedding
-                init_embedding = {
-                    "id": str(unique_id),
-                    "embedding": list(np.zeros(self.args["dimensions"])),
-                }
-
-                # dump embedding to a local file
-                with open(self.local_file_name, "w") as f:
-                    json.dump(init_embedding, f)
-
-                # upload to GCS
-                bucket_client = self.storage_client.bucket(self.gcs_bucket)
-                blob = bucket_client.blob(f"{self.gcs_folder}/{self.local_file_name}")
-                blob.upload_from_filename(f"{self.local_file_name}")
-
-            self.target_index = self._create_index(
-                index_name=self.index_name,
-                contents_delta_uri=self.contents_delta_uri,
-                dimensions=self.args["dimensions"],
-                approximate_neighbors_count=self.args["approx_nn_count"],
-                leaf_node_embedding_count=self.args["leaf_node_emb_count"],
-                leaf_nodes_to_search_percent=self.args["leaf_nodes_percent"],
-                distance_measure_type=self.args["distance_measure"],
-                shard_size=self.args["shard_size"],
-            )
-            self.index_endpoint_name = f"{self.index_name}_endpoint"
-            self.index_endpoint = self._create_index_endpoint(
-                endpoint_name=self.index_endpoint_name
-            )
-
-            if self.deploy_new_index:
-                # Note: Don't need to deploy index to upsert vectors to index
-
-                # optional; used if deploy_new_index = True
-                self.machine_type = self.args.get("machine_type", "e2-standard-16")
-                self.min_replicas = self.args.get("min_replicas", 1)
-                self.max_replicas = self.args.get("max_replicas", 1)
-
-                self._deploy_index(
-                    index_name=self.index_name,
-                    endpoint_name=self.index_endpoint.display_name,
-                    machine_type=self.machine_type,
-                    min_replicas=self.min_replicas,
-                    max_replicas=self.max_replicas,
+        self.index_names = []
+        for index_name, index_meta in self.vdf_meta["indexes"].items():
+            # load data
+            print(f"Importing data for index: {index_name}")
+            print(f"index_meta: {index_meta}")
+            for namespace_meta in index_meta:
+                all_indexes = [index.display_name for index in self.list_indexes()]
+                # check if index exists
+                index_name = index_name + (
+                    f"_{namespace_meta['namespace']}"
+                    if namespace_meta["namespace"]
+                    else ""
                 )
-        else:
-            self.target_index = self._get_index()
-            if self.target_index is None:
-                raise ValueError(
-                    f"{self.index_name} not found; create_new_index = False"
+                suffix = 2
+                while index_name in all_indexes and self.args["create_new"] is True:
+                    index_name = index_name + f"_{suffix}"
+                    suffix += 1
+                self.index_name = index_name
+                self.index_names.append(self.index_name)
+                if self.index_name not in all_indexes:
+                    # create index
+                    unique_id = uuid.uuid4()
+                    if self.index_name is None:
+                        self.index_name = f"my_vvs_index_{unique_id}"
+                        print(f"Creating new index: {self.index_name} ...")
+                    self.dimensions = namespace_meta["dimensions"]
+                    print(f"dimensions: {self.dimensions}")
+
+                    # optional; used if create_new_index = True
+                    self.approx_nn_count = self.args.get("approx_nn_count", 150)
+                    self.leaf_node_emb_count = self.args.get("leaf_node_emb_count", 1000)
+                    self.leaf_nodes_percent = self.args.get("leaf_nodes_percent", 7)
+                    self.distance_measure = self.args.get(
+                        "distance_measure", "DOT_PRODUCT_DISTANCE"
+                    )
+                    self.shard_size = self.args.get("shard_size", "SHARD_SIZE_MEDIUM")
+                    self.gcs_bucket = self.args.get("gcs_bucket", None)
+
+                    if self.gcs_bucket is None:
+                        self.gcs_bucket = self.index_name
+                        try:
+                            print(f"Creating new gcs_bucket: {self.gcs_bucket} ...")
+                            bucket_client = self.storage_client.bucket(self.gcs_bucket)
+                            new_bucket = self.storage_client.create_bucket(
+                                self.gcs_bucket, location=self.location
+                            )
+                            print(
+                                f"Created bucket {new_bucket.name} in {new_bucket.location}"
+                            )
+                        except Exception as e:
+                            print(
+                                f"{self.gcs_bucket} bucket already exists {e}"
+                            )
+                            pass
+                    self.gcs_folder = "init_index"
+                    self.local_file_name = "embeddings_0.json"
+                    self.contents_delta_uri = f"gs://{self.gcs_bucket}/{self.gcs_folder}"
+
+                    # dummy embedding - TODO: use input data from parquet(?) 
+                    init_embedding = {
+                        "id": str(unique_id),
+                        "embedding": list(np.zeros(self.dimensions)),
+                    }
+
+                    # dump embedding to a local file
+                    with open(self.local_file_name, "w") as f:
+                        json.dump(init_embedding, f)
+
+                    # upload to GCS
+                    bucket_client = self.storage_client.bucket(self.gcs_bucket)
+                    blob = bucket_client.blob(f"{self.gcs_folder}/{self.local_file_name}")
+                    blob.upload_from_filename(f"{self.local_file_name}")
+
+                    self.target_index = self._create_index(
+                        index_name=self.index_name,
+                        contents_delta_uri=self.contents_delta_uri,
+                        dimensions=self.dimensions,
+                        approximate_neighbors_count=self.approx_nn_count,
+                        leaf_node_embedding_count=self.leaf_node_emb_count,
+                        leaf_nodes_to_search_percent=self.leaf_nodes_percent,
+                        distance_measure_type=self.distance_measure,
+                        shard_size=self.shard_size,
+                    )
+
+                    if self.deploy_new_index:
+                        # Note: Don't need to deploy index to upsert vectors to index
+
+                        self.index_endpoint_name = f"{self.index_name}_endpoint"
+                        self.index_endpoint = self._create_index_endpoint(
+                            endpoint_name=self.index_endpoint_name
+                        )
+
+                        # optional; used if deploy_new_index = True
+                        self.machine_type = self.args.get("machine_type", "e2-standard-16")
+                        self.min_replicas = self.args.get("min_replicas", 1)
+                        self.max_replicas = self.args.get("max_replicas", 1)
+
+                        self._deploy_index(
+                            index_name=self.index_name,
+                            endpoint_name=self.index_endpoint.display_name,
+                            machine_type=self.machine_type,
+                            min_replicas=self.min_replicas,
+                            max_replicas=self.max_replicas,
+                        )
+                else:
+                    self.target_index = self._get_index()
+                    if self.target_index is None:
+                        raise ValueError(
+                            f"Failed to set target_index: {self.index_name}"
+                        )
+
+                self.target_index_resource_name = self.target_index.name
+
+                # init target index to import vectors to
+                self.target_vertexai_index = aip.MatchingEngineIndex(
+                    self.target_index_resource_name
                 )
+                print(f"Importing to index: {self.target_vertexai_index.display_name}")
+                print(f"Full resource name: {self.target_vertexai_index.resource_name}")
+                print("Target index config:")
 
-        self.target_index_resource_name = self.target_index.name
-
-        # init target index to import vectors to
-        self.target_vertexai_index = aip.MatchingEngineIndex(
-            self.target_index_resource_name
-        )
-        print(f"Importing to index: {self.target_vertexai_index.display_name}")
-        print(f"Full resource name: {self.target_vertexai_index.resource_name}")
-        print("Target index config:")
-
-        index_config_dict = self.target_vertexai_index.to_dict()
-        _index_meta_config = index_config_dict["metadata"]["config"]
-        tqdm.write(json.dumps(_index_meta_config, indent=4))
+                index_config_dict = self.target_vertexai_index.to_dict()
+                _index_meta_config = index_config_dict["metadata"]["config"]
+                tqdm.write(json.dumps(_index_meta_config, indent=4))
 
     # =========================================================
     # VectorSearch helpers
@@ -260,10 +291,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
         indexes = []
         if self.index_name is not None:
             all_indexes = [index for index in self.list_indexes()]
-
-            print(f"Checking if {self.index_name} already exists...")
             try:
-                print("Checking existing Index display_names and resource_names...")
                 indexes = [
                     index.name
                     for index in all_indexes
@@ -277,7 +305,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 pass
             if not indexes:
                 try:
-                    print("checking deployed_indexes...")
+                    # checking deployed indexes
                     for test_index in all_indexes:
                         if test_index.deployed_indexes:
                             # grabbing all deployed indexes
@@ -306,15 +334,13 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 except Exception as e:
                     print(f"not an existing deployed_index: {e}")
                     pass
-        else:
-            raise ResourceNotExistException("index")
 
         if len(indexes) == 0:
             print(f"Index {self.index_name} not found")
             return None
         else:
             index_id = indexes[0]
-            print("Found existing index")
+            # print("Found existing index")
             request = aipv1.GetIndexRequest(name=index_id)
             index = self.index_client.get_index(request=request)
             return index
@@ -472,14 +498,18 @@ class ImportVertexAIVectorSearch(ImportVDF):
     ) -> Index:
         """
 
-        :param index_name:
         :param contents_delta_uri:
         :param dimensions:
+        :param approximate_neighbors_count:
+        :param leaf_node_embedding_count:
+        :param leaf_nodes_to_search_percent:
+        :param distance_measure_type:
+        :param shard_size:
+        :param index_name:
         :return:
         """
 
         if index_name is not None:
-            index_name = self.args["target_index_name"]
             self._set_index_name(index_name=index_name)
         # Get index
         if self.index_name is None:
@@ -569,7 +599,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 while True:
                     if r.done():
                         break
-                    time.sleep(5)
+                    time.sleep(10)
                     print(".", end="")
 
                 index_endpoint = r.result()
@@ -578,6 +608,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
             print(f"Failed to create index endpoint {self.index_endpoint_name}")
             raise e
 
+        print(f"\nReturning index endpoint: {index_endpoint}")
         return index_endpoint
 
     def _deploy_index(
@@ -597,13 +628,8 @@ class ImportVertexAIVectorSearch(ImportVDF):
         :param max_replicas:
         :return:
         """
-        if index_name is not None:
-            self._set_index_name(index_name=index_name)
 
-        if endpoint_name is not None:
-            self._set_index_endpoint_name(index_endpoint_name=endpoint_name)
-
-        index = self.index_name
+        index = self._get_index()
         index_endpoint = self._get_index_endpoint()
 
         # Deploy Index to endpoint
@@ -659,9 +685,18 @@ class ImportVertexAIVectorSearch(ImportVDF):
         return index_endpoint
 
     def upsert_data(self):
-        for index_name, index_meta in self.vdf_meta["indexes"].items():
+        for new_index_name, (index_name, index_meta) in zip(
+            self.index_names, self.vdf_meta["indexes"].items()
+        ):
+            self.index_name = new_index_name
+            self.target_index = self._get_index()
+            self.target_index_resource_name = self.target_index.name
+            # init target index to import vectors to
+            self.target_vertexai_index = aip.MatchingEngineIndex(
+                self.target_index_resource_name
+            )
             # load data
-            print(f"Importing data from: {index_name}")
+            print(f"Importing data from {index_name} to {self.target_vertexai_index.display_name}")
             print(f"index_meta: {index_meta}")
 
             for namespace_meta in index_meta:
