@@ -46,20 +46,12 @@ class ImportVertexAIVectorSearch(ImportVDF):
         self.DB_NAME_SLUG = DBNames.VERTEXAI
         self.project_id = self.args["project_id"]
         self.location = self.args["location"]
-        self.batch_size = (
-            self.args["batch_size"]
-            if ("batch_size" in self.args and self.args["batch_size"] is not None)
-            else 100
-        )
+        self.batch_size = self.args.get("batch_size", 100)
 
         # optional
-        self.create_new_index = (
-            self.args["create_new_index"] if self.args["create_new_index"] else False
-        )
+        self.create_new_index = self.args.get("create_new_index", False)
 
-        self.deploy_new_index = (
-            self.args["deploy_new_index"] if self.args["deploy_new_index"] else False
-        )
+        self.deploy_new_index = self.args.get("deploy_new_index", False)
 
         # =========================================================
         # set index, endpoint, and SDK client
@@ -144,34 +136,13 @@ class ImportVertexAIVectorSearch(ImportVDF):
 
         if self.create_new_index:
             # optional; used if create_new_index = True
-            self.approx_nn_count = (
-                self.args["approx_nn_count"]
-                if self.args["approx_nn_count"] is not None
-                else 150
+            self.approx_nn_count = self.args.get("approx_nn_count", 150)
+            self.leaf_node_emb_count = self.args.get("leaf_node_emb_count", 1000)
+            self.leaf_nodes_percent = self.args.get("leaf_nodes_percent", 7)
+            self.distance_measure = self.args.get(
+                "distance_measure", "DOT_PRODUCT_DISTANCE"
             )
-
-            self.leaf_node_emb_count = (
-                self.args["leaf_node_emb_count"]
-                if self.args["leaf_node_emb_count"] is not None
-                else 1000
-            )
-
-            self.leaf_nodes_percent = (
-                self.args["leaf_nodes_percent"]
-                if self.args["leaf_nodes_percent"] is not None
-                else 7
-            )
-
-            self.distance_measure = (
-                self.args["distance_measure"]
-                if self.args["distance_measure"] is not None
-                else "DOT_PRODUCT_DISTANCE"
-            )
-            self.shard_size = (
-                self.args["shard_size"]
-                if self.args["shard_size"] is not None
-                else "SHARD_SIZE_MEDIUM"
-            )
+            self.shard_size = self.args.get("shard_size", "SHARD_SIZE_MEDIUM")
 
             unique_id = uuid.uuid4()
 
@@ -180,9 +151,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 print(f"Creating new index: {self.index_name} ...")
 
             if self.args["gcs_bucket"] is None:
-                raise ValueError(f"Please set valid gcs_bucket name; exclude `gs://`")
+                raise ValueError("Please set valid gcs_bucket name; exclude `gs://`")
             elif self.args["dimensions"] is None:
-                raise ValueError(f"Please set `dimensions`")
+                raise ValueError("Please set `dimensions`")
             else:
                 self.gcs_bucket = self.args["gcs_bucket"]
                 self.gcs_folder = "init_index"
@@ -223,21 +194,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 # Note: Don't need to deploy index to upsert vectors to index
 
                 # optional; used if deploy_new_index = True
-                self.machine_type = (
-                    self.args["machine_type"]
-                    if self.args["machine_type"] is not None
-                    else "e2-standard-16"
-                )
-                self.min_replicas = (
-                    self.args["min_replicas"]
-                    if self.args["min_replicas"] is not None
-                    else 1
-                )
-                self.max_replicas = (
-                    self.args["max_replicas"]
-                    if self.args["max_replicas"] is not None
-                    else 1
-                )
+                self.machine_type = self.args.get("machine_type", "e2-standard-16")
+                self.min_replicas = self.args.get("min_replicas", 1)
+                self.max_replicas = self.args.get("max_replicas", 1)
 
                 self._deploy_index(
                     index_name=self.index_name,
@@ -261,7 +220,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
         )
         print(f"Importing to index: {self.target_vertexai_index.display_name}")
         print(f"Full resource name: {self.target_vertexai_index.resource_name}")
-        print(f"Target index config:")
+        print("Target index config:")
 
         index_config_dict = self.target_vertexai_index.to_dict()
         _index_meta_config = index_config_dict["metadata"]["config"]
@@ -304,7 +263,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
 
             print(f"Checking if {self.index_name} already exists...")
             try:
-                print(f"Checking existing Index display_names and resource_names...")
+                print("Checking existing Index display_names and resource_names...")
                 indexes = [
                     index.name
                     for index in all_indexes
@@ -318,7 +277,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 pass
             if not indexes:
                 try:
-                    print(f"checking deployed_indexes...")
+                    print("checking deployed_indexes...")
                     for test_index in all_indexes:
                         if test_index.deployed_indexes:
                             # grabbing all deployed indexes
@@ -355,7 +314,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
             return None
         else:
             index_id = indexes[0]
-            print(f"Found existing index")
+            print("Found existing index")
             request = aipv1.GetIndexRequest(name=index_id)
             index = self.index_client.get_index(request=request)
             return index
@@ -672,7 +631,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
                     "max_replica_count": max_replicas,
                 },
             }
-            print(f"Deploying index with request:")
+            print("Deploying index with request:")
             tqdm.write(json.dumps(deploy_index_config, indent=4))
             r = self.index_endpoint_client.deploy_index(
                 index_endpoint=index_endpoint.name,
@@ -825,7 +784,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
 
                         self.index_client.upsert_datapoints(request=upsert_request)
 
-        print(f"Index import complete")
+        print("Index import complete")
         print(
             f"Updated {self.target_vertexai_index.display_name} with {len(total_ids)} vectors"
         )
