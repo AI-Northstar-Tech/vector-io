@@ -13,8 +13,6 @@ from google.cloud.aiplatform import MatchingEngineIndex  # as vs
 from google.cloud.aiplatform import MatchingEngineIndexEndpoint  # as vsep
 
 import os
-import json
-import pandas as pd
 from tqdm import tqdm
 
 

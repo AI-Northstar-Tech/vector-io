@@ -162,7 +162,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
 
                     # optional; used if create_new_index = True
                     self.approx_nn_count = self.args.get("approx_nn_count", 150)
-                    self.leaf_node_emb_count = self.args.get("leaf_node_emb_count", 1000)
+                    self.leaf_node_emb_count = self.args.get(
+                        "leaf_node_emb_count", 1000
+                    )
                     self.leaf_nodes_percent = self.args.get("leaf_nodes_percent", 7)
                     self.distance_measure = self.args.get(
                         "distance_measure", "DOT_PRODUCT_DISTANCE"
@@ -182,15 +184,15 @@ class ImportVertexAIVectorSearch(ImportVDF):
                                 f"Created bucket {new_bucket.name} in {new_bucket.location}"
                             )
                         except Exception as e:
-                            print(
-                                f"{self.gcs_bucket} bucket already exists {e}"
-                            )
+                            print(f"{self.gcs_bucket} bucket already exists {e}")
                             pass
                     self.gcs_folder = "init_index"
                     self.local_file_name = "embeddings_0.json"
-                    self.contents_delta_uri = f"gs://{self.gcs_bucket}/{self.gcs_folder}"
+                    self.contents_delta_uri = (
+                        f"gs://{self.gcs_bucket}/{self.gcs_folder}"
+                    )
 
-                    # dummy embedding - TODO: use input data from parquet(?) 
+                    # dummy embedding - TODO: use input data from parquet(?)
                     init_embedding = {
                         "id": str(unique_id),
                         "embedding": list(np.zeros(self.dimensions)),
@@ -202,7 +204,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
 
                     # upload to GCS
                     bucket_client = self.storage_client.bucket(self.gcs_bucket)
-                    blob = bucket_client.blob(f"{self.gcs_folder}/{self.local_file_name}")
+                    blob = bucket_client.blob(
+                        f"{self.gcs_folder}/{self.local_file_name}"
+                    )
                     blob.upload_from_filename(f"{self.local_file_name}")
 
                     self.target_index = self._create_index(
@@ -225,7 +229,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
                         )
 
                         # optional; used if deploy_new_index = True
-                        self.machine_type = self.args.get("machine_type", "e2-standard-16")
+                        self.machine_type = self.args.get(
+                            "machine_type", "e2-standard-16"
+                        )
                         self.min_replicas = self.args.get("min_replicas", 1)
                         self.max_replicas = self.args.get("max_replicas", 1)
 
@@ -696,7 +702,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 self.target_index_resource_name
             )
             # load data
-            print(f"Importing data from {index_name} to {self.target_vertexai_index.display_name}")
+            print(
+                f"Importing data from {index_name} to {self.target_vertexai_index.display_name}"
+            )
             print(f"index_meta: {index_meta}")
 
             for namespace_meta in index_meta:
