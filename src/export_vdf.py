@@ -116,12 +116,6 @@ def export_kdbai(args):
         "Enter the name of table to export:",
         str,
     )
-    set_arg_from_input(
-        args,
-        "model",
-        "Enter the embedding model used:",
-        str,
-    )
     set_arg_from_password(
         args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
     )
