@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BATCH_SIZE = 1000  # Set the desired batch size
+BATCH_SIZE = 100  # Set the desired batch size
 
 
 class ImportPinecone(ImportVDF):
