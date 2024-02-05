@@ -5,13 +5,13 @@ import os
 import sys
 import time
 from dotenv import load_dotenv
-from export_vdf.pinecone_export import ExportPinecone
-from export_vdf.qdrant_export import ExportQdrant
+#from export_vdf.pinecone_export import ExportPinecone
+#from export_vdf.qdrant_export import ExportQdrant
 from export_vdf.kdbai_export import ExportKDBAI
-from export_vdf.milvus_export import ExportMilvus
+#from export_vdf.milvus_export import ExportMilvus
 from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
-from push_to_hub import push_to_hub
+#from push_to_hub import push_to_hub
 from util import set_arg_from_input, set_arg_from_password
 import warnings
 
@@ -110,16 +110,16 @@ def export_kdbai(args):
         "Enter the KDB.AI endpoint instance: ",
         str,
     )
-    set_arg_from_input(
-        args,
-        "tables",
-        "Enter the name of table to export:",
-        str,
-    )
     set_arg_from_password(
         args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
     )
     kdbai_export = ExportKDBAI(args)
+    set_arg_from_input(
+        args,
+        "tables",
+        f"Enter the name of table to export: {kdbai_export.get_all_table_names()}",
+        str,
+    )
     kdbai_export.get_data()
     return kdbai_export
 
@@ -229,7 +229,6 @@ def main():
     parser_kdbai.add_argument(
         "-t", "--kdbai_table", type=str, help="KDB.AI table to export"
     )
-    parser_kdbai.add_argument("-m", "--model", type=str, help="Embedding model used")
 
     # Pinecone
     parser_pinecone = subparsers.add_parser(

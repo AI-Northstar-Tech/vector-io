@@ -4,6 +4,8 @@ import os
 from dotenv import load_dotenv
 from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
+from util import standardize_metric_reverse, standardize_metric
+
 
 
 load_dotenv()
@@ -17,13 +19,14 @@ class ExportKDBAI(ExportVDB):
         api_key = args.get("kdbai_api_key")
         endpoint = args.get("url")
         self.session = kdbai.Session(api_key=api_key, endpoint=endpoint)
+        self.model = args.get("model_name")
 
     def get_all_table_names(self):
         return self.session.list()
 
     def get_data(self):
         table_name = self.args["tables"]
-        model = self.args["model"]
+        model = self.model
         vectors_directory = os.path.join(self.vdf_directory, table_name)
         os.makedirs(vectors_directory, exist_ok=True)
 
@@ -41,7 +44,7 @@ class ExportKDBAI(ExportVDB):
             if "vectorIndex" in tab_schema["columns"][i].keys():
                 embedding_name = tab_schema["columns"][i]["name"]
                 embedding_dims = tab_schema["columns"][i]["vectorIndex"]["dims"]
-                embedding_dist = tab_schema["columns"][i]["vectorIndex"]["metric"]
+                embedding_dist = standardize_metric(tab_schema["columns"][i]["vectorIndex"]["metric"], self.DB_NAME_SLUG)
 
         namespace_meta = {
             "namespace": "",

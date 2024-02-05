@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import kdbai_client as kdbai
 from names import DBNames
 from import_vdf.vdf_import_cls import ImportVDF
+from util import standardize_metric_reverse, standardize_metric
 import json
 import pyarrow.parquet as pq
 
@@ -50,14 +51,14 @@ class ImportKDBAI(ImportVDF):
                 "name": vector_columns,
                 "vectorIndex": {
                     "dims": indexes_content[index_names[0]][""][0]["dimensions"],
-                    "metric": indexes_content[index_names[0]][""][0]["metric"],
-                    "type": self.index,
+                    "metric": standardize_metric_reverse(indexes_content[index_names[0]][""][0]["metric"],self.DB_NAME_SLUG),
+                    "type": self.index.lower(),
                 },
             }
         )
 
-        allowed_vector_types = ["FLAT", "IVF", "IVFPQ", "HNSW"]
-        if self.index.upper() not in allowed_vector_types:
+        allowed_vector_types = ["flat", "ivf", "ivfpq", "hnsw"]
+        if self.index.lower() not in allowed_vector_types:
             raise ValueError(
                 f"Invalid vectorIndex type: {self.index}. "
                 f"Allowed types are {', '.join(allowed_vector_types)}"
@@ -67,16 +68,6 @@ class ImportKDBAI(ImportVDF):
         for col in parquet_columns:
             if col["name"] != vector_columns:
                 schema["columns"].append({"name": col["name"], "pytype": col["type"]})
-
-        for column in schema["columns"]:
-            if "vectorIndex" in column:
-                # Check and update the 'metric' value based on conditions
-                if column["vectorIndex"]["metric"] == "Euclid":
-                    column["vectorIndex"]["metric"] = "L2"
-                elif column["vectorIndex"]["metric"] == "Cosine":
-                    column["vectorIndex"]["metric"] = "CS"
-                elif column["vectorIndex"]["metric"] == "DotProduct":
-                    column["vectorIndex"]["metric"] = "IP"
 
         for column in schema["columns"]:
             if "pytype" in column and column["pytype"] == "string":
