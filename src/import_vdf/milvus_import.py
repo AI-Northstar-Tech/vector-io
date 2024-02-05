@@ -139,7 +139,10 @@ class ImportMilvus(ImportVDF):
                         )
                         data_rows.append(row)
                     BATCH_SIZE = 100
-                    for i in tqdm(range(0, len(data_rows), BATCH_SIZE), desc="Upserting in Batches"):
+                    for i in tqdm(
+                        range(0, len(data_rows), BATCH_SIZE),
+                        desc="Upserting in Batches",
+                    ):
                         mr = collection.insert(data_rows[i : i + BATCH_SIZE])
                         num_inserted += mr.succ_count
 

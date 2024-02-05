@@ -6,6 +6,7 @@ import sys
 import json
 import yaml
 
+
 def expand_shorthand_path(shorthand_path):
     """
     Expand shorthand notations in a file path to a full path-like object.
@@ -22,5 +23,8 @@ def expand_shorthand_path(shorthand_path):
     return str(full_path)
 
 
-
-print(yaml.dump(json.load(open(expand_shorthand_path(sys.argv[1]))), default_flow_style=False))
+print(
+    yaml.dump(
+        json.load(open(expand_shorthand_path(sys.argv[1]))), default_flow_style=False
+    )
+)

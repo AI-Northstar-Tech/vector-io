@@ -19,7 +19,11 @@ def push_to_hub(export_obj, args):
         os.environ["HUGGING_FACE_TOKEN"] = getpass(
             prompt="Enter your HuggingFace API token (with write access): "
         )
-    if "HF_USERNAME" not in args or args["HF_USERNAME"] is None or args["HF_USERNAME"] == "":
+    if (
+        "HF_USERNAME" not in args
+        or args["HF_USERNAME"] is None
+        or args["HF_USERNAME"] == ""
+    ):
         if "HF_USERNAME" not in os.environ or os.environ["HF_USERNAME"] is None:
             # set HF_USERNAME env var
             os.environ["HF_USERNAME"] = input("Enter your HuggingFace username: ")
