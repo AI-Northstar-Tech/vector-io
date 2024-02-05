@@ -1,10 +1,12 @@
 import json
+from typing import Dict, List
 from qdrant_client import QdrantClient
 import os
 from tqdm import tqdm
 from dotenv import load_dotenv
 from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
+from meta_types import NamespaceMeta
 from util import standardize_metric
 
 load_dotenv()
@@ -40,7 +42,7 @@ class ExportQdrant(ExportVDB):
         else:
             collection_names = self.args["collections"].split(",")
 
-        index_metas = {}
+        index_metas: Dict[str, List[NamespaceMeta]] = {}
         for collection_name in tqdm(collection_names, desc="Fetching indexes"):
             index_meta = self.get_data_for_collection(collection_name)
             index_metas[collection_name] = index_meta
@@ -80,7 +82,7 @@ class ExportQdrant(ExportVDB):
             )
             return self.try_scroll((fetch_size * 2) // 3, collection_name, next_offset)
 
-    def get_data_for_collection(self, collection_name):
+    def get_data_for_collection(self, collection_name) -> List[NamespaceMeta]:
         vectors_directory = os.path.join(self.vdf_directory, collection_name)
         os.makedirs(vectors_directory, exist_ok=True)
 
@@ -107,24 +109,23 @@ class ExportQdrant(ExportVDB):
             )
             pbar.update(len(records))
 
-        namespace_meta = {
-            "index_name": collection_name,
-            "namespace": "",
-            "total_vector_count": total,
-            "exported_vector_count": num_vectors_exported,
-            "metric": standardize_metric(
+        namespace_meta = NamespaceMeta(
+            index_name=collection_name,
+            namespace="",
+            total_vector_count=total,
+            exported_vector_count=num_vectors_exported,
+            metric=standardize_metric(
                 self.client.get_collection(
                     collection_name
                 ).config.params.vectors.distance,
                 self.DB_NAME_SLUG,
             ),
-            "dimensions": dim,
-            "model_name": self.args["model_name"],
-            "vector_columns": ["vector"],
-            "data_path": "/".join(vectors_directory.split("/")[1:]),
-        }
-
-        return namespace_meta
+            dimensions=dim,
+            model_name=self.args["model_name"],
+            vector_columns=["vector"],
+            data_path="/".join(vectors_directory.split("/")[1:]),
+        )
+        return [namespace_meta]
 
     def save_from_records(self, records, vectors_directory):
         num_vectors_exported = 0
