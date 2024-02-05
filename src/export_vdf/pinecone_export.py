@@ -295,7 +295,7 @@ class ExportPinecone(ExportVDB):
 
     def unmark_vectors_as_exported(self, all_ids, namespace, hash_value):
         if (
-            self.args.get("modify_to_search") == False
+            self.args.get("modify_to_search") is False
             or not self.collected_ids_by_modifying
         ):
             return
@@ -325,7 +325,7 @@ class ExportPinecone(ExportVDB):
                     cur_vec.sparse_values = vector_data["sparseValues"]
                 upsert_data.append(cur_vec)
             # upsert the vectors
-            resp = self.index.upsert(vectors=upsert_data, namespace=namespace)
+            self.index.upsert(vectors=upsert_data, namespace=namespace)
         tqdm.write(f"Unmarked {len(all_ids)} vectors as exported.")
 
     def get_data(self):
