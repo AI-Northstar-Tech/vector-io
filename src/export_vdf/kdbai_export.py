@@ -1,3 +1,15 @@
+import json
+import kdbai_client as kdbai
+import os
+from dotenv import load_dotenv
+from export_vdf.vdb_export_cls import ExportVDB
+from names import DBNames
+from util import standardize_metric
+from pathlib import Path
+
+
+load_dotenv()
+
 class ExportKDBAI(ExportVDB):
     DB_NAME_SLUG = DBNames.KDBAI
 
@@ -11,7 +23,7 @@ class ExportKDBAI(ExportVDB):
         return self.session.list()
 
     def get_data(self):
-        table_name = self.args["kdbai_table"]
+        table_name = self.args["tables"]
         model = self.args["model"]
         vectors_directory = os.path.join(self.vdf_directory, table_name)
         os.makedirs(vectors_directory, exist_ok=True)

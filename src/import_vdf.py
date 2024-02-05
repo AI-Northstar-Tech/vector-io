@@ -9,6 +9,7 @@ from names import DBNames
 from util import set_arg_from_input, set_arg_from_password
 from import_vdf.pinecone_import import ImportPinecone
 from import_vdf.qdrant_import import ImportQdrant
+from import_vdf.kdbai_import import ImportKDBAI
 from import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
@@ -31,6 +32,27 @@ def import_qdrant(args):
     qdrant_import = ImportQdrant(args)
     qdrant_import.upsert_data()
 
+def import_kdbai(args):
+    """
+    Import data to KDB.AI
+    """
+    set_arg_from_input(
+        args,
+        "url",
+        "Enter the endpoint for KDB.AI Cloud instance: ",
+        str,
+    )
+    set_arg_from_password(
+        args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
+    )
+    set_arg_from_input(
+        args,
+        "ind",
+        "Enter the index type used: ",
+        str,
+    )
+    kdbai_import = ImportKDBAI(args)
+    kdbai_import.upsert_data()
 
 def import_pinecone(args):
     """
@@ -143,6 +165,13 @@ def main():
     )
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
 
+    # KDB.AI
+    parser_kdbai = subparsers.add_parser(
+        DBNames.KDBAI, help="Import data to KDB.AI"
+    )
+    parser_kdbai.add_argument("-u", "--endpoint", type=str, help="KDB.AI Cloud instance Endpoint url")
+    parser_kdbai.add_argument("-i", "--index", type=str, help="Index used")
+
     args = parser.parse_args()
     args = vars(args)
     # open VERSION.txt which is in the parent directory of this script
@@ -168,6 +197,8 @@ def main():
         import_pinecone(args)
     elif args["vector_database"] == DBNames.QDRANT:
         import_qdrant(args)  # Add the function to import data to Qdrant
+    elif args["vector_database"] == DBNames.KDBAI:
+        import_kdbai(args)
     else:
         print(
             "Unrecognized DB. Please choose a vector database to export data from:",
