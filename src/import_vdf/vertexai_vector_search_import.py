@@ -710,7 +710,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
             for namespace_meta in index_meta:
                 # get data path
                 data_path = namespace_meta["data_path"]
-                print(f"data_path: {data_path}")
+                final_data_path = self.get_final_data_path(data_path)
 
                 # get col names
                 vector_metadata_names, vector_column_name = self.get_vector_column_name(
@@ -720,11 +720,11 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 print(f"vector_metadata_names : {vector_metadata_names}")
 
                 # Load the data from the parquet files
-                parquet_files = self.get_parquet_files(data_path)
+                parquet_files = self.get_parquet_files(final_data_path)
 
                 total_ids = []
                 for file in tqdm(parquet_files, desc="Inserting data"):
-                    file_path = os.path.join(data_path, file)
+                    file_path = os.path.join(final_data_path, file)
                     df = pd.read_parquet(file_path)
                     df["id"] = df["id"].apply(lambda x: str(x))
 
