@@ -710,9 +710,10 @@ class ImportVertexAIVectorSearch(ImportVDF):
             return self.index_client.upsert_datapoints(request=upsert_request)
 
         # upsert for each index
-        for new_index_name, (index_name, index_meta) in tqdm(zip(
-            self.index_names, self.vdf_meta["indexes"].items()
-        ), desc="Iterating over indexes"):
+        for new_index_name, (index_name, index_meta) in tqdm(
+            zip(self.index_names, self.vdf_meta["indexes"].items()),
+            desc="Iterating over indexes",
+        ):
             self.index_name = new_index_name
             self.target_index = self._get_index()
             self.target_index_resource_name = self.target_index.name
