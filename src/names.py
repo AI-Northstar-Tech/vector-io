@@ -3,3 +3,4 @@ class DBNames:
     QDRANT = "qdrant"
     MILVUS = "milvus"
     VERTEXAI = "vertexai_vectorsearch"
+    KDBAI = "kdbai"

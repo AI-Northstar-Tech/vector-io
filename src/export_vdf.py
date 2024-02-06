@@ -5,8 +5,10 @@ import os
 import sys
 import time
 from dotenv import load_dotenv
+
 from export_vdf.pinecone_export import ExportPinecone
 from export_vdf.qdrant_export import ExportQdrant
+from export_vdf.kdbai_export import ExportKDBAI
 from export_vdf.milvus_export import ExportMilvus
 from export_vdf.vertexai_vector_search_export import ExportVertexAIVectorSearch
 from export_vdf.vdb_export_cls import ExportVDB
@@ -107,6 +109,33 @@ def export_qdrant(args):
     return qdrant_export
 
 
+def export_kdbai(args):
+    """
+    Export data from KDBAI
+    """
+    set_arg_from_input(
+        args,
+        "url",
+        "Enter the KDB.AI endpoint instance: ",
+        str,
+    )
+    set_arg_from_password(
+        args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
+    )
+    kdbai_export = ExportKDBAI(args)
+    set_arg_from_input(
+        args,
+        "tables",
+        f"Enter the name of table to export: {kdbai_export.get_all_table_names()}",
+        str,
+        None,
+    )
+    if args.get("tables", None) == "":
+        args["tables"] = ",".join(kdbai_export.get_all_table_names())
+    kdbai_export.get_data()
+    return kdbai_export
+
+
 def export_milvus(args):
     """
     Export data from Milvus
@@ -159,40 +188,6 @@ def export_vertexai_vectorsearch(args):
 
 
 def main():
-    """
-    Export data from various vector databases to the VDF format for vector datasets.
-
-    Usage:
-        python export.py <vector_database> [options]
-
-    Arguments:
-        vector_database (str): Choose the vectors database to export data from.
-            Possible values: "pinecone", "qdrant", "vertexai_vectorsearch".
-
-    Options:
-        Pinecone:
-            -e, --environment (str): Environment of Pinecone instance.
-            -i, --index (str): Name of indexes to export (comma-separated).
-
-        Qdrant:
-            -u, --url (str): Location of Qdrant instance.
-            -c, --collections (str): Names of collections to export (comma-separated).
-
-        Vertex AI Vector Search:
-            -p, --project-id (str): Google Cloud Project ID.
-            -i, --index (str): Name of indexes to export (comma-separated).
-            -c, --gcloud-credentials-file: Path to Goofle Cloud Service Account credentials
-
-    Examples:
-        Export data from Pinecone:
-        python export_vdf.py pinecone -e my_env -i my_index
-
-        Export data from Qdrant:
-        python export_vdf.py qdrant -u http://localhost:6333 -c my_collection
-
-        Export data from Vertex AI Vector Search:
-        python export_vdf.py vertexai_vectorsearch -p your_project_id -i your_index
-    """
     parser = argparse.ArgumentParser(
         description="Export data from various vector databases to the VDF format for vector datasets"
     )
@@ -228,6 +223,15 @@ def main():
         title="Vector Databases",
         description="Choose the vectors database to export data from",
         dest="vector_database",
+    )
+
+    # KDB.AI
+    parser_kdbai = subparsers.add_parser("kdbai", help="Export data from KDB.AI")
+    parser_kdbai.add_argument(
+        "-u", "--url", type=str, help="KDB.AI cloud endpoint to connect"
+    )
+    parser_kdbai.add_argument(
+        "-t", "--tables", type=str, help="KDB.AI tables to export (comma-separated)"
     )
 
     # Pinecone
@@ -339,6 +343,8 @@ def main():
         export_obj = export_pinecone(args)
     elif args["vector_database"] == DBNames.QDRANT:
         export_obj = export_qdrant(args)
+    elif args["vector_database"] == "kdbai":
+        export_obj = export_kdbai(args)
     elif args["vector_database"] == DBNames.MILVUS:
         export_obj = export_milvus(args)
     elif args["vector_database"] == DBNames.VERTEXAI:
