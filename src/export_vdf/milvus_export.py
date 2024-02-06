@@ -1,4 +1,3 @@
-from pydantic import BaseModel, ConfigDict
 from typing import Dict, List
 import os
 import json
@@ -8,33 +7,12 @@ from tqdm import tqdm
 from pymilvus import connections, utility, Collection
 
 from export_vdf.vdb_export_cls import ExportVDB
+from meta_types import NamespaceMeta, VDFMeta
 from util import standardize_metric
 from names import DBNames
 
 
 MAX_FETCH_SIZE = 1_000
-
-
-class NamespaceMeta(BaseModel):
-    namespace: str
-    index_name: str
-    total_vector_count: int
-    exported_vector_count: int
-    dimensions: int
-    model_name: str
-    vector_columns: List[str] = ["vector"]
-    data_path: str
-    metric: str
-    model_config = ConfigDict(protected_namespaces=())
-
-
-class VDFMeta(BaseModel):
-    version: str
-    file_structure: List[str]
-    author: str
-    exported_from: str = "milvus"
-    indexes: Dict[str, List[NamespaceMeta]]
-    exported_at: str
 
 
 class ExportMilvus(ExportVDB):
@@ -64,7 +42,7 @@ class ExportMilvus(ExportVDB):
         else:
             collection_names = self.args.get("collections").split(",")
 
-        index_metas = {}
+        index_metas: Dict[str, List[NamespaceMeta]] = {}
         for collection_name in tqdm(collection_names, desc="Fetching indexes"):
             index_meta = self.get_data_for_collection(collection_name)
             index_metas[collection_name] = index_meta

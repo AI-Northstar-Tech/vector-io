@@ -3,6 +3,7 @@
 import argparse
 import os
 import time
+from typing import Any
 from dotenv import load_dotenv
 from names import DBNames
 
@@ -41,9 +42,37 @@ def import_qdrant(args):
     set_arg_from_input(
         args,
         "url",
-        "Enter the url of Qdrant instance (default: 'http://localhost:6333'): ",
+        "Enter the URL of Qdrant instance (default: 'http://localhost:6334'): ",
         str,
-        "http://localhost:6333",
+        "http://localhost:6334",
+    )
+    set_arg_from_input(
+        args,
+        "prefer_grpc",
+        "Whether to use GRPC. Recommended. (default: True): ",
+        bool,
+        True,
+    )
+    set_arg_from_input(
+        args,
+        "parallel",
+        "Enter the batch size for upserts (default: 64): ",
+        int,
+        1,
+    )
+    set_arg_from_input(
+        args,
+        "batch_size",
+        "Enter the number of parallel processes of upload (default: 1): ",
+        int,
+        64,
+    )
+    set_arg_from_input(
+        args,
+        "max_retries",
+        "Enter the maximum number of retries in case of a failure (default: 3): ",
+        int,
+        3,
     )
     set_arg_from_password(
         args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
@@ -285,6 +314,36 @@ def main():
     # Qdrant
     parser_qdrant = subparsers.add_parser(DBNames.QDRANT, help="Import data to Qdrant")
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
+    parser_qdrant.add_argument(
+        "--prefer_grpc",
+        type=bool,
+        help="Whether to use Qdrant's GRPC interface",
+        default=True,
+    )
+    parser_qdrant.add_argument(
+        "--batch_size",
+        type=int,
+        help="Batch size for upserts (default: 64).",
+        default=64,
+    )
+    parser_qdrant.add_argument(
+        "--parallel",
+        type=int,
+        help="Number of parallel processes of upload (default: 1).",
+        default=1,
+    )
+    parser_qdrant.add_argument(
+        "--max_retries",
+        type=int,
+        help="Maximum number of retries in case of a failure (default: 3).",
+        default=3,
+    )
+    parser_qdrant.add_argument(
+        "--shard_key_selector",
+        type=Any,
+        help="Shard to be queried (default: None)",
+        default=None,
+    )
 
     # Vertex AI VectorSearch
     parser_vertexai_vectorsearch = subparsers.add_parser(

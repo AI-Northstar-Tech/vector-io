@@ -82,9 +82,16 @@ def export_qdrant(args):
     set_arg_from_input(
         args,
         "url",
-        "Enter the url of Qdrant instance (hit return for 'http://localhost:6333'): ",
+        "Enter the URL of Qdrant instance (default: 'http://localhost:6334'): ",
         str,
-        "http://localhost:6333",
+        "http://localhost:6334",
+    )
+    set_arg_from_input(
+        args,
+        "prefer_grpc",
+        "Whether to use GRPC. Recommended. (default: True): ",
+        bool,
+        True,
     )
     set_arg_from_input(
         args,
@@ -270,6 +277,13 @@ def main():
     )
     parser_qdrant.add_argument(
         "-c", "--collections", type=str, help="Names of collections to export"
+    )
+    parser_qdrant.add_argument(
+        "--prefer_grpc",
+        type=bool,
+        help="Whether to use GRPC. Recommended. (default: True)",
+        default=True,
+        action=argparse.BooleanOptionalAction,
     )
     # Milvus
     parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")

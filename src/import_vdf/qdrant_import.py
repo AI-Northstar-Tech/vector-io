@@ -2,11 +2,15 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 from qdrant_client import QdrantClient
-import tqdm
+from tqdm import tqdm
 from names import DBNames
 from util import extract_numerical_hash
 from import_vdf.vdf_import_cls import ImportVDF
-from qdrant_client.http.models import VectorParams, Distance, PointStruct, UpdateStatus
+from grpc import RpcError
+from qdrant_client.http.exceptions import UnexpectedResponse
+from qdrant_client.http.models import VectorParams, Distance, PointStruct
+from typing import Dict, List
+from meta_types import NamespaceMeta
 
 load_dotenv()
 
@@ -18,16 +22,21 @@ class ImportQdrant(ImportVDF):
         # call super class constructor
         super().__init__(args)
         self.client = QdrantClient(
-            url=self.args["url"], api_key=self.args["qdrant_api_key"]
+            url=self.args["url"],
+            api_key=self.args.get("qdrant_api_key", None),
+            prefer_grpc=self.args.get("prefer_grpc", True),
         )
 
     def upsert_data(self):
         # we know that the self.vdf_meta["indexes"] is a list
-        for index_name, index_meta in self.vdf_meta["indexes"].items():
-            # load data
+        index_meta: Dict[str, List[NamespaceMeta]] = {}
+        for index_name, index_meta in tqdm(
+            self.vdf_meta["indexes"].items(), desc="Importing indexes"
+        ):
             tqdm.write(f"Importing data for index '{index_name}'")
-            for namespace_meta in index_meta:
+            for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
                 data_path = namespace_meta["data_path"]
+                final_data_path = self.get_final_data_path(data_path)
                 # list indexes
                 collections = [
                     x.name for x in self.client.get_collections().collections
@@ -63,7 +72,7 @@ class ImportQdrant(ImportVDF):
                         f"Index '{new_collection_name}' has {prev_vector_count} vectors before import"
                     )
                 # Load the data from the parquet files
-                parquet_files = self.get_parquet_files(data_path)
+                parquet_files = self.get_parquet_files(final_data_path)
 
                 vectors = {}
                 metadata = {}
@@ -71,7 +80,7 @@ class ImportQdrant(ImportVDF):
                     new_collection_name, namespace_meta
                 )
                 for file in parquet_files:
-                    file_path = os.path.join(data_path, file)
+                    file_path = os.path.join(final_data_path, file)
                     df = pd.read_parquet(file_path)
                     vectors.update(
                         {row["id"]: row[vector_column_name] for _, row in df.iterrows()}
@@ -87,21 +96,30 @@ class ImportQdrant(ImportVDF):
                         }
                     )
                 vectors = {k: v.tolist() for k, v in vectors.items()}
-                response = self.client.upsert(
-                    collection_name=new_collection_name,
-                    points=[
-                        PointStruct(
-                            id=int(idx)
-                            if idx.isdigit()
-                            else extract_numerical_hash(idx),
-                            vector=vectors[idx],
-                            payload=metadata.get(idx, {}),
-                        )
-                        for idx in vectors.keys()
-                    ],
-                    wait=True,
-                )
-                if response.status != UpdateStatus.COMPLETED:
+                points = [
+                    PointStruct(
+                        id=(
+                            int(idx)
+                            if (isinstance(idx, int) or idx.isdigit())
+                            else extract_numerical_hash(idx)
+                        ),
+                        vector=vectors[idx],
+                        payload=metadata.get(idx, {}),
+                    )
+                    for idx in vectors.keys()
+                ]
+
+                try:
+                    self.client.upload_points(
+                        collection_name=new_collection_name,
+                        points=points,
+                        batch_size=self.args.get("batch_size", 64),
+                        parallel=self.args.get("parallel", 1),
+                        max_retries=self.args.get("max_retries", 3),
+                        shard_key_selector=self.args.get("shard_key_selector", None),
+                        wait=True,
+                    )
+                except (UnexpectedResponse, RpcError, ValueError):
                     tqdm.write(
                         f"Failed to upsert data for collection '{new_collection_name}'"
                     )

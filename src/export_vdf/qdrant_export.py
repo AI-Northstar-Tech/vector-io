@@ -1,15 +1,18 @@
+import datetime
 import json
+from typing import Dict, List
 from qdrant_client import QdrantClient
 import os
 from tqdm import tqdm
 from dotenv import load_dotenv
 from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
+from meta_types import NamespaceMeta, VDFMeta
 from util import standardize_metric
 
 load_dotenv()
 
-MAX_FETCH_SIZE = 10_000
+MAX_FETCH_SIZE = 1_000
 
 
 class ExportQdrant(ExportVDB):
@@ -20,12 +23,11 @@ class ExportQdrant(ExportVDB):
         Initialize the class
         """
         super().__init__(args)
-        try:
-            self.client = QdrantClient(
-                url=self.args["url"], api_key=self.args["qdrant_api_key"]
-            )
-        except Exception:
-            self.client = QdrantClient(url=self.args["url"])
+        self.client = QdrantClient(
+            url=self.args["url"],
+            api_key=self.args.get("qdrant_api_key", None),
+            prefer_grpc=self.args.get("prefer_grpc", True),
+        )
 
     def get_all_collection_names(self):
         """
@@ -41,24 +43,26 @@ class ExportQdrant(ExportVDB):
         else:
             collection_names = self.args["collections"].split(",")
 
-        index_metas = {}
+        index_metas: Dict[str, List[NamespaceMeta]] = {}
         for collection_name in tqdm(collection_names, desc="Fetching indexes"):
             index_meta = self.get_data_for_collection(collection_name)
             index_metas[collection_name] = index_meta
 
         # Create and save internal metadata JSON
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
-        internal_metadata = {
-            "version": self.args["library_version"],
-            "file_structure": self.file_structure,
-            "author": os.environ.get("USER"),
-            "exported_from": self.DB_NAME_SLUG,
-            "indexes": index_metas,
-        }
+        internal_metadata = VDFMeta(
+            version=self.args["library_version"],
+            file_structure=self.file_structure,
+            author=os.environ.get("USER"),
+            exported_from=self.DB_NAME_SLUG,
+            indexes=index_metas,
+            exported_at=datetime.datetime.now().astimezone().isoformat(),
+        )
+        meta_text = json.dumps(internal_metadata.dict(), indent=4)
+        tqdm.write(meta_text)
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
-            json.dump(internal_metadata, json_file, indent=4)
+            json_file.write(meta_text)
         # print internal metadata properly
-        tqdm.write(json.dumps(internal_metadata, indent=4))
         return True
 
     def try_scroll(self, fetch_size, collection_name, next_offset):
@@ -69,6 +73,7 @@ class ExportQdrant(ExportVDB):
                 limit=fetch_size,
                 with_payload=True,
                 with_vectors=True,
+                shard_key_selector=self.args.get("shard_key_selector", None),
             )
             return records, next_offset, fetch_size
         except Exception as e:
@@ -76,11 +81,11 @@ class ExportQdrant(ExportVDB):
             if isinstance(e, KeyboardInterrupt):
                 raise e
             tqdm.write(
-                "Failed to fetch data, reducing fetch size to", (fetch_size * 2) // 3
+                f"Failed to fetch data, reducing fetch size to{(fetch_size * 2) // 3}"
             )
             return self.try_scroll((fetch_size * 2) // 3, collection_name, next_offset)
 
-    def get_data_for_collection(self, collection_name):
+    def get_data_for_collection(self, collection_name) -> List[NamespaceMeta]:
         vectors_directory = os.path.join(self.vdf_directory, collection_name)
         os.makedirs(vectors_directory, exist_ok=True)
 
@@ -107,24 +112,23 @@ class ExportQdrant(ExportVDB):
             )
             pbar.update(len(records))
 
-        namespace_meta = {
-            "index_name": collection_name,
-            "namespace": "",
-            "total_vector_count": total,
-            "exported_vector_count": num_vectors_exported,
-            "metric": standardize_metric(
+        namespace_meta = NamespaceMeta(
+            index_name=collection_name,
+            namespace="",
+            total_vector_count=total,
+            exported_vector_count=num_vectors_exported,
+            metric=standardize_metric(
                 self.client.get_collection(
                     collection_name
                 ).config.params.vectors.distance,
                 self.DB_NAME_SLUG,
             ),
-            "dimensions": dim,
-            "model_name": self.args["model_name"],
-            "vector_columns": ["vector"],
-            "data_path": "/".join(vectors_directory.split("/")[1:]),
-        }
-
-        return {"": [namespace_meta]}
+            dimensions=dim,
+            model_name=self.args["model_name"],
+            vector_columns=["vector"],
+            data_path="/".join(vectors_directory.split("/")[1:]),
+        )
+        return [namespace_meta]
 
     def save_from_records(self, records, vectors_directory):
         num_vectors_exported = 0
