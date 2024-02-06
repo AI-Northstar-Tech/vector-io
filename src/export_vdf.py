@@ -213,7 +213,7 @@ def main():
             -u, --endpoint (str): KDB.AI cloud instance endpoint.
             -t, --kdbai_table (str): Name of the KDB.AI table to export.
             -m, --model (str): Embedding model used
-        
+
     Examples:
         Export data from Pinecone:
         python export_vdf.py pinecone -e my_env -i my_index
