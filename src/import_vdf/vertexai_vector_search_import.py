@@ -139,7 +139,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
         for index_name, index_meta in self.vdf_meta["indexes"].items():
             # load data
             print(f"Importing data for index: {index_name}")
-            print(f"index_meta: {index_meta}")
+            print(f"index_meta: {json.dumps(index_meta, indent=4)}")
             for namespace_meta in index_meta:
                 all_indexes = [index.display_name for index in self.list_indexes()]
                 # check if index exists
@@ -710,9 +710,9 @@ class ImportVertexAIVectorSearch(ImportVDF):
             return self.index_client.upsert_datapoints(request=upsert_request)
 
         # upsert for each index
-        for new_index_name, (index_name, index_meta) in zip(
+        for new_index_name, (index_name, index_meta) in tqdm(zip(
             self.index_names, self.vdf_meta["indexes"].items()
-        ):
+        ), desc="Iterating over indexes"):
             self.index_name = new_index_name
             self.target_index = self._get_index()
             self.target_index_resource_name = self.target_index.name
@@ -721,14 +721,15 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 self.target_index_resource_name
             )
             # load data
-            print(
+            tqdm.write(
                 f"Importing data from {index_name} to {self.target_vertexai_index.display_name}"
             )
-            print(f"index_meta: {index_meta}")
+            tqdm.write(f"index_meta: {json.dumps(index_meta, indent=4)}")
 
-            for namespace_meta in index_meta:
+            for namespace_meta in tqdm(index_meta, desc="Iterating over namespaces"):
                 # get data path
                 data_path = namespace_meta["data_path"]
+                final_data_path = self.get_final_data_path(data_path)
                 print(f"data_path: {data_path}")
 
                 # get col names
@@ -739,17 +740,19 @@ class ImportVertexAIVectorSearch(ImportVDF):
                 print(f"vector_metadata_names : {vector_metadata_names}")
 
                 # Load the data from the parquet files
-                parquet_files = self.get_parquet_files(data_path)
+                parquet_files = self.get_parquet_files(final_data_path)
 
                 total_ids = []
-                for file in tqdm(parquet_files, desc="Inserting data"):
-                    file_path = os.path.join(data_path, file)
+                for file in tqdm(parquet_files, desc="Iterating over parquet files"):
+                    file_path = os.path.join(final_data_path, file)
                     df = pd.read_parquet(file_path)
                     df["id"] = df["id"].apply(lambda x: str(x))
 
                     insert_datapoints_payload = []
 
-                    for idx, row in df.iterrows():
+                    for idx, row in tqdm(
+                        df.iterrows(), desc="Iterating over rows", total=len(df)
+                    ):
                         row = json.loads(row.to_json())
 
                         total_ids.append(row["id"])
