@@ -1,11 +1,13 @@
 import pandas as pd
 from tqdm import tqdm
-from names import DBNames
-from util import standardize_metric_reverse
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
-from pinecone import Pinecone, ServerlessSpec, PodSpec, Vector
 import os
 from dotenv import load_dotenv
+
+from pinecone import Pinecone, ServerlessSpec, PodSpec, Vector
+
+from vdf_io.names import DBNames
+from vdf_io.util import standardize_metric_reverse
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
 
@@ -56,12 +58,14 @@ class ImportPinecone(ImportVDF):
                             ),
                             spec=PodSpec(
                                 environment=self.args["environment"],
-                                pod_type=self.args["pod_type"]
-                                if (
-                                    "pod_type" in self.args
-                                    and self.args["pod_type"] is not None
-                                )
-                                else "starter",
+                                pod_type=(
+                                    self.args["pod_type"]
+                                    if (
+                                        "pod_type" in self.args
+                                        and self.args["pod_type"] is not None
+                                    )
+                                    else "starter"
+                                ),
                             ),
                         )
                 except Exception as e:
@@ -143,19 +147,21 @@ class ImportPinecone(ImportVDF):
                     end_idx = min(start_idx + current_batch_size, len(vectors))
 
                     batch_vectors = [
-                        Vector(
-                            id=str(id),
-                            values=vector,
-                            metadata={
-                                k: v
-                                for k, v in metadata.get(id, {}).items()
-                                if v is not None
-                            },
-                        )
-                        if len(metadata.get(id, {}).keys()) > 0
-                        else Vector(
-                            id=str(id),
-                            values=vector,
+                        (
+                            Vector(
+                                id=str(id),
+                                values=vector,
+                                metadata={
+                                    k: v
+                                    for k, v in metadata.get(id, {}).items()
+                                    if v is not None
+                                },
+                            )
+                            if len(metadata.get(id, {}).keys()) > 0
+                            else Vector(
+                                id=str(id),
+                                values=vector,
+                            )
                         )
                         for id, vector in list(vectors.items())[start_idx:end_idx]
                     ]

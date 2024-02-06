@@ -1,0 +1,16 @@
+Help for 'export_vdf vertexai_vectorsearch':
+usage: export_vdf vertexai_vectorsearch [-h] [-p PROJECT_ID] [-i INDEX]
+                                        [-c GCLOUD_CREDENTIALS_FILE]
+                                        [-m MAX_VECTORS]
+
+options:
+  -h, --help            show this help message and exit
+  -p PROJECT_ID, --project-id PROJECT_ID
+                        Google Cloud Project ID
+  -i INDEX, --index INDEX
+                        Name of the index or indexes to export
+  -c GCLOUD_CREDENTIALS_FILE, --gcloud-credentials-file GCLOUD_CREDENTIALS_FILE
+                        Path to Google Cloud service account credentials file
+  -m MAX_VECTORS, --max_vectors MAX_VECTORS
+                        Optional: max vectors to retrieve
+

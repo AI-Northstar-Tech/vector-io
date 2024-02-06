@@ -4,7 +4,6 @@ import json
 import pyarrow.parquet as pq
 import os
 import argparse
-
 from tqdm import tqdm
 
 

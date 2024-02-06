@@ -1,0 +1,9 @@
+Help for 'import_vdf kdbai':
+usage: import_vdf kdbai [-h] [-u URL] [-i INDEX]
+
+options:
+  -h, --help            show this help message and exit
+  -u URL, --url URL     KDB.AI Cloud instance Endpoint url
+  -i INDEX, --index INDEX
+                        Index used
+

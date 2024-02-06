@@ -11,7 +11,7 @@ import sys
 from IPython.core import ultratb
 import warnings
 
-from util import (
+from vdf_io.util import (
     get_final_data_path,
     get_parquet_files,
     set_arg_from_input,

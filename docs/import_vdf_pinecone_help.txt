@@ -1,0 +1,16 @@
+Help for 'import_vdf pinecone':
+usage: import_vdf pinecone [-h] [-e ENVIRONMENT]
+                           [--serverless | --no-serverless] [-c CLOUD]
+                           [-r REGION]
+
+options:
+  -h, --help            show this help message and exit
+  -e ENVIRONMENT, --environment ENVIRONMENT
+                        Pinecone environment
+  --serverless, --no-serverless
+                        Import data to Pinecone Serverless (default: False)
+  -c CLOUD, --cloud CLOUD
+                        Pinecone Serverless cloud
+  -r REGION, --region REGION
+                        Pinecone Serverless region
+

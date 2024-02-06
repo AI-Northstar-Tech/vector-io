@@ -2,13 +2,15 @@ import os
 from typing import Dict, List
 from dotenv import load_dotenv
 from tqdm import tqdm
-import kdbai_client as kdbai
-from names import DBNames
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
-from meta_types import NamespaceMeta
-from util import standardize_metric_reverse
 import json
 import pyarrow.parquet as pq
+
+import kdbai_client as kdbai
+
+from vdf_io.names import DBNames
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.meta_types import NamespaceMeta
+from vdf_io.util import standardize_metric_reverse
 
 load_dotenv()
 

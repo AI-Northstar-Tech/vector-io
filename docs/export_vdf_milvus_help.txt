@@ -1,0 +1,11 @@
+Help for 'export_vdf milvus':
+usage: export_vdf milvus [-h] [-u URI] [-t TOKEN] [-c COLLECTIONS]
+
+options:
+  -h, --help            show this help message and exit
+  -u URI, --uri URI     Milvus connection URI
+  -t TOKEN, --token TOKEN
+                        Milvus connection token
+  -c COLLECTIONS, --collections COLLECTIONS
+                        Names of collections to export
+

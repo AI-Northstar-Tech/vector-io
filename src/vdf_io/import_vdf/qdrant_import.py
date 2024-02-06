@@ -1,16 +1,18 @@
 import os
 from dotenv import load_dotenv
 import pandas as pd
-from qdrant_client import QdrantClient
 from tqdm import tqdm
-from names import DBNames
-from util import extract_numerical_hash
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 from grpc import RpcError
+from typing import Dict, List
+
+from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
-from typing import Dict, List
-from meta_types import NamespaceMeta
+
+from vdf_io.names import DBNames
+from vdf_io.util import extract_numerical_hash
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.meta_types import NamespaceMeta
 
 load_dotenv()
 

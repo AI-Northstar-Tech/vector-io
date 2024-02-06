@@ -1,0 +1,9 @@
+Help for 'export_vdf kdbai':
+usage: export_vdf kdbai [-h] [-u URL] [-t TABLES]
+
+options:
+  -h, --help            show this help message and exit
+  -u URL, --url URL     KDB.AI cloud endpoint to connect
+  -t TABLES, --tables TABLES
+                        KDB.AI tables to export (comma-separated)
+
