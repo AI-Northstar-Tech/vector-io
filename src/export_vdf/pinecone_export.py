@@ -1,5 +1,6 @@
 import datetime
 from names import DBNames
+from src.meta_types import NamespaceMeta, VDFMeta
 from util import standardize_metric
 from export_vdf.vdb_export_cls import ExportVDB
 from pinecone import Pinecone, Vector
@@ -348,20 +349,18 @@ class ExportPinecone(ExportVDB):
 
         # Create and save internal metadata JSON
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
-        internal_metadata = {
-            "version": self.args["library_version"],
-            "file_structure": self.file_structure,
-            # author is from unix username
-            "author": os.environ.get("USER"),
-            "exported_from": self.DB_NAME_SLUG,
-            "indexes": index_metas,
-            # timestamp with timezone
-            "exported_at": datetime.datetime.now().astimezone().isoformat(),
-        }
+        internal_metadata = VDFMeta(
+            version=self.args.get("library_version"),
+            file_structure=self.file_structure,
+            author=os.environ.get("USER"),
+            exported_from=self.DB_NAME_SLUG,
+            indexes=index_metas,
+            exported_at=datetime.datetime.now().astimezone().isoformat(),
+        )
+        vdf_meta_text = json.dumps(internal_metadata.dict(), indent=4)
+        tqdm.write(vdf_meta_text)
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
-            json.dump(internal_metadata, json_file, indent=4)
-        # print internal metadata properly
-        tqdm.write(json.dumps(internal_metadata, indent=4))
+            json.dump(vdf_meta_text, json_file, indent=4)
         return True
 
     def get_data_for_index(self, index_name):
@@ -438,14 +437,15 @@ class ExportPinecone(ExportVDB):
                 vectors, metadata, vectors_directory
             )
             pbar.update(total_size - prev_total_size)
-            namespace_meta = {
-                "namespace": namespace,
-                "total_vector_count": namespace_info["vector_count"],
-                "exported_vector_count": total_size,
-                "dimensions": index_info["dimension"],
-                "model_name": self.args["model_name"],
-                "vector_columns": ["vector"],
-                "data_path": "/".join(vectors_directory.split("/")[1:]),
-            }
+            namespace_meta = NamespaceMeta(
+                namespace=namespace,
+                index_name=index_name,
+                total_vector_count=namespace_info["vector_count"],
+                exported_vector_count=total_size,
+                dimensions=index_info["dimension"],
+                model_name=self.args["model_name"],
+                vector_columns=["vector"],
+                data_path="/".join(vectors_directory.split("/")[1:]),
+            )
             index_meta.append(namespace_meta)
         return index_meta

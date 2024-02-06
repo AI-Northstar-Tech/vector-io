@@ -128,7 +128,10 @@ def export_kdbai(args):
         "tables",
         f"Enter the name of table to export: {kdbai_export.get_all_table_names()}",
         str,
+        None
     )
+    if args.get("tables", None) == "":
+        args["tables"] = ",".join(kdbai_export.get_all_table_names())
     kdbai_export.get_data()
     return kdbai_export
 
@@ -185,49 +188,6 @@ def export_vertexai_vectorsearch(args):
 
 
 def main():
-    """
-    Export data from various vector databases to the VDF format for vector datasets.
-
-    Usage:
-        python export.py <vector_database> [options]
-
-    Arguments:
-        vector_database (str): Choose the vectors database to export data from.
-            Possible values: "pinecone", "qdrant", "milvus", "vertexai_vectorsearch", "kdbai"
-
-    Options:
-        Pinecone:
-            -e, --environment (str): Environment of Pinecone instance.
-            -i, --index (str): Name of indexes to export (comma-separated).
-
-        Qdrant:
-            -u, --url (str): Location of Qdrant instance.
-            -c, --collections (str): Names of collections to export (comma-separated).
-
-        Vertex AI Vector Search:
-            -p, --project-id (str): Google Cloud Project ID.
-            -i, --index (str): Name of indexes to export (comma-separated).
-            -c, --gcloud-credentials-file: Path to Goofle Cloud Service Account credentials
-
-        KDB.AI:
-            -u, --endpoint (str): KDB.AI cloud instance endpoint.
-            -t, --kdbai_table (str): Name of the KDB.AI table to export.
-            -m, --model (str): Embedding model used
-
-    Examples:
-        Export data from Pinecone:
-        python export_vdf.py pinecone -e my_env -i my_index
-
-        Export data from Qdrant:
-        python export.py qdrant -u http://localhost:6333 -c my_collection
-
-        Export data from Vertex AI Vector Search:
-        python export_vdf.py vertexai_vectorsearch -p your_project_id -i your_index
-
-        Export data from KDBAI:
-        python export.py kdbai -u https://cloud.kdb.ai/instance/xyz -t my_table -m my_model
-        python export_vdf.py qdrant -u http://localhost:6333 -c my_collection
-    """
     parser = argparse.ArgumentParser(
         description="Export data from various vector databases to the VDF format for vector datasets"
     )
@@ -268,10 +228,10 @@ def main():
     # KDB.AI
     parser_kdbai = subparsers.add_parser("kdbai", help="Export data from KDB.AI")
     parser_kdbai.add_argument(
-        "-u", "--endpoint", type=str, help="KDB.AI cloud endpoint to connect"
+        "-u", "--url", type=str, help="KDB.AI cloud endpoint to connect"
     )
     parser_kdbai.add_argument(
-        "-t", "--kdbai_table", type=str, help="KDB.AI table to export"
+        "-t", "--tables", type=str, help="KDB.AI tables to export (comma-separated)"
     )
 
     # Pinecone

@@ -1,3 +1,4 @@
+import datetime
 import json
 from typing import Dict, List
 
@@ -41,10 +42,11 @@ class ExportKDBAI(ExportVDB):
             author=os.environ.get("USER"),
             exported_from=self.DB_NAME_SLUG,
             indexes=index_metas,
+            exported_at=datetime.datetime.now().astimezone().isoformat(),
         )
 
         internal_metadata_path = os.path.join(self.vdf_directory, "VDF_META.json")
-        meta_json_text = json.dump(internal_metadata, indent=4)
+        meta_json_text = json.dumps(internal_metadata.dict(), indent=4)
         print(meta_json_text)
         with open(internal_metadata_path, "w") as json_file:
             json_file.write(meta_json_text)
@@ -74,12 +76,13 @@ class ExportKDBAI(ExportVDB):
 
         namespace_meta = NamespaceMeta(
             namespace="",
+            index_name=table_name,
             total_vector_count=len(table_res.index),
             exported_vector_count=len(table_res.index),
             dimensions=embedding_dims,
             model_name=model,
-            vector_columns=embedding_name,
-            data_path=save_path,
+            vector_columns=[embedding_name],
+            data_path="/".join(vectors_directory.split("/")[1:]),
             metric=embedding_dist,
         )
         return [namespace_meta]
