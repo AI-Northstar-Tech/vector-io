@@ -32,7 +32,7 @@ def sort_recursive(d):
     if not isinstance(d, dict):
         try:
             d = dict(d)
-        except Exception as e:
+        except Exception:
             d = {"": str(d)}
 
     sorted_dict = OrderedDict()
