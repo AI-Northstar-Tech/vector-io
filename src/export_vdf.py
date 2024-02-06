@@ -128,7 +128,7 @@ def export_kdbai(args):
         "tables",
         f"Enter the name of table to export: {kdbai_export.get_all_table_names()}",
         str,
-        None
+        None,
     )
     if args.get("tables", None) == "":
         args["tables"] = ",".join(kdbai_export.get_all_table_names())
