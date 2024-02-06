@@ -59,7 +59,7 @@ class ExportQdrant(ExportVDB):
             exported_at=datetime.datetime.now().astimezone().isoformat(),
         )
         meta_text = json.dumps(internal_metadata.dict(), indent=4)
-        tqdm.write(meta_text) 
+        tqdm.write(meta_text)
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
             json_file.write(meta_text)
         # print internal metadata properly
