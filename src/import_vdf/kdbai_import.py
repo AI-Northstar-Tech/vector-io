@@ -22,13 +22,14 @@ class ImportKDBAI(ImportVDF):
         self.session = kdbai.Session(api_key=api_key, endpoint=endpoint)
 
     def upsert_data(self):
-        json_file_path = os.path.join(self.dir_path, "VDF_META.json")
+        final_data_path = self.get_final_data_path(self.dir_path)
+        json_file_path = os.path.join(final_data_path, "VDF_META.json")
         # return json_file_path
         with open(json_file_path, "r") as json_file:
-            data = json.load(json_file)
-
-        indexes_content = data.get("indexes", {})
-        index_names = list(data.get("indexes", {}).keys())
+            vdf_meta = json.load(json_file)
+        print(json.dumps(vdf_meta, indent=4))
+        indexes_content = vdf_meta.get("indexes", {})
+        index_names = list(vdf_meta.get("indexes", {}).keys())
 
         # Load Parquet file
         parquet_file_path = indexes_content[index_names[0]][""][0]["data_path"]
