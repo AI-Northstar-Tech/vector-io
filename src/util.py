@@ -123,6 +123,12 @@ db_metric_to_standard_metric = {
         "IP": Distance.DOT,
         "L2": Distance.EUCLID,
     },
+    DBNames.VERTEXAI: {
+        "DOT_PRODUCT_DISTANCE": Distance.DOT,
+        "SQUARED_L2_DISTANCE": Distance.EUCLID,
+        "COSINE_DISTANCE": Distance.COSINE,
+        "L1_DISTANCE": Distance.MANHATTAN,
+    },
 }
 
 
