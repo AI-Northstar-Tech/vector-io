@@ -15,9 +15,9 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Pinecone                       | ✅     | ✅     |
 | Qdrant                         | ✅     | ✅     |
 | Milvus                         | ✅     | ✅     |
+| GCP Vertex AI Vector Search    | ✅     | ✅     |
+| KDB.AI                         | ✅     | ✅     |
 | Azure AI Search                | 🔜     | 🔜     |
-| GCP Vertex AI Vector Search    | 🔜     | 🔜     |
-| KDB.AI                         | 🔜     | 🔜     |
 | Rockset                        | 🔜     | 🔜     |
 | Vespa                          | ⏳     | ⏳     |
 | Weaviate                       | ⏳     | ⏳     |
