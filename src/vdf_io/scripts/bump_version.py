@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
-
-
+import re
 def bump_version(version_file, part="patch"):
     # Read the current version
     with open(version_file, "r") as file:
-        version = file.read().strip()
+        content = file.read()
+
+    # Find the version number using regex
+    version_match = re.search(r"version\s*=\s*['\"]([^'\"]+)['\"]", content)
+    if version_match:
+        version = version_match.group(1)
+    else:
+        raise ValueError("Version number not found in setup.py.")
 
     # Split version into components
     major, minor, patch = map(int, version.split("."))
@@ -27,9 +33,12 @@ def bump_version(version_file, part="patch"):
     # Combine the parts back into a version string
     new_version = f"{major}.{minor}.{patch}"
 
-    # Write the new version back to the file
+    # Replace the old version with the new version in the content
+    new_content = re.sub(r"(version\s*=\s*['\"])[^'\"]+(['\"])", fr"\g<1>{new_version}\g<2>", content)
+
+    # Write the new content back to the file
     with open(version_file, "w") as file:
-        file.write(new_version)
+        file.write(new_content)
 
     return new_version
 
