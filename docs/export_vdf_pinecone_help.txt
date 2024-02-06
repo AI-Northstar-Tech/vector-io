@@ -1,0 +1,26 @@
+Help for 'export_vdf pinecone':
+usage: export_vdf pinecone [-h] [-e ENVIRONMENT] [-i INDEX]
+                           [-s ID_RANGE_START] [--id_range_end ID_RANGE_END]
+                           [-f ID_LIST_FILE]
+                           [--modify_to_search | --no-modify_to_search]
+                           [--subset | --no-subset] [--namespaces NAMESPACES]
+
+options:
+  -h, --help            show this help message and exit
+  -e ENVIRONMENT, --environment ENVIRONMENT
+                        Environment of Pinecone instance
+  -i INDEX, --index INDEX
+                        Name of index to export
+  -s ID_RANGE_START, --id_range_start ID_RANGE_START
+                        Start of id range
+  --id_range_end ID_RANGE_END
+                        End of id range
+  -f ID_LIST_FILE, --id_list_file ID_LIST_FILE
+                        Path to id list file
+  --modify_to_search, --no-modify_to_search
+                        Allow modifying data to search
+  --subset, --no-subset
+                        Export a subset of data (default: False)
+  --namespaces NAMESPACES
+                        Name of namespace(s) to export (comma-separated)
+

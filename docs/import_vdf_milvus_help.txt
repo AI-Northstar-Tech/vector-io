@@ -1,0 +1,9 @@
+Help for 'import_vdf milvus':
+usage: import_vdf milvus [-h] [-u URI] [-t TOKEN]
+
+options:
+  -h, --help            show this help message and exit
+  -u URI, --uri URI     URI of Milvus instance
+  -t TOKEN, --token TOKEN
+                        Milvus token
+

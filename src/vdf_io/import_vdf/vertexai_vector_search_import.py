@@ -3,8 +3,8 @@ Import data to vertex ai vector search index
 """
 
 from typing import Dict, List
-from names import DBNames
 
+from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 
 

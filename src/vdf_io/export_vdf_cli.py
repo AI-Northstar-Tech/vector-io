@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
 import sys
 import time
 from dotenv import load_dotenv
-
-from vdf_io.export_vdf.pinecone_export import ExportPinecone
-from vdf_io.export_vdf.qdrant_export import ExportQdrant
-from vdf_io.export_vdf.kdbai_export import ExportKDBAI
-from vdf_io.export_vdf.milvus_export import ExportMilvus
-from vdf_io.export_vdf.vertexai_vector_search_export import ExportVertexAIVectorSearch
-from vdf_io.export_vdf.vdb_export_cls import ExportVDB
-from names import DBNames
-from push_to_hub import push_to_hub
-from util import set_arg_from_input, set_arg_from_password
 import warnings
+
+
+from vdf_io.export_vdf.pinecone_export import (
+    export_pinecone,
+    make_pinecone_parser,
+)
+from vdf_io.export_vdf.qdrant_export import (
+    export_qdrant,
+    make_qdrant_parser,
+)
+from vdf_io.export_vdf.kdbai_export import export_kdbai, make_kdbai_parser
+from vdf_io.export_vdf.milvus_export import (
+    export_milvus,
+    make_milvus_parser,
+)
+from vdf_io.export_vdf.vertexai_vector_search_export import (
+    export_vertexai_vectorsearch,
+    make_vertexai_parser,
+)
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.names import DBNames
+from vdf_io.push_to_hub_vdf import push_to_hub
 
 # Suppress specific warnings
 warnings.simplefilter("ignore", ResourceWarning)
@@ -25,172 +36,76 @@ load_dotenv()
 DEFAULT_MAX_FILE_SIZE = 1024  # in MB
 
 
-def export_pinecone(args):
-    """
-    Export data from Pinecone
-    """
-    set_arg_from_input(
-        args, "environment", "Enter the environment of Pinecone instance: "
-    )
-    set_arg_from_input(
-        args,
-        "index",
-        "Enter the name of index to export (hit return to export all): ",
-    )
-    set_arg_from_password(
-        args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY"
-    )
-    set_arg_from_input(
-        args,
-        "modify_to_search",
-        "Allow modifying data to search, enter Y or N: ",
-        bool,
-    )
-    set_arg_from_input(
-        args,
-        "namespaces",
-        "Enter the name of namespace(s) to export (comma-separated) (hit return to export all):",
-        str,
-    )
-    if args["subset"] is True:
-        if "id_list_file" not in args or args["id_list_file"] is None:
-            set_arg_from_input(
-                args,
-                "id_range_start",
-                "Enter the start of id range (hit return to skip): ",
-                int,
-            )
-            set_arg_from_input(
-                args,
-                "id_range_end",
-                "Enter the end of id range (hit return to skip): ",
-                int,
-            )
-        if args["id_range_start"] is None and args["id_range_end"] is None:
-            set_arg_from_input(
-                args,
-                "id_list_file",
-                "Enter the path to id list file (hit return to skip): ",
-            )
-    pinecone_export = ExportPinecone(args)
-    pinecone_export.get_data()
-    return pinecone_export
+slug_to_export_func = {
+    DBNames.PINECONE: export_pinecone,
+    DBNames.QDRANT: export_qdrant,
+    DBNames.KDBAI: export_kdbai,
+    DBNames.MILVUS: export_milvus,
+    DBNames.VERTEXAI: export_vertexai_vectorsearch,
+}
+
+slug_to_parser_func = {
+    DBNames.PINECONE: make_pinecone_parser,
+    DBNames.QDRANT: make_qdrant_parser,
+    DBNames.KDBAI: make_kdbai_parser,
+    DBNames.MILVUS: make_milvus_parser,
+    DBNames.VERTEXAI: make_vertexai_parser,
+}
 
 
-def export_qdrant(args):
-    """
-    Export data from Qdrant
-    """
-    set_arg_from_input(
-        args,
-        "url",
-        "Enter the URL of Qdrant instance (default: 'http://localhost:6334'): ",
-        str,
-        "http://localhost:6334",
-    )
-    set_arg_from_input(
-        args,
-        "prefer_grpc",
-        "Whether to use GRPC. Recommended. (default: True): ",
-        bool,
-        True,
-    )
-    set_arg_from_input(
-        args,
-        "collections",
-        "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
-        str,
-    )
-    set_arg_from_password(
-        args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
-    )
-    qdrant_export = ExportQdrant(args)
-    qdrant_export.get_data()
-    return qdrant_export
-
-
-def export_kdbai(args):
-    """
-    Export data from KDBAI
-    """
-    set_arg_from_input(
-        args,
-        "url",
-        "Enter the KDB.AI endpoint instance: ",
-        str,
-    )
-    set_arg_from_password(
-        args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
-    )
-    kdbai_export = ExportKDBAI(args)
-    set_arg_from_input(
-        args,
-        "tables",
-        f"Enter the name of table to export: {kdbai_export.get_all_table_names()}",
-        str,
-        None,
-    )
-    if args.get("tables", None) == "":
-        args["tables"] = ",".join(kdbai_export.get_all_table_names())
-    kdbai_export.get_data()
-    return kdbai_export
-
-
-def export_milvus(args):
-    """
-    Export data from Milvus
-    """
-    set_arg_from_input(
-        args,
-        "uri",
-        "Enter the uri of Milvus (hit return for 'http://localhost:19530'): ",
-        str,
-        "http://localhost:19530",
-    )
-    set_arg_from_input(
-        args,
-        "collections",
-        "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
-        str,
-    )
-    set_arg_from_password(
-        args, "token", "Enter your Milvus Token (hit return to skip): ", "Milvus Token"
-    )
-    milvus_export = ExportMilvus(args)
-    milvus_export.get_data()
-    return milvus_export
-
-
-def export_vertexai_vectorsearch(args):
-    """
-    Export data from Vertex AI Vector Search
-    """
-    set_arg_from_input(args, "project_id", "Enter the Google Cloud Project ID: ")
-    set_arg_from_input(
-        args,
-        "index",
-        "Enter name of index to export (hit return to export all. Comma separated for multiple indexes): ",
-    )
-    set_arg_from_input(
-        args,
-        "gcloud_credentials_file",
-        "Enter path to service account credentials file (hit return to use application default credentials): ",
-    )
-    # max_vectors
-    set_arg_from_input(
-        args,
-        "max_vectors",
-        "Optional: max_vectors to export; can be larger than actual vector count",
-    )
-    vertexai_vectorsearch_export = ExportVertexAIVectorSearch(args)
-    vertexai_vectorsearch_export.get_data()
-    return vertexai_vectorsearch_export
+def add_subparsers_for_dbs(subparsers, slugs):
+    for slug in slugs:
+        parser_func = slug_to_parser_func[slug]
+        parser_func(subparsers)
 
 
 def main():
     parser = argparse.ArgumentParser(
         description="Export data from various vector databases to the VDF format for vector datasets"
     )
+    make_common_options(parser)
+    subparsers = parser.add_subparsers(
+        title="Vector Databases",
+        description="Choose the vectors database to export data from",
+        dest="vector_database",
+    )
+
+    db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
+    add_subparsers_for_dbs(subparsers, db_choices)
+
+    args = parser.parse_args()
+    # convert args to dict
+    args = vars(args)
+    # args["library_version"] = vdf_io.__version__
+    t_start = time.time()
+    if (
+        ("vector_database" not in args)
+        or (args["vector_database"] is None)
+        or (args["vector_database"] not in db_choices)
+    ):
+        print("Please choose a vector database to export data from:", db_choices)
+        return
+
+    if args["vector_database"] in slug_to_export_func:
+        export_obj = slug_to_export_func[args["vector_database"]](args)
+    else:
+        print("Invalid vector database")
+        args["vector_database"] = input("Enter the name of vector database to export: ")
+        sys.argv.extend(["--vector_database", args["vector_database"]])
+        main()
+    t_end = time.time()
+    # formatted time
+    print(f"Export to disk completed. Exported to: {export_obj.vdf_directory}/")
+    print(
+        "Time taken to export data: ",
+        time.strftime("%H:%M:%S", time.gmtime(t_end - t_start)),
+    )
+
+    if args["push_to_hub"]:
+        push_to_hub(export_obj, args)
+
+
+def make_common_options(parser):
     parser.add_argument(
         "-m",
         "--model_name",
@@ -219,151 +134,6 @@ def main():
         default=False,
         action=argparse.BooleanOptionalAction,
     )
-    subparsers = parser.add_subparsers(
-        title="Vector Databases",
-        description="Choose the vectors database to export data from",
-        dest="vector_database",
-    )
-
-    # KDB.AI
-    parser_kdbai = subparsers.add_parser("kdbai", help="Export data from KDB.AI")
-    parser_kdbai.add_argument(
-        "-u", "--url", type=str, help="KDB.AI cloud endpoint to connect"
-    )
-    parser_kdbai.add_argument(
-        "-t", "--tables", type=str, help="KDB.AI tables to export (comma-separated)"
-    )
-
-    # Pinecone
-    parser_pinecone = subparsers.add_parser(
-        "pinecone", help="Export data from Pinecone"
-    )
-    parser_pinecone.add_argument(
-        "-e", "--environment", type=str, help="Environment of Pinecone instance"
-    )
-    parser_pinecone.add_argument(
-        "-i", "--index", type=str, help="Name of index to export"
-    )
-    parser_pinecone.add_argument(
-        "-s", "--id_range_start", type=int, help="Start of id range", default=None
-    )
-    parser_pinecone.add_argument(
-        "--id_range_end", type=int, help="End of id range", default=None
-    )
-    parser_pinecone.add_argument(
-        "-f", "--id_list_file", type=str, help="Path to id list file", default=None
-    )
-    parser_pinecone.add_argument(
-        "--modify_to_search",
-        type=bool,
-        help="Allow modifying data to search",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-    )
-    parser_pinecone.add_argument(
-        "--subset",
-        type=bool,
-        help="Export a subset of data (default: False)",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-    )
-    parser_pinecone.add_argument(
-        "--namespaces",
-        type=str,
-        help="Name of namespace(s) to export (comma-separated)",
-        default=None,
-    )
-    db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
-    # Qdrant
-    parser_qdrant = subparsers.add_parser("qdrant", help="Export data from Qdrant")
-    parser_qdrant.add_argument(
-        "-u", "--url", type=str, help="Location of Qdrant instance"
-    )
-    parser_qdrant.add_argument(
-        "-c", "--collections", type=str, help="Names of collections to export"
-    )
-    parser_qdrant.add_argument(
-        "--prefer_grpc",
-        type=bool,
-        help="Whether to use GRPC. Recommended. (default: True)",
-        default=True,
-        action=argparse.BooleanOptionalAction,
-    )
-    # Milvus
-    parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
-    parser_milvus.add_argument("-u", "--uri", type=str, help="Milvus connection URI")
-    parser_milvus.add_argument(
-        "-t", "--token", type=str, required=False, help="Milvus connection token"
-    )
-    parser_milvus.add_argument(
-        "-c", "--collections", type=str, help="Names of collections to export"
-    )
-
-    # Vertex AI VectorSearch
-    parser_vertexai_vectorsearch = subparsers.add_parser(
-        "vertexai_vectorsearch", help="Export data from Vertex AI Vector Search"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-p", "--project-id", type=str, help="Google Cloud Project ID"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-i", "--index", type=str, help="Name of the index or indexes to export"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-c",
-        "--gcloud-credentials-file",
-        type=str,
-        help="Path to Google Cloud service account credentials file",
-        default=None,
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-m",
-        "--max_vectors",
-        type=str,
-        help="Optional: max vectors to retrieve",
-        default=None,
-    )
-
-    args = parser.parse_args()
-    # convert args to dict
-    args = vars(args)
-    # open VERSION.txt which is in the parent directory of this script
-    args["library_version"] = open(
-        os.path.join(os.path.dirname(__file__), "../VERSION.txt")
-    ).read()
-    t_start = time.time()
-    if (
-        ("vector_database" not in args)
-        or (args["vector_database"] is None)
-        or (args["vector_database"] not in db_choices)
-    ):
-        print("Please choose a vector database to export data from:", db_choices)
-        return
-    if args["vector_database"] == DBNames.PINECONE:
-        export_obj = export_pinecone(args)
-    elif args["vector_database"] == DBNames.QDRANT:
-        export_obj = export_qdrant(args)
-    elif args["vector_database"] == "kdbai":
-        export_obj = export_kdbai(args)
-    elif args["vector_database"] == DBNames.MILVUS:
-        export_obj = export_milvus(args)
-    elif args["vector_database"] == DBNames.VERTEXAI:
-        export_obj = export_vertexai_vectorsearch(args)
-    else:
-        print("Invalid vector database")
-        args["vector_database"] = input("Enter the name of vector database to export: ")
-        sys.argv.extend(["--vector_database", args["vector_database"]])
-        main()
-    t_end = time.time()
-    # formatted time
-    print(f"Export to disk completed. Exported to: {export_obj.vdf_directory}/")
-    print(
-        "Time taken to export data: ",
-        time.strftime("%H:%M:%S", time.gmtime(t_end - t_start)),
-    )
-
-    if args["push_to_hub"]:
-        push_to_hub(export_obj, args)
 
 
 if __name__ == "__main__":

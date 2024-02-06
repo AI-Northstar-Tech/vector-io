@@ -5,9 +5,10 @@ import os
 import time
 from typing import Any
 from dotenv import load_dotenv
-from names import DBNames
 
-from util import set_arg_from_input, set_arg_from_password
+import vdf_io
+from vdf_io.names import DBNames
+from vdf_io.util import set_arg_from_input, set_arg_from_password
 from vdf_io.import_vdf.pinecone_import import ImportPinecone
 from vdf_io.import_vdf.qdrant_import import ImportQdrant
 from vdf_io.import_vdf.kdbai_import import ImportKDBAI
@@ -420,10 +421,7 @@ def main():
 
     args = parser.parse_args()
     args = vars(args)
-    # open VERSION.txt which is in the parent directory of this script
-    args["library_version"] = open(
-        os.path.join(os.path.dirname(__file__), "../VERSION.txt")
-    ).read()
+    args["library_version"] = vdf_io.__version__
     set_arg_from_input(
         args, "dir", "Enter the directory of vector dataset to be imported: ", str
     )

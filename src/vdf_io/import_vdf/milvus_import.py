@@ -13,8 +13,8 @@ from pymilvus import (
     DataType,
 )
 
-from names import DBNames
-from util import standardize_metric_reverse
+from vdf_io.names import DBNames
+from vdf_io.util import standardize_metric_reverse
 from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 
 

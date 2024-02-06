@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import json
 from typing import Dict, List
@@ -5,14 +6,64 @@ from qdrant_client import QdrantClient
 import os
 from tqdm import tqdm
 from dotenv import load_dotenv
+
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
-from names import DBNames
-from meta_types import NamespaceMeta, VDFMeta
-from util import standardize_metric
+from vdf_io.names import DBNames
+from vdf_io.meta_types import NamespaceMeta, VDFMeta
+from vdf_io.util import set_arg_from_input, set_arg_from_password, standardize_metric
 
 load_dotenv()
 
 MAX_FETCH_SIZE = 1_000
+
+
+def make_qdrant_parser(subparsers):
+    parser_qdrant = subparsers.add_parser("qdrant", help="Export data from Qdrant")
+    parser_qdrant.add_argument(
+        "-u", "--url", type=str, help="Location of Qdrant instance"
+    )
+    parser_qdrant.add_argument(
+        "-c", "--collections", type=str, help="Names of collections to export"
+    )
+    parser_qdrant.add_argument(
+        "--prefer_grpc",
+        type=bool,
+        help="Whether to use GRPC. Recommended. (default: True)",
+        default=True,
+        action=argparse.BooleanOptionalAction,
+    )
+
+
+def export_qdrant(args):
+    """
+    Export data from Qdrant
+    """
+    set_arg_from_input(
+        args,
+        "url",
+        "Enter the URL of Qdrant instance (default: 'http://localhost:6334'): ",
+        str,
+        "http://localhost:6334",
+    )
+    set_arg_from_input(
+        args,
+        "prefer_grpc",
+        "Whether to use GRPC. Recommended. (default: True): ",
+        bool,
+        True,
+    )
+    set_arg_from_input(
+        args,
+        "collections",
+        "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
+        str,
+    )
+    set_arg_from_password(
+        args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
+    )
+    qdrant_export = ExportQdrant(args)
+    qdrant_export.get_data()
+    return qdrant_export
 
 
 class ExportQdrant(ExportVDB):

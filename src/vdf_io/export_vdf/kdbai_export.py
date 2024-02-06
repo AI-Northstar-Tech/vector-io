@@ -1,18 +1,56 @@
-import datetime
+import os
 import json
 from typing import Dict, List
-
-from tqdm import tqdm
-import kdbai_client as kdbai
-import os
 from dotenv import load_dotenv
+import datetime
+from tqdm import tqdm
+
+import kdbai_client as kdbai
+
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
-from names import DBNames
-from meta_types import NamespaceMeta, VDFMeta
-from util import standardize_metric
+from vdf_io.names import DBNames
+from vdf_io.meta_types import NamespaceMeta, VDFMeta
+from vdf_io.util import set_arg_from_input, set_arg_from_password, standardize_metric
 
 
 load_dotenv()
+
+
+def make_kdbai_parser(subparsers):
+    parser_kdbai = subparsers.add_parser("kdbai", help="Export data from KDB.AI")
+    parser_kdbai.add_argument(
+        "-u", "--url", type=str, help="KDB.AI cloud endpoint to connect"
+    )
+    parser_kdbai.add_argument(
+        "-t", "--tables", type=str, help="KDB.AI tables to export (comma-separated)"
+    )
+
+
+def export_kdbai(args):
+    """
+    Export data from KDBAI
+    """
+    set_arg_from_input(
+        args,
+        "url",
+        "Enter the KDB.AI endpoint instance: ",
+        str,
+    )
+    set_arg_from_password(
+        args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
+    )
+    kdbai_export = ExportKDBAI(args)
+    set_arg_from_input(
+        args,
+        "tables",
+        f"Enter the name of table to export: {kdbai_export.get_all_table_names()}",
+        str,
+        None,
+    )
+    if args.get("tables", None) == "":
+        args["tables"] = ",".join(kdbai_export.get_all_table_names())
+    kdbai_export.get_data()
+    return kdbai_export
 
 
 class ExportKDBAI(ExportVDB):

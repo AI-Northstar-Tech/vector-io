@@ -5,7 +5,11 @@ import hashlib
 import json
 import os
 from qdrant_client.http.models import Distance
-from names import DBNames
+from io import StringIO
+import sys
+
+
+from vdf_io.names import DBNames
 
 
 def sort_recursive(d):
@@ -191,3 +195,47 @@ def get_parquet_files(data_path):
             [file for file in os.listdir(data_path) if file.endswith(".parquet")]
         )
         return parquet_files
+
+
+# Function to recursively print help messages
+def print_help_recursively(parser, level=0):
+    # Temporarily redirect stdout to capture the help message
+    old_stdout = sys.stdout
+    sys.stdout = StringIO()
+
+    # Print the current parser's help message
+    parser.print_help()
+
+    # Retrieve and print the help message from the StringIO object
+    help_message = sys.stdout.getvalue()
+    sys.stdout = old_stdout  # Restore stdout
+
+    # Print the captured help message with indentation for readability
+    print("\n" + "\t" * level + "Help message for level " + str(level) + ":")
+    for line in help_message.split("\n"):
+        print("\t" * level + line)
+
+    # Check if the current parser has subparsers
+    if hasattr(parser, "_subparsers"):
+        for _, subparser in parser._subparsers._group_actions[0].choices.items():
+            # Recursively print help for each subparser
+            print_help_recursively(subparser, level + 1)
+
+
+# Create the top-level parser
+# parser = argparse.ArgumentParser(description='Top-level parser')
+# parser.add_argument('--foo', help='foo help')
+
+# # Create a subparser
+# subparsers = parser.add_subparsers(help='sub-command help')
+
+# # Create the subparser for the "a" command
+# parser_a = subparsers.add_parser('a', help='a help')
+# parser_a.add_argument('--bar', type=int, help='bar help')
+
+# # Create another subparser for the "b" command
+# parser_b = subparsers.add_parser('b', help='b help')
+# parser_b.add_argument('--baz', choices='XYZ', help='baz help')
+
+# # Recursively print help messages
+# print_help_recursively(parser)

@@ -1,0 +1,27 @@
+Help for 'import_vdf vertexai_vectorsearch':
+usage: import_vdf vertexai_vectorsearch [-h] [-p PROJECT_ID] [-l LOCATION]
+                                        [-b BATCH_SIZE] [-f FILTER_RESTRICTS]
+                                        [-n NUMERIC_RESTRICTS]
+                                        [-r REQUESTS_PER_MINUTE]
+                                        [-c CROWDING_TAG]
+                                        [--deploy_new_index | --no-deploy_new_index]
+
+options:
+  -h, --help            show this help message and exit
+  -p PROJECT_ID, --project-id PROJECT_ID
+                        Google Cloud Project ID
+  -l LOCATION, --location LOCATION
+                        Google Cloud region hosting your index
+  -b BATCH_SIZE, --batch-size BATCH_SIZE
+                        Enter size of upsert batches:
+  -f FILTER_RESTRICTS, --filter-restricts FILTER_RESTRICTS
+                        string filters
+  -n NUMERIC_RESTRICTS, --numeric-restricts NUMERIC_RESTRICTS
+                        numeric filters
+  -r REQUESTS_PER_MINUTE, --requests-per-minute REQUESTS_PER_MINUTE
+                        rate limiter
+  -c CROWDING_TAG, --crowding-tag CROWDING_TAG
+                        string value to enforce diversity in retrieval
+  --deploy_new_index, --no-deploy_new_index
+                        deploy new index (default: False)
+

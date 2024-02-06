@@ -1,0 +1,20 @@
+Help for 'import_vdf qdrant':
+usage: import_vdf qdrant [-h] [-u URL] [--prefer_grpc PREFER_GRPC]
+                         [--batch_size BATCH_SIZE] [--parallel PARALLEL]
+                         [--max_retries MAX_RETRIES]
+                         [--shard_key_selector SHARD_KEY_SELECTOR]
+
+options:
+  -h, --help            show this help message and exit
+  -u URL, --url URL     Qdrant url
+  --prefer_grpc PREFER_GRPC
+                        Whether to use Qdrant's GRPC interface
+  --batch_size BATCH_SIZE
+                        Batch size for upserts (default: 64).
+  --parallel PARALLEL   Number of parallel processes of upload (default: 1).
+  --max_retries MAX_RETRIES
+                        Maximum number of retries in case of a failure
+                        (default: 3).
+  --shard_key_selector SHARD_KEY_SELECTOR
+                        Shard to be queried (default: None)
+

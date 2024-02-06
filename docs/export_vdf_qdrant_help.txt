@@ -1,0 +1,12 @@
+Help for 'export_vdf qdrant':
+usage: export_vdf qdrant [-h] [-u URL] [-c COLLECTIONS]
+                         [--prefer_grpc | --no-prefer_grpc]
+
+options:
+  -h, --help            show this help message and exit
+  -u URL, --url URL     Location of Qdrant instance
+  -c COLLECTIONS, --collections COLLECTIONS
+                        Names of collections to export
+  --prefer_grpc, --no-prefer_grpc
+                        Whether to use GRPC. Recommended. (default: True)
+
