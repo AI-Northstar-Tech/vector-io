@@ -10,6 +10,7 @@ from export_vdf.pinecone_export import ExportPinecone
 from export_vdf.qdrant_export import ExportQdrant
 from export_vdf.kdbai_export import ExportKDBAI
 from export_vdf.milvus_export import ExportMilvus
+from export_vdf.vertexai_vector_search_export import ExportVertexAIVectorSearch
 from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
 from push_to_hub import push_to_hub
@@ -83,9 +84,16 @@ def export_qdrant(args):
     set_arg_from_input(
         args,
         "url",
-        "Enter the url of Qdrant instance (hit return for 'http://localhost:6333'): ",
+        "Enter the URL of Qdrant instance (default: 'http://localhost:6334'): ",
         str,
-        "http://localhost:6333",
+        "http://localhost:6334",
+    )
+    set_arg_from_input(
+        args,
+        "prefer_grpc",
+        "Whether to use GRPC. Recommended. (default: True): ",
+        bool,
+        True,
     )
     set_arg_from_input(
         args,
@@ -150,6 +158,32 @@ def export_milvus(args):
     return milvus_export
 
 
+def export_vertexai_vectorsearch(args):
+    """
+    Export data from Vertex AI Vector Search
+    """
+    set_arg_from_input(args, "project_id", "Enter the Google Cloud Project ID: ")
+    set_arg_from_input(
+        args,
+        "index",
+        "Enter name of index to export (hit return to export all. Comma separated for multiple indexes): ",
+    )
+    set_arg_from_input(
+        args,
+        "gcloud_credentials_file",
+        "Enter path to service account credentials file (hit return to use application default credentials): ",
+    )
+    # max_vectors
+    set_arg_from_input(
+        args,
+        "max_vectors",
+        "Optional: max_vectors to export; can be larger than actual vector count",
+    )
+    vertexai_vectorsearch_export = ExportVertexAIVectorSearch(args)
+    vertexai_vectorsearch_export.get_data()
+    return vertexai_vectorsearch_export
+
+
 def main():
     """
     Export data from various vector databases to the VDF format for vector datasets.
@@ -159,7 +193,7 @@ def main():
 
     Arguments:
         vector_database (str): Choose the vectors database to export data from.
-            Possible values: "pinecone", "qdrant", "kdbai".
+            Possible values: "pinecone", "qdrant", "milvus", "vertexai_vectorsearch", "kdbai"
 
     Options:
         Pinecone:
@@ -170,20 +204,29 @@ def main():
             -u, --url (str): Location of Qdrant instance.
             -c, --collections (str): Names of collections to export (comma-separated).
 
+        Vertex AI Vector Search:
+            -p, --project-id (str): Google Cloud Project ID.
+            -i, --index (str): Name of indexes to export (comma-separated).
+            -c, --gcloud-credentials-file: Path to Goofle Cloud Service Account credentials
+
         KDB.AI:
             -u, --endpoint (str): KDB.AI cloud instance endpoint.
             -t, --kdbai_table (str): Name of the KDB.AI table to export.
             -m, --model (str): Embedding model used
-
+        
     Examples:
         Export data from Pinecone:
-        python export.py pinecone -e my_env -i my_index
+        python export_vdf.py pinecone -e my_env -i my_index
 
         Export data from Qdrant:
         python export.py qdrant -u http://localhost:6333 -c my_collection
 
+        Export data from Vertex AI Vector Search:
+        python export_vdf.py vertexai_vectorsearch -p your_project_id -i your_index
+
         Export data from KDBAI:
         python export.py kdbai -u https://cloud.kdb.ai/instance/xyz -t my_table -m my_model
+        python export_vdf.py qdrant -u http://localhost:6333 -c my_collection
     """
     parser = argparse.ArgumentParser(
         description="Export data from various vector databases to the VDF format for vector datasets"
@@ -279,6 +322,13 @@ def main():
     parser_qdrant.add_argument(
         "-c", "--collections", type=str, help="Names of collections to export"
     )
+    parser_qdrant.add_argument(
+        "--prefer_grpc",
+        type=bool,
+        help="Whether to use GRPC. Recommended. (default: True)",
+        default=True,
+        action=argparse.BooleanOptionalAction,
+    )
     # Milvus
     parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
     parser_milvus.add_argument("-u", "--uri", type=str, help="Milvus connection URI")
@@ -287,6 +337,31 @@ def main():
     )
     parser_milvus.add_argument(
         "-c", "--collections", type=str, help="Names of collections to export"
+    )
+
+    # Vertex AI VectorSearch
+    parser_vertexai_vectorsearch = subparsers.add_parser(
+        "vertexai_vectorsearch", help="Export data from Vertex AI Vector Search"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-p", "--project-id", type=str, help="Google Cloud Project ID"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-i", "--index", type=str, help="Name of the index or indexes to export"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-c",
+        "--gcloud-credentials-file",
+        type=str,
+        help="Path to Google Cloud service account credentials file",
+        default=None,
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-m",
+        "--max_vectors",
+        type=str,
+        help="Optional: max vectors to retrieve",
+        default=None,
     )
 
     args = parser.parse_args()
@@ -312,6 +387,8 @@ def main():
         export_obj = export_kdbai(args)
     elif args["vector_database"] == DBNames.MILVUS:
         export_obj = export_milvus(args)
+    elif args["vector_database"] == DBNames.VERTEXAI:
+        export_obj = export_vertexai_vectorsearch(args)
     else:
         print("Invalid vector database")
         args["vector_database"] = input("Enter the name of vector database to export: ")

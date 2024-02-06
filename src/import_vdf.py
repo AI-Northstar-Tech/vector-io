@@ -3,6 +3,7 @@
 import argparse
 import os
 import time
+from typing import Any
 from dotenv import load_dotenv
 from names import DBNames
 
@@ -11,6 +12,7 @@ from import_vdf.pinecone_import import ImportPinecone
 from import_vdf.qdrant_import import ImportQdrant
 from import_vdf.kdbai_import import ImportKDBAI
 from import_vdf.milvus_import import ImportMilvus
+from import_vdf.vertexai_vector_search_import import ImportVertexAIVectorSearch
 from import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
@@ -41,9 +43,37 @@ def import_qdrant(args):
     set_arg_from_input(
         args,
         "url",
-        "Enter the url of Qdrant instance (default: 'http://localhost:6333'): ",
+        "Enter the URL of Qdrant instance (default: 'http://localhost:6334'): ",
         str,
-        "http://localhost:6333",
+        "http://localhost:6334",
+    )
+    set_arg_from_input(
+        args,
+        "prefer_grpc",
+        "Whether to use GRPC. Recommended. (default: True): ",
+        bool,
+        True,
+    )
+    set_arg_from_input(
+        args,
+        "parallel",
+        "Enter the batch size for upserts (default: 1): ",
+        int,
+        1,
+    )
+    set_arg_from_input(
+        args,
+        "batch_size",
+        "Enter the number of parallel processes of upload (default: 64): ",
+        int,
+        64,
+    )
+    set_arg_from_input(
+        args,
+        "max_retries",
+        "Enter the maximum number of retries in case of a failure (default: 3): ",
+        int,
+        3,
     )
     set_arg_from_password(
         args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
@@ -128,6 +158,126 @@ def import_pinecone(args):
     pinecone_import.upsert_data()
 
 
+def import_vertexai_vectorsearch(args):
+    """
+    Import data to Vertex AI Vector Search
+    """
+    set_arg_from_input(args, "project_id", "Enter the Google Cloud Project ID:")
+    set_arg_from_input(args, "location", "Enter the region hosting your index: ")
+    set_arg_from_input(
+        args,
+        "batch_size",
+        "Enter size of upsert batches (default: 100):",
+        default_value=100,
+        type_name=int,
+    )
+    set_arg_from_input(
+        args,
+        "requests_per_minute",
+        "Optional. Enter desired requests per minute for rate limit (default: 6000): ",
+        default_value=6000,
+        type_name=int,
+    )
+    set_arg_from_input(
+        args,
+        "filter_restricts",
+        "Optional. Enter list of dicts describing string filters for each data point: ",
+    )
+    set_arg_from_input(
+        args, "numeric_restricts", "Optional. Enter list of dicts for each datapoint: "
+    )
+    set_arg_from_input(
+        args, "crowding_tag", "Optional. CrowdingTag of the datapoint: ", type_name=str
+    )
+    if args["create_new"] is True:
+        set_arg_from_input(
+            args,
+            "gcs_bucket",
+            "Optional. Enter valid gcs bucket name (or one will be created per index_name): ",
+            type_name=str,
+        )
+        set_arg_from_input(
+            args,
+            "approx_nn_count",
+            "Optional. The default number of neighbors to find via approximate search (default: 150): ",
+            type_name=int,
+            default_value=150,
+        )
+        set_arg_from_input(
+            args,
+            "leaf_node_emb_count",
+            "Optional. Number of embeddings on each leaf node (default: 1000): ",
+            type_name=int,
+            default_value=1000,
+        )
+        set_arg_from_input(
+            args,
+            "leaf_nodes_percent",
+            "Optional. The default percentage of leaf nodes that any query may be searched (default: 10 [10%]): ",
+            type_name=int,
+            default_value=10,
+            # choices=range(1, 101)
+        )
+        set_arg_from_input(
+            args,
+            "distance_measure",
+            "Optional. The distance measure used in nearest neighbor search (default: `DOT_PRODUCT_DISTANCE`): ",
+            type_name=str,
+            default_value="DOT_PRODUCT_DISTANCE",
+            # choices=[
+            #     "DOT_PRODUCT_DISTANCE",
+            #     "COSINE_DISTANCE",
+            #     "L1_DISTANCE",
+            #     "SQUARED_L2_DISTANCE"
+            # ],
+        )
+        set_arg_from_input(
+            args,
+            "shard_size",
+            "Optional. Size of the shards (default: `SHARD_SIZE_MEDIUM`): ",
+            type_name=str,
+            default_value="SHARD_SIZE_MEDIUM",
+            # choices=[
+            #     "SHARD_SIZE_SMALL",
+            #     "SHARD_SIZE_MEDIUM",
+            #     "SHARD_SIZE_LARGE",
+            # ],
+        )
+    if args["deploy_new_index"] is True:
+        set_arg_from_input(
+            args,
+            "machine_type",
+            "Optional. The type of machine (default: `e2-standard-16`): ",
+            type_name=str,
+            default_value="e2-standard-16",
+            # choices=[
+            #     "n1-standard-16",
+            #     "n1-standard-32",
+            #     "e2-standard-2",
+            #     "e2-standard-16",
+            #     "e2-highmem-16",
+            #     "n2d-standard-32",
+            # ],
+        )
+        set_arg_from_input(
+            args,
+            "min_replicas",
+            "Optional. The minimum number of machine replicas for deployed index (default: 1): ",
+            type_name=int,
+            default_value=1,
+        )
+        set_arg_from_input(
+            args,
+            "max_replicas",
+            "Optional. The maximum number of machine replicas for deployed index (default: 1): ",
+            type_name=int,
+            default_value=1,
+        )
+
+    vertexai_vectorsearch_import = ImportVertexAIVectorSearch(args)
+    vertexai_vectorsearch_import.upsert_data()
+
+
 def main():
     """
     Import data to Pinecone using a vector dataset directory in the VDF format.
@@ -188,6 +338,76 @@ def main():
     # Qdrant
     parser_qdrant = subparsers.add_parser(DBNames.QDRANT, help="Import data to Qdrant")
     parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
+    parser_qdrant.add_argument(
+        "--prefer_grpc",
+        type=bool,
+        help="Whether to use Qdrant's GRPC interface",
+        default=True,
+    )
+    parser_qdrant.add_argument(
+        "--batch_size",
+        type=int,
+        help="Batch size for upserts (default: 64).",
+        default=64,
+    )
+    parser_qdrant.add_argument(
+        "--parallel",
+        type=int,
+        help="Number of parallel processes of upload (default: 1).",
+        default=1,
+    )
+    parser_qdrant.add_argument(
+        "--max_retries",
+        type=int,
+        help="Maximum number of retries in case of a failure (default: 3).",
+        default=3,
+    )
+    parser_qdrant.add_argument(
+        "--shard_key_selector",
+        type=Any,
+        help="Shard to be queried (default: None)",
+        default=None,
+    )
+
+    # Vertex AI VectorSearch
+    parser_vertexai_vectorsearch = subparsers.add_parser(
+        DBNames.VERTEXAI, help="Import data to Vertex AI Vector Search"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-p", "--project-id", type=str, help="Google Cloud Project ID"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-l", "--location", type=str, help="Google Cloud region hosting your index"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-b",
+        "--batch-size",
+        type=str,
+        help="Enter size of upsert batches:",
+        default=100,
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-f", "--filter-restricts", type=str, help="string filters"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-n", "--numeric-restricts", type=str, help="numeric filters"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-r", "--requests-per-minute", type=int, help="rate limiter"
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "-c",
+        "--crowding-tag",
+        type=str,
+        help="string value to enforce diversity in retrieval",
+    )
+    parser_vertexai_vectorsearch.add_argument(
+        "--deploy_new_index",
+        type=bool,
+        help="deploy new index (default: False)",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+    )
 
     # KDB.AI
     parser_kdbai = subparsers.add_parser(DBNames.KDBAI, help="Import data to KDB.AI")
@@ -225,6 +445,8 @@ def main():
         import_kdbai(args)
     elif args["vector_database"] == DBNames.MILVUS:
         import_milvus(args)
+    elif args["vector_database"] == DBNames.VERTEXAI:
+        import_vertexai_vectorsearch(args)
     else:
         print(
             "Unrecognized DB. Please choose a vector database to export data from:",
