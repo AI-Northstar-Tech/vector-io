@@ -5,7 +5,7 @@ Import data to vertex ai vector search index
 from typing import Dict, List
 from names import DBNames
 
-from import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 
 
 # gcloud config set project $PROJECT_ID - users

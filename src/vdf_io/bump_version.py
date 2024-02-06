@@ -35,12 +35,12 @@ def bump_version(version_file, part="patch"):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Bump version number in VERSION.txt.")
+    parser = argparse.ArgumentParser(description="Bump version number in setup.py.")
     parser.add_argument(
         "version_file",
         nargs="?",
-        default="VERSION.txt",
-        help="Path to the version file (default: VERSION.txt)",
+        default="setup.py",
+        help="Path to the version file (default: setup.py)",
     )
     parser.add_argument(
         "--part",

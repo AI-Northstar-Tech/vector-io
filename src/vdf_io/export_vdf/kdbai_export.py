@@ -6,7 +6,7 @@ from tqdm import tqdm
 import kdbai_client as kdbai
 import os
 from dotenv import load_dotenv
-from export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
 from meta_types import NamespaceMeta, VDFMeta
 from util import standardize_metric

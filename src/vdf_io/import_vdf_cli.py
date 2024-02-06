@@ -8,12 +8,12 @@ from dotenv import load_dotenv
 from names import DBNames
 
 from util import set_arg_from_input, set_arg_from_password
-from import_vdf.pinecone_import import ImportPinecone
-from import_vdf.qdrant_import import ImportQdrant
-from import_vdf.kdbai_import import ImportKDBAI
-from import_vdf.milvus_import import ImportMilvus
-from import_vdf.vertexai_vector_search_import import ImportVertexAIVectorSearch
-from import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.import_vdf.pinecone_import import ImportPinecone
+from vdf_io.import_vdf.qdrant_import import ImportQdrant
+from vdf_io.import_vdf.kdbai_import import ImportKDBAI
+from vdf_io.import_vdf.milvus_import import ImportMilvus
+from vdf_io.import_vdf.vertexai_vector_search_import import ImportVertexAIVectorSearch
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
 
