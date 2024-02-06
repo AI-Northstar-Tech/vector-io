@@ -5,7 +5,7 @@ from qdrant_client import QdrantClient
 from tqdm import tqdm
 from names import DBNames
 from util import extract_numerical_hash
-from import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 from grpc import RpcError
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import VectorParams, Distance, PointStruct

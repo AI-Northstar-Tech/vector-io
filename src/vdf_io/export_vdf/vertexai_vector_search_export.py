@@ -5,7 +5,7 @@ Export data from vertex ai vector search index
 import json
 from names import DBNames
 from util import standardize_metric
-from export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 import google.auth
 from google.cloud import aiplatform

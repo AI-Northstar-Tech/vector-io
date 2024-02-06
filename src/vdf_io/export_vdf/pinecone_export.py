@@ -2,7 +2,7 @@ import datetime
 from names import DBNames
 from src.meta_types import NamespaceMeta, VDFMeta
 from util import standardize_metric
-from export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from pinecone import Pinecone, Vector
 import os
 import json

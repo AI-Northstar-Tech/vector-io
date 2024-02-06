@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from pymilvus import connections, utility, Collection
 
-from export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from meta_types import NamespaceMeta, VDFMeta
 from util import standardize_metric
 from names import DBNames

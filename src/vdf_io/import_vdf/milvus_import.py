@@ -15,7 +15,7 @@ from pymilvus import (
 
 from names import DBNames
 from util import standardize_metric_reverse
-from import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 
 
 load_dotenv()

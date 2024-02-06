@@ -5,7 +5,7 @@ from qdrant_client import QdrantClient
 import os
 from tqdm import tqdm
 from dotenv import load_dotenv
-from export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
 from meta_types import NamespaceMeta, VDFMeta
 from util import standardize_metric
