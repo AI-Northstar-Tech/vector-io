@@ -74,9 +74,10 @@ class ImportKDBAI(ImportVDF):
 
                     # Extract information from JSON
                     # namespace = indexes_content[index_names[0]][""][0]["namespace"]
-                    vector_column_names, vector_column_name = (
-                        self.get_vector_column_name(index_name, namespace_meta)
-                    )
+                    (
+                        vector_column_names,
+                        vector_column_name,
+                    ) = self.get_vector_column_name(index_name, namespace_meta)
                     vector_column_names = [
                         col.replace("-", "_") for col in vector_column_names
                     ]
