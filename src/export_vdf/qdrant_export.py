@@ -1,3 +1,4 @@
+import datetime
 import json
 from typing import Dict, List
 from qdrant_client import QdrantClient
@@ -6,7 +7,7 @@ from tqdm import tqdm
 from dotenv import load_dotenv
 from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
-from meta_types import NamespaceMeta
+from meta_types import NamespaceMeta, VDFMeta
 from util import standardize_metric
 
 load_dotenv()
@@ -49,17 +50,19 @@ class ExportQdrant(ExportVDB):
 
         # Create and save internal metadata JSON
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
-        internal_metadata = {
-            "version": self.args["library_version"],
-            "file_structure": self.file_structure,
-            "author": os.environ.get("USER"),
-            "exported_from": self.DB_NAME_SLUG,
-            "indexes": index_metas,
-        }
+        internal_metadata = VDFMeta(
+            version=self.args["library_version"],
+            file_structure=self.file_structure,
+            author=os.environ.get("USER"),
+            exported_from=self.DB_NAME_SLUG,
+            indexes=index_metas,
+            exported_at=datetime.datetime.now().astimezone().isoformat(),
+        )
+        meta_text = json.dumps(internal_metadata.dict(), indent=4)
+        tqdm.write(meta_text) 
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
-            json.dump(internal_metadata, json_file, indent=4)
+            json_file.write(meta_text)
         # print internal metadata properly
-        tqdm.write(json.dumps(internal_metadata, indent=4))
         return True
 
     def try_scroll(self, fetch_size, collection_name, next_offset):
