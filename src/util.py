@@ -71,9 +71,7 @@ def set_arg_from_input(args, arg_name, prompt, type_name=str, default_value=None
     """
     Set the value of an argument from user input if it is not already present
     """
-    if (arg_name not in args or args[arg_name] is None) and args[
-        arg_name
-    ] != default_value:
+    if arg_name not in args or args[arg_name] is None:
         inp = input(prompt)
         if inp == "":
             args[arg_name] = None if default_value is None else type_name(default_value)

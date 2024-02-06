@@ -1,9 +1,13 @@
 import json
+from typing import Dict, List
+
+from tqdm import tqdm
 import kdbai_client as kdbai
 import os
 from dotenv import load_dotenv
 from export_vdf.vdb_export_cls import ExportVDB
 from names import DBNames
+from meta_types import NamespaceMeta, VDFMeta
 from util import standardize_metric
 
 
@@ -24,14 +28,35 @@ class ExportKDBAI(ExportVDB):
         return self.session.list()
 
     def get_data(self):
-        table_name = self.args["tables"]
+        if "tables" not in self.args or self.args["tables"] is None:
+            table_names = self.get_all_table_names()
+        else:
+            table_names = self.args["tables"].split(",")
+        index_metas: Dict[str, List[NamespaceMeta]] = {}
+        for table_name in tqdm(table_names, desc="Fetching indexes"):
+            index_metas[table_name] = self.export_table(table_name)
+        internal_metadata = VDFMeta(
+            version=self.args["library_version"],
+            file_structure=self.file_structure,
+            author=os.environ.get("USER"),
+            exported_from=self.DB_NAME_SLUG,
+            indexes=index_metas,
+        )
+
+        internal_metadata_path = os.path.join(self.vdf_directory, "VDF_META.json")
+        meta_json_text = json.dump(internal_metadata, indent=4)
+        print(meta_json_text)
+        with open(internal_metadata_path, "w") as json_file:
+            json_file.write(meta_json_text)
+
+    def export_table(self, table_name):
         model = self.model
         vectors_directory = os.path.join(self.vdf_directory, table_name)
         os.makedirs(vectors_directory, exist_ok=True)
 
         table = self.session.table(table_name)
         table_res = table.query()
-        save_path = vectors_directory + "/" + table_name + ".parquet"
+        save_path = f"{vectors_directory}/{table_name}.parquet"
         table_res.to_parquet(save_path, index=False)
 
         embedding_name = None
@@ -47,26 +72,14 @@ class ExportKDBAI(ExportVDB):
                     tab_schema["columns"][i]["vectorIndex"]["metric"], self.DB_NAME_SLUG
                 )
 
-        namespace_meta = {
-            "namespace": "",
-            "total_vector_count": len(table_res.index),
-            "exported_vector_count": len(table_res.index),
-            "dimensions": embedding_dims,
-            "model_name": model,
-            "vector_columns": embedding_name,
-            "data_path": save_path,
-            "metric": embedding_dist,
-        }
-
-        internal_metadata = {
-            # "version": self.args["library_version"],
-            "version": "0.0.6",
-            "file_structure": self.file_structure,
-            "author": os.environ.get("USER"),
-            "exported_from": self.DB_NAME_SLUG,
-            "indexes": {table_name: {"": [namespace_meta]}},
-        }
-
-        internal_metadata_path = os.path.join(self.vdf_directory, "VDF_META.json")
-        with open(internal_metadata_path, "w") as json_file:
-            json.dump(internal_metadata, json_file, indent=4)
+        namespace_meta = NamespaceMeta(
+            namespace="",
+            total_vector_count=len(table_res.index),
+            exported_vector_count=len(table_res.index),
+            dimensions=embedding_dims,
+            model_name=model,
+            vector_columns=embedding_name,
+            data_path=save_path,
+            metric=embedding_dist,
+        )
+        return [namespace_meta]

@@ -97,7 +97,7 @@ def import_kdbai(args):
     )
     set_arg_from_input(
         args,
-        "ind",
+        "index",
         "Enter the index type used (Flat, IVF, IVFPQ, HNSW): ",
         str,
     )
@@ -412,9 +412,11 @@ def main():
     # KDB.AI
     parser_kdbai = subparsers.add_parser(DBNames.KDBAI, help="Import data to KDB.AI")
     parser_kdbai.add_argument(
-        "-u", "--endpoint", type=str, help="KDB.AI Cloud instance Endpoint url"
+        "-u", "--url", type=str, help="KDB.AI Cloud instance Endpoint url"
     )
-    parser_kdbai.add_argument("-i", "--index", type=str, help="Index used")
+    parser_kdbai.add_argument(
+        "-i", "--index", type=str, help="Index used", default="hnsw"
+    )
 
     args = parser.parse_args()
     args = vars(args)
