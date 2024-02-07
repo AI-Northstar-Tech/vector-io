@@ -8,130 +8,101 @@ Vector IO
    :alt: PyPI version
 
 
-This library uses a universal format for vector datasets to easily export and import data from all vector databases.
 
-See the `Contributing <#contributing>`_ section to add support for your favorite vector database.
+.. raw:: html
 
-Supported Vector Databases
---------------------------
+   <!-- include photo -->
+   ![Logo](assets/vector-io-logo.png)
 
-(Request support for a VectorDB by voting/commenting here: https://github.com/AI-Northstar-Tech/vector-io/discussions/38)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   This library uses a universal format for vector datasets to easily export and import data from all vector databases.
 
-.. list-table::
-   :header-rows: 1
+   See the [Contributing](#contributing) section to add support for your favorite vector database.
 
-   * - Vector Database
-     - Import
-     - Export
-   * - Pinecone
-     - ✅
-     - ✅
-   * - Qdrant
-     - ✅
-     - ✅
-   * - Milvus
-     - ✅
-     - ✅
-   * - GCP Vertex AI Vector Search
-     - ✅
-     - ✅
-   * - KDB.AI
-     - ✅
-     - ✅
-   * - Azure AI Search
-     - 🔜
-     - 🔜
-   * - Rockset
-     - 🔜
-     - 🔜
-   * - Vespa
-     - ⏳
-     - ⏳
-   * - Weaviate
-     - ⏳
-     - ⏳
-   * - MongoDB Atlas
-     - ⏳
-     - ⏳
-   * - Epsilla
-     - ⏳
-     - ⏳
-   * - txtai
-     - ⏳
-     - ⏳
-   * - Redis Search
-     - ⏳
-     - ⏳
-   * - OpenSearch
-     - ⏳
-     - ⏳
-   * - Activeloop Deep Lake
-     - ❌
-     - ❌
-   * - Anari AI
-     - ❌
-     - ❌
-   * - Apache Cassandra
-     - ❌
-     - ❌
-   * - ApertureDB
-     - ❌
-     - ❌
-   * - Chroma
-     - ❌
-     - ❌
-   * - ClickHouse
-     - ❌
-     - ❌
-   * - CrateDB
-     - ❌
-     - ❌
-   * - DataStax Astra DB
-     - ❌
-     - ❌
-   * - Elasticsearch
-     - ❌
-     - ❌
-   * - LanceDB
-     - ❌
-     - ❌
-   * - Marqo
-     - ❌
-     - ❌
-   * - Meilisearch
-     - ❌
-     - ❌
-   * - MyScale
-     - ❌
-     - ❌
-   * - Neo4j
-     - ❌
-     - ❌
-   * - Nuclia DB
-     - ❌
-     - ❌
-   * - OramaSearch
-     - ❌
-     - ❌
-   * - pgvector
-     - ❌
-     - ❌
-   * - Turbopuffer
-     - ❌
-     - ❌
-   * - Typesense
-     - ❌
-     - ❌
-   * - USearch
-     - ❌
-     - ❌
-   * - Vald
-     - ❌
-     - ❌
-   * - Apache Solr
-     - ❌
-     - ❌
+   ## Supported Vector Databases
+
+   ### (Request support for a VectorDB by voting/commenting here: <https://github.com/AI-Northstar-Tech/vector-io/discussions/38>)
+
+   <details open>
+     <summary>Supported</summary>
+
+   | Vector Database                | Import | Export |
+   |--------------------------------|--------|--------|
+   | Pinecone                       | ✅     | ✅     |
+   | Qdrant                         | ✅     | ✅     |
+   | Milvus                         | ✅     | ✅     |
+   | GCP Vertex AI Vector Search    | ✅     | ✅     |
+   | KDB.AI                         | ✅     | ✅     |
+
+   </details>
+
+   -----
+
+   <details open>
+
+     <summary>Coming Soon</summary>
+
+   | Vector Database                | Import | Export |
+   |--------------------------------|--------|--------|
+   | Azure AI Search                | 🔜     | 🔜     |
+   | Rockset                        | 🔜     | 🔜     |
+   | Vespa                          | 🔜     | 🔜     |
+   </details>
+   <!-- line break -->
+
+
+
+----
+
+
+.. raw:: html
+
+   <details>
+     <summary>In Progress</summary>
+
+   | Vector Database                | Import | Export |
+   |--------------------------------|--------|--------|
+   | Weaviate                       | ⏳     | ⏳     |
+   | MongoDB Atlas                  | ⏳     | ⏳     |
+   | Epsilla                        | ⏳     | ⏳     |
+   | txtai                          | ⏳     | ⏳     |
+   | Redis Search                   | ⏳     | ⏳     |
+   | OpenSearch                     | ⏳     | ⏳     |
+   </details>
+
+
+----
+
+
+.. raw:: html
+
+   <details>
+     <summary>Not Supported</summary>
+
+   | Vector Database                | Import | Export |
+   |--------------------------------|--------|--------|
+   | Activeloop Deep Lake           | ❌     | ❌     |
+   | Anari AI                       | ❌     | ❌     |
+   | Apache Cassandra               | ❌     | ❌     |
+   | ApertureDB                     | ❌     | ❌     |
+   | Chroma                         | ❌     | ❌     |
+   | ClickHouse                     | ❌     | ❌     |
+   | CrateDB                        | ❌     | ❌     |
+   | DataStax Astra DB              | ❌     | ❌     |
+   | Elasticsearch                  | ❌     | ❌     |
+   | LanceDB                        | ❌     | ❌     |
+   | Marqo                          | ❌     | ❌     |
+   | Meilisearch                    | ❌     | ❌     |
+   | MyScale                        | ❌     | ❌     |
+   | Neo4j                          | ❌     | ❌     |
+   | Nuclia DB                      | ❌     | ❌     |
+   | OramaSearch                    | ❌     | ❌     |
+   | pgvector                       | ❌     | ❌     |
+   | Turbopuffer                    | ❌     | ❌     |
+   | Typesense                      | ❌     | ❌     |
+   | USearch                        | ❌     | ❌     |
+   | Vald                           | ❌     | ❌     |
+   | Apache Solr                    | ❌     | ❌     |
+   </details>
 
 
 Universal Vector Dataset Format (VDF) specification
@@ -266,8 +237,8 @@ This Python script is used to re-embed a vector dataset. It takes a directory of
 
 .. code-block:: bash
 
-   reembed.py --help
-   usage: reembed.py [-h] -d DIR [-m NEW_MODEL_NAME]
+   reembed_vdf --help
+   usage: reembed_vdf [-h] -d DIR [-m NEW_MODEL_NAME]
                      [-t TEXT_COLUMN]
 
    Reembed a vector dataset
@@ -288,6 +259,10 @@ Examples
 .. code-block:: bash
 
    export_vdf -m hkunlp/instructor-xl --push_to_hub pinecone --environment gcp-starter
+
+   import_vdf -d /path/to/vdf/dataset milvus
+
+   reembed_vdf -d /path/to/vdf/dataset -m sentence-transformers/all-MiniLM-L6-v2 -t title
 
 Follow the prompt to select the index and id range to export.
 
