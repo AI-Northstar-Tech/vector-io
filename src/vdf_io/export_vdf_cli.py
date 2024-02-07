@@ -5,6 +5,7 @@ import sys
 import time
 from dotenv import load_dotenv
 import warnings
+import vdf_io
 
 
 from vdf_io.export_vdf.pinecone_export import (
@@ -26,7 +27,7 @@ from vdf_io.export_vdf.vertexai_vector_search_export import (
 )
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.names import DBNames
-from vdf_io.push_to_hub_vdf import push_to_hub
+from vdf_io.scripts.push_to_hub_vdf import push_to_hub
 
 # Suppress specific warnings
 warnings.simplefilter("ignore", ResourceWarning)
@@ -76,7 +77,7 @@ def main():
     args = parser.parse_args()
     # convert args to dict
     args = vars(args)
-    # args["library_version"] = vdf_io.__version__
+    args["library_version"] = vdf_io.__version__
     t_start = time.time()
     if (
         ("vector_database" not in args)
