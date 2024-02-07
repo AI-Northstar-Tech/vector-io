@@ -34,7 +34,7 @@ class ExportVDB(abc.ABC):
     @abc.abstractmethod
     def make_parser(cls, subparsers):
         raise NotImplementedError()
-    
+
     @classmethod
     @abc.abstractmethod
     def export_vdb(cls, args):

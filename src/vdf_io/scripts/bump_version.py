@@ -2,6 +2,8 @@
 
 import argparse
 import re
+
+
 def bump_version(version_file, part="patch"):
     # Read the current version
     with open(version_file, "r") as file:
@@ -34,7 +36,9 @@ def bump_version(version_file, part="patch"):
     new_version = f"{major}.{minor}.{patch}"
 
     # Replace the old version with the new version in the content
-    new_content = re.sub(r"(version\s*=\s*['\"])[^'\"]+(['\"])", fr"\g<1>{new_version}\g<2>", content)
+    new_content = re.sub(
+        r"(version\s*=\s*['\"])[^'\"]+(['\"])", rf"\g<1>{new_version}\g<2>", content
+    )
 
     # Write the new content back to the file
     with open(version_file, "w") as file:
