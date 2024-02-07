@@ -2,6 +2,9 @@
 
 import argparse
 import re
+import fileinput
+
+
 def bump_version(version_file, part="patch"):
     # Read the current version
     with open(version_file, "r") as file:
@@ -34,7 +37,9 @@ def bump_version(version_file, part="patch"):
     new_version = f"{major}.{minor}.{patch}"
 
     # Replace the old version with the new version in the content
-    new_content = re.sub(r"(version\s*=\s*['\"])[^'\"]+(['\"])", fr"\g<1>{new_version}\g<2>", content)
+    new_content = re.sub(
+        r"(version\s*=\s*['\"])[^'\"]+(['\"])", rf"\g<1>{new_version}\g<2>", content
+    )
 
     # Write the new content back to the file
     with open(version_file, "w") as file:
@@ -60,6 +65,12 @@ def main():
     args = parser.parse_args()
 
     new_version = bump_version(args.version_file, args.part)
+
+    # run `sed -i '' "s/__version__ = .*/__version__ = '$version_number'/" src/vdf_io/__init__.py`
+    # Replace the version number in the file
+    for line in fileinput.input("src/vdf_io/__init__.py", inplace=True):
+        if line.startswith("__version__"):
+            line = f"__version__ = '{new_version}'\n"
     print(f"Updated version: {new_version}")
 
 
