@@ -12,15 +12,15 @@ Vector IO
 .. raw:: html
 
    <!-- include photo -->
-   ![Logo](assets/vector-io-logo.png)
+   <img src="assets/vector-io-logo.png" width="200"/>
 
    This library uses a universal format for vector datasets to easily export and import data from all vector databases.
+
+   Request support for a VectorDB by voting/commenting on [this poll](https://github.com/AI-Northstar-Tech/vector-io/discussions/38)
 
    See the [Contributing](#contributing) section to add support for your favorite vector database.
 
    ## Supported Vector Databases
-
-   ### (Request support for a VectorDB by voting/commenting here: <https://github.com/AI-Northstar-Tech/vector-io/discussions/38>)
 
    <details open>
      <summary>Supported</summary>
@@ -105,39 +105,6 @@ Vector IO
    </details>
 
 
-Universal Vector Dataset Format (VDF) specification
----------------------------------------------------
-
-
-#. VDF_META.json: It is a json file with the following schema:
-
-.. code-block:: typescript
-
-   interface Index {
-     namespace: string;
-     total_vector_count: number;
-     exported_vector_count: number;
-     dimensions: number;
-     model_name: string;
-     vector_columns: string[];
-     data_path: string;
-     metric: 'Euclid' | 'Cosine' | 'Dot';
-   }
-
-   interface VDFMeta {
-     version: string;
-     file_structure: string[];
-     author: string;
-     exported_from: 'pinecone' | 'qdrant'; // others when they are added
-     indexes: {
-       [key: string]: Index[];
-     };
-     exported_at: string;
-   }
-
-
-#. Parquet files/folders for metadata and vectors.
-
 Installation
 ------------
 
@@ -156,6 +123,38 @@ From source
    git clone https://github.com/AI-Northstar-Tech/vector-io.git
    cd vector-io
    pip install -r requirements.txt
+
+Universal Vector Dataset Format (VDF) specification
+---------------------------------------------------
+
+
+#. VDF_META.json: It is a json file with the following schema VDFMeta defined in `src/vdf_io/meta_types.py <src/vdf_io/meta_types.py>`_\ :
+
+.. code-block:: python
+
+   class NamespaceMeta(BaseModel):
+       namespace: str
+       index_name: str
+       total_vector_count: int
+       exported_vector_count: int
+       dimensions: int
+       model_name: str
+       vector_columns: List[str] = ["vector"]
+       data_path: str
+       metric: str
+       model_config = ConfigDict(protected_namespaces=())
+
+
+   class VDFMeta(BaseModel):
+       version: str
+       file_structure: List[str]
+       author: str
+       exported_from: str
+       indexes: Dict[str, List[NamespaceMeta]]
+       exported_at: str
+
+
+#. Parquet files/folders for metadata and vectors.
 
 Export Script
 -------------
@@ -277,21 +276,34 @@ Please fork the repo and send a PR for both the import and export scripts.
 
 Steps to add a new vector database (ABC):
 
+
+#. Add your database name in `src/vdf_io/names.py <src/vdf_io/names.py>`_ in the DBNames enum class.
+#. Create new files ``src/vdf_io/export_vdf/export_abc.py`` and ``src/vdf_io/import_vdf/import_abc.py`` for the new DB.
+
 **Export**\ :
 
 
-#. Add a new subparser in ``export_vdf_cli.py`` for the new vector database. Add database specific arguments to the subparser, such as the url of the database, any authentication tokens, etc.
-#. Add a new file in ``src/vdf_io/export_vdf/`` for the new vector database. This file should define a class ExportABC which inherits from ExportVDF.
+#. In your export file, define a class ExportABC which inherits from ExportVDF.
 #. Specify a DB_NAME_SLUG for the class
-#. The class should implement the get_data() function to download points (in a batched manner) with all the metadata from the specified index of the vector database. This data should be stored in a series of parquet files/folders.
-   The metadata should be stored in a json file with the `schema above <#universal-vector-dataset-format-vdf-specification>`_.
+#. The class should implement:
+
+   #. make_parser() function to add database specific arguments to the export_vdf CLI
+   #. export_vdb() function to prompt user for info not provided in the CLI. It should then call the get_data() function.
+   #. get_data() function to download points (in a batched manner) with all the metadata from the specified index of the vector database. This data should be stored in a series of parquet files/folders. The metadata should be stored in a json file with the `schema above <#universal-vector-dataset-format-vdf-specification>`_.
+
 #. Use the script to export data from an example index of the vector database and verify that the data is exported correctly.
 
 **Import**\ :
 
 
-#. Add a new subparser in ``import_vdf_cli.py`` for the new vector database. Add database specific arguments to the subparser, such as the url of the database, any authentication tokens, etc.
-#. Add a new file in ``src/vdf_io/import_vdf/`` for the new vector database. This file should define a class ImportABC which inherits from ImportVDF. It should implement the upsert_data() function to upload points from a vdf dataset (in a batched manner) with all the metadata to the specified index of the vector database. All metadata about the dataset should be read fro mthe VDF_META.json file in the vdf folder.
+#. In your import file, define a class ImportABC which inherits from ImportVDF.
+#. Specify a DB_NAME_SLUG for the class
+#. The class should implement:
+
+   #. make_parser() function to add database specific arguments to the import_vdf CLI, such as the url of the database, any authentication tokens, etc.
+   #. import_vdb() function to prompt user for info not provided in the CLI. It should then call the upsert_data() function.
+   #. upsert_data() function to upload points from a vdf dataset (in a batched manner) with all the metadata to the specified index of the vector database. All metadata about the dataset should be read from the VDF_META.json file in the vdf folder.
+
 #. Use the script to import data from the example vdf dataset exported in the previous step and verify that the data is imported correctly.
 
 Changing the VDF specification

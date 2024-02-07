@@ -28,7 +28,17 @@ class ExportVDB(abc.ABC):
         """
         Get data from vector database
         """
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def make_parser(cls, subparsers):
+        raise NotImplementedError()
+    
+    @classmethod
+    @abc.abstractmethod
+    def export_vdb(cls, args):
+        raise NotImplementedError()
 
     def save_vectors_to_parquet(self, vectors, metadata, vectors_directory):
         vectors_df = pd.DataFrame(list(vectors.items()), columns=["id", "vector"])

@@ -16,60 +16,60 @@ from vdf_io.util import set_arg_from_input, standardize_metric
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 
-def make_vertexai_parser(subparsers):
-    parser_vertexai_vectorsearch = subparsers.add_parser(
-        "vertexai_vectorsearch", help="Export data from Vertex AI Vector Search"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-p", "--project-id", type=str, help="Google Cloud Project ID"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-i", "--index", type=str, help="Name of the index or indexes to export"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-c",
-        "--gcloud-credentials-file",
-        type=str,
-        help="Path to Google Cloud service account credentials file",
-        default=None,
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-m",
-        "--max_vectors",
-        type=str,
-        help="Optional: max vectors to retrieve",
-        default=None,
-    )
-
-
-def export_vertexai_vectorsearch(args):
-    """
-    Export data from Vertex AI Vector Search
-    """
-    set_arg_from_input(args, "project_id", "Enter the Google Cloud Project ID: ")
-    set_arg_from_input(
-        args,
-        "index",
-        "Enter name of index to export (hit return to export all. Comma separated for multiple indexes): ",
-    )
-    set_arg_from_input(
-        args,
-        "gcloud_credentials_file",
-        "Enter path to service account credentials file (hit return to use application default credentials): ",
-    )
-    # max_vectors
-    set_arg_from_input(
-        args,
-        "max_vectors",
-        "Optional: max_vectors to export; can be larger than actual vector count",
-    )
-    vertexai_vectorsearch_export = ExportVertexAIVectorSearch(args)
-    vertexai_vectorsearch_export.get_data()
-    return vertexai_vectorsearch_export
-
-
 class ExportVertexAIVectorSearch(ExportVDB):
     DB_NAME_SLUG = DBNames.VERTEXAI
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_vertexai_vectorsearch = subparsers.add_parser(
+            "vertexai_vectorsearch", help="Export data from Vertex AI Vector Search"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-p", "--project-id", type=str, help="Google Cloud Project ID"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-i", "--index", type=str, help="Name of the index or indexes to export"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-c",
+            "--gcloud-credentials-file",
+            type=str,
+            help="Path to Google Cloud service account credentials file",
+            default=None,
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-m",
+            "--max_vectors",
+            type=str,
+            help="Optional: max vectors to retrieve",
+            default=None,
+        )
+
+    @classmethod
+    def export_vdb(cls, args):
+        """
+        Export data from Vertex AI Vector Search
+        """
+        set_arg_from_input(args, "project_id", "Enter the Google Cloud Project ID: ")
+        set_arg_from_input(
+            args,
+            "index",
+            "Enter name of index to export (hit return to export all. Comma separated for multiple indexes): ",
+        )
+        set_arg_from_input(
+            args,
+            "gcloud_credentials_file",
+            "Enter path to service account credentials file (hit return to use application default credentials): ",
+        )
+        # max_vectors
+        set_arg_from_input(
+            args,
+            "max_vectors",
+            "Optional: max_vectors to export; can be larger than actual vector count",
+        )
+        vertexai_vectorsearch_export = ExportVertexAIVectorSearch(args)
+        vertexai_vectorsearch_export.get_data()
+        return vertexai_vectorsearch_export
 
     def __init__(self, args):
         """

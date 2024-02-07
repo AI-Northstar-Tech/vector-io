@@ -7,26 +7,14 @@ from dotenv import load_dotenv
 import warnings
 
 
-from vdf_io.export_vdf.pinecone_export import (
-    export_pinecone,
-    make_pinecone_parser,
-)
-from vdf_io.export_vdf.qdrant_export import (
-    export_qdrant,
-    make_qdrant_parser,
-)
-from vdf_io.export_vdf.kdbai_export import export_kdbai, make_kdbai_parser
-from vdf_io.export_vdf.milvus_export import (
-    export_milvus,
-    make_milvus_parser,
-)
-from vdf_io.export_vdf.vertexai_vector_search_export import (
-    export_vertexai_vectorsearch,
-    make_vertexai_parser,
-)
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
-from vdf_io.names import DBNames
-from vdf_io.push_to_hub_vdf import push_to_hub
+from vdf_io.export_vdf.kdbai_export import ExportKDBAI
+from vdf_io.export_vdf.qdrant_export import ExportQdrant
+from vdf_io.export_vdf.milvus_export import ExportMilvus
+from vdf_io.export_vdf.pinecone_export import ExportPinecone
+from vdf_io.export_vdf.vertexai_vector_search_export import ExportVertexAIVectorSearch
+
+from vdf_io.scripts.push_to_hub_vdf import push_to_hub
 
 # Suppress specific warnings
 warnings.simplefilter("ignore", ResourceWarning)
@@ -34,29 +22,6 @@ warnings.simplefilter("ignore", ResourceWarning)
 load_dotenv()
 
 DEFAULT_MAX_FILE_SIZE = 1024  # in MB
-
-
-slug_to_export_func = {
-    DBNames.PINECONE: export_pinecone,
-    DBNames.QDRANT: export_qdrant,
-    DBNames.KDBAI: export_kdbai,
-    DBNames.MILVUS: export_milvus,
-    DBNames.VERTEXAI: export_vertexai_vectorsearch,
-}
-
-slug_to_parser_func = {
-    DBNames.PINECONE: make_pinecone_parser,
-    DBNames.QDRANT: make_qdrant_parser,
-    DBNames.KDBAI: make_kdbai_parser,
-    DBNames.MILVUS: make_milvus_parser,
-    DBNames.VERTEXAI: make_vertexai_parser,
-}
-
-
-def add_subparsers_for_dbs(subparsers, slugs):
-    for slug in slugs:
-        parser_func = slug_to_parser_func[slug]
-        parser_func(subparsers)
 
 
 def main():
@@ -71,7 +36,17 @@ def main():
     )
 
     db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
-    add_subparsers_for_dbs(subparsers, db_choices)
+    db_class_map = {c.DB_NAME_SLUG: c for c in ExportVDB.__subclasses__()}
+    for db in db_choices:
+        print(db_class_map[db], type(db_class_map[db]))
+        print(ExportKDBAI)
+        print(dir(ExportKDBAI))
+        print(ExportKDBAI.make_parser)
+        # call static method make_parser of the class
+        db_class_map[db].make_parser(subparsers)
+
+        print(dir(db_class_map[db]))
+        # print(db_class_map[db])
 
     args = parser.parse_args()
     # convert args to dict
@@ -86,8 +61,8 @@ def main():
         print("Please choose a vector database to export data from:", db_choices)
         return
 
-    if args["vector_database"] in slug_to_export_func:
-        export_obj = slug_to_export_func[args["vector_database"]](args)
+    if args["vector_database"] in db_choices:
+        export_obj = db_class_map[args["vector_database"]].export_vdb(args)
     else:
         print("Invalid vector database")
         args["vector_database"] = input("Enter the name of vector database to export: ")
