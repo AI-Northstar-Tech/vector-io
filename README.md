@@ -3,7 +3,7 @@
 [![PyPI version](https://badge.fury.io/py/vdf-io.svg)](https://badge.fury.io/py/vdf-io)
 
 <!-- include photo -->
-![Logo](assets/vector-io-logo.png)
+<img src="assets/vector-io-logo.png" width="200"/>
 
 This library uses a universal format for vector datasets to easily export and import data from all vector databases.
 
