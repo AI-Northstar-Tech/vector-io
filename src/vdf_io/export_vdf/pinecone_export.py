@@ -1,10 +1,11 @@
 import argparse
 import datetime
-from pinecone import Pinecone, Vector
 import os
 import json
 import numpy as np
 from tqdm import tqdm
+
+from pinecone import Pinecone, Vector
 
 from vdf_io.names import DBNames
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
@@ -58,7 +59,7 @@ def make_pinecone_parser(subparsers):
     )
 
 
-def export_pinecone(args):
+def export_pinecone(args) -> ExportVDB:
     """
     Export data from Pinecone
     """

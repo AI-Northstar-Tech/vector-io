@@ -34,7 +34,7 @@ def make_qdrant_parser(subparsers):
     )
 
 
-def export_qdrant(args):
+def export_qdrant(args) -> ExportVDB:
     """
     Export data from Qdrant
     """

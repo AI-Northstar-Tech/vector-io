@@ -42,7 +42,7 @@ def make_vertexai_parser(subparsers):
     )
 
 
-def export_vertexai_vectorsearch(args):
+def export_vertexai_vectorsearch(args) -> ExportVDB:
     """
     Export data from Vertex AI Vector Search
     """

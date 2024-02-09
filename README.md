@@ -269,6 +269,12 @@ If you wish to change the VDF specification, please open an issue to discuss the
 
 If you wish to improve the efficiency of the import/export scripts, please fork the repo and send a PR.
 
+## Telemetry
+
+Running the export_vdf and import_vdf scripts will send anonymous usage data to AI Northstar Tech to help improve the library.
+
+You can opt out this by setting the environment variable `DISABLE_TELEMETRY_VECTORIO` to `1`.
+
 ## Questions
 
 If you have any questions, please open an issue on the repo or message Dhruv Anand on [LinkedIn](https://www.linkedin.com/in/dhruv-anand-ainorthstartech/)

@@ -26,7 +26,7 @@ def make_kdbai_parser(subparsers):
     )
 
 
-def export_kdbai(args):
+def export_kdbai(args) -> ExportVDB:
     """
     Export data from KDBAI
     """

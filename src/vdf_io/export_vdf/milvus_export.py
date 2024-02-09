@@ -27,7 +27,7 @@ def make_milvus_parser(subparsers):
     )
 
 
-def export_milvus(args):
+def export_milvus(args) -> ExportVDB:
     """
     Export data from Milvus
     """
