@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
 import re
 import subprocess
 import sys
@@ -24,7 +23,7 @@ def update_version_in_init(version_number):
     with open("src/vdf_io/__init__.py", "r+") as f:
         content = f.read()
         content_new = re.sub(
-            r"__version__ = .+", f"__version__ = '{version_number}'", content
+            r"__version__ = .+", f'__version__ = "{version_number}"', content
         )
         f.seek(0)
         f.write(content_new)

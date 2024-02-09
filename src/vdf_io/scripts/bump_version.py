@@ -2,7 +2,6 @@
 
 import argparse
 import re
-import fileinput
 
 
 def bump_version(version_file, part="patch"):

@@ -124,7 +124,6 @@ def run_export(span):
     args = vars(args)
     args["library_version"] = vdf_io.__version__
 
-
     t_start = time.time()
     if (
         ("vector_database" not in args)
@@ -142,12 +141,11 @@ def run_export(span):
         sys.argv.extend(["--vector_database", args["vector_database"]])
         main()
     t_end = time.time()
-    
-    print(export_obj.args)
+
     for key in list(export_obj.args.keys()):
         if key in ARGS_ALLOWLIST:
             span.set_attribute(key, export_obj.args[key])
-    
+
     # formatted time
     print(f"Export to disk completed. Exported to: {export_obj.vdf_directory}/")
     print(
