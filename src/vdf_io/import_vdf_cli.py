@@ -296,6 +296,11 @@ def main():
 
     parser.add_argument("-d", "--dir", type=str, help="Directory to import")
     parser.add_argument(
+        "--hf_dataset",
+        type=str,
+        help="Hugging Face dataset name eg: 'aintech/vdf_20240125_130746_ac5a6_medium_articles'",
+    )
+    parser.add_argument(
         "-s",
         "--subset",
         type=bool,
