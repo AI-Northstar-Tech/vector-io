@@ -143,8 +143,7 @@ usage: export_vdf [-h] [-m MODEL_NAME]
                   {pinecone,qdrant,kdbai,milvus,vertexai_vectorsearch}
                   ...
 
-Export data from various vector databases to the VDF format
-for vector datasets
+Export data from various vector databases to the VDF format for vector datasets
 
 options:
   -h, --help            show this help message and exit

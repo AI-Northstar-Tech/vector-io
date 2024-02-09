@@ -4,6 +4,7 @@ import argparse
 import re
 import subprocess
 import sys
+import shutil
 
 
 def bump_version():
@@ -31,6 +32,9 @@ def update_version_in_init(version_number):
 
 
 def build():
+    # move all files in dist/* to data/dist/* first. do not move the dist folder itself
+    subprocess.run(["mkdir", "-p", "data/dist"], check=True)
+    subprocess.run("mv dist/* data/dist/", shell=True, check=False)
     # Build the package
     subprocess.run(
         ["python", "setup.py", "sdist", "bdist_wheel", "--verbose"], check=True
