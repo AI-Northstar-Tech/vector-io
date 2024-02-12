@@ -188,7 +188,7 @@ class ImportPinecone(ImportVDB):
                             id_list = pd.read_csv(
                                 self.args["id_list_file"], header=None
                             )[0].tolist()
-                            df = df[df["id"].isin(id_list)]
+                            df = df[df[self.id_column].isin(id_list)]
                         elif (
                             "id_range_start" in self.args
                             and self.args["id_range_start"] is not None
@@ -197,8 +197,14 @@ class ImportPinecone(ImportVDB):
                         ):
                             # convert id to int before comparison
                             df = df[
-                                (df["id"].astype(int) >= self.args["id_range_start"])
-                                & (df["id"].astype(int) <= self.args["id_range_end"])
+                                (
+                                    df[self.id_column].astype(int)
+                                    >= self.args["id_range_start"]
+                                )
+                                & (
+                                    df[self.id_column].astype(int)
+                                    <= self.args["id_range_end"]
+                                )
                             ]
                         else:
                             raise Exception(
@@ -207,16 +213,16 @@ class ImportPinecone(ImportVDB):
                             )
                     vectors.update(
                         {
-                            row["id"]: row[vector_column_name].tolist()
+                            row[self.id_column]: row[vector_column_name].tolist()
                             for _, row in df.iterrows()
                         }
                     )
                     metadata.update(
                         {
-                            row["id"]: {
+                            row[self.id_column]: {
                                 key: value
                                 for key, value in row.items()
-                                if key not in ["id"] + vector_column_names
+                                if key not in [self.id_column] + vector_column_names
                             }
                             for _, row in df.iterrows()
                         }

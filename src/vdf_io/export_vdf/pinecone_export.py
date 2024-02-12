@@ -6,6 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 from pinecone import Pinecone, Vector
+from vdf_io.constants import ID_COLUMN
 
 from vdf_io.names import DBNames
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
@@ -142,7 +143,7 @@ class ExportPinecone(ExportVDB):
                 tqdm.write("No vectors found that have not been exported yet.")
                 return []
             # mark the vectors as exported
-            ids = [result["id"] for result in results["matches"]]
+            ids = [result[ID_COLUMN] for result in results["matches"]]
             ids_to_mark = list(set(ids) - all_ids)
             tqdm.write(
                 f"Found {len(ids_to_mark)} vectors that have not been exported yet."
@@ -203,7 +204,7 @@ class ExportPinecone(ExportVDB):
                 top_k=PINECONE_MAX_K,
                 namespace=namespace,
             )
-        ids = set(result["id"] for result in results["matches"])
+        ids = set(result[ID_COLUMN] for result in results["matches"])
         return ids
 
     def get_all_ids_from_index(self, num_dimensions, namespace="", hash_value=""):
@@ -236,7 +237,7 @@ class ExportPinecone(ExportVDB):
             top_k=100,
             namespace=namespace,
         )
-        random_results_ids_strs = [x["id"] for x in random_results["matches"]]
+        random_results_ids_strs = [x[ID_COLUMN] for x in random_results["matches"]]
         all_ids = set()
         if not all(x.isdigit() for x in random_results_ids_strs):
             tqdm.write(

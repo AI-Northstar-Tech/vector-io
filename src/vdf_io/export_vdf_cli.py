@@ -20,6 +20,7 @@ from vdf_io.export_vdf.qdrant_export import ExportQdrant
 from vdf_io.export_vdf.kdbai_export import ExportKDBAI
 from vdf_io.export_vdf.vertexai_vector_search_export import ExportVertexAIVectorSearch
 from vdf_io.names import DBNames
+from vdf_io.scripts.check_for_updates import check_for_updates
 from vdf_io.scripts.push_to_hub_vdf import push_to_hub
 
 # Suppress specific warnings
@@ -138,6 +139,8 @@ def run_export(span):
     span.set_attribute("export_time", t_end - t_start)
     if args["push_to_hub"]:
         push_to_hub(export_obj, args)
+
+    check_for_updates()
 
 
 def make_common_options(parser):

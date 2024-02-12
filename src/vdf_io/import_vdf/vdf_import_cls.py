@@ -3,6 +3,9 @@ import os
 from packaging.version import Version
 import abc
 
+from tqdm import tqdm
+from vdf_io.constants import ID_COLUMN
+
 from vdf_io.util import expand_shorthand_path, get_final_data_path, get_parquet_files
 
 
@@ -27,6 +30,9 @@ class ImportVDB(abc.ABC):
             raise Exception("VDF_META.json not found in the specified directory")
         with open(vdf_meta_path) as f:
             self.vdf_meta = json.load(f)
+        self.id_column = ID_COLUMN
+        if "id_column" in self.vdf_meta:
+            self.id_column = self.vdf_meta["id_column"]
         if "indexes" not in self.vdf_meta:
             raise Exception("Invalid VDF_META.json, 'indexes' key not found")
         if "version" not in self.vdf_meta:
@@ -61,14 +67,21 @@ class ImportVDB(abc.ABC):
             vector_column_names = namespace_meta["vector_columns"]
             vector_column_name = vector_column_names[0]
             if len(vector_column_names) > 1:
-                print(
+                tqdm.write(
                     f"Warning: More than one vector column found for index {index_name}."
                     f" Only the first vector column {vector_column_name} will be imported."
                 )
         return vector_column_names, vector_column_name
 
     def get_parquet_files(self, data_path):
-        return get_parquet_files(data_path)
+        return get_parquet_files(data_path, self.args)
 
     def get_final_data_path(self, data_path):
-        return get_final_data_path(self.args["cwd"], self.args["dir"], data_path)
+        return get_final_data_path(
+            self.args["cwd"], self.args["dir"], data_path, self.args
+        )
+
+    def get_file_path(self, final_data_path, parquet_file):
+        if self.args.get("hf_dataset", None):
+            return parquet_file
+        return os.path.join(final_data_path, parquet_file)
