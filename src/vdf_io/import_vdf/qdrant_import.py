@@ -13,7 +13,6 @@ from vdf_io.constants import ID_COLUMN
 
 from vdf_io.names import DBNames
 from vdf_io.util import (
-    extract_numerical_hash,
     set_arg_from_input,
     set_arg_from_password,
 )
@@ -125,7 +124,7 @@ class ImportQdrant(ImportVDB):
             return uuid_obj
         except ValueError:
             return False
-    
+
     def get_qdrant_id_from_id(self, idx):
         if isinstance(idx, int) or idx.isdigit():
             return int(idx)
@@ -220,7 +219,9 @@ class ImportQdrant(ImportVDB):
 
                     if total_imported_count + len(points) >= self.args["max_num_rows"]:
                         max_hit = True
-                        points = points[: self.args["max_num_rows"] - total_imported_count]
+                        points = points[
+                            : self.args["max_num_rows"] - total_imported_count
+                        ]
                         tqdm.write("Truncating data to limit to max rows")
                     try:
                         self.client.upload_points(
@@ -229,7 +230,9 @@ class ImportQdrant(ImportVDB):
                             batch_size=self.args.get("batch_size", 64),
                             parallel=self.args.get("parallel", 1),
                             max_retries=self.args.get("max_retries", 3),
-                            shard_key_selector=self.args.get("shard_key_selector", None),
+                            shard_key_selector=self.args.get(
+                                "shard_key_selector", None
+                            ),
                             wait=True,
                         )
                     except (UnexpectedResponse, RpcError, ValueError) as e:
@@ -243,7 +246,9 @@ class ImportQdrant(ImportVDB):
                     tqdm.write(
                         f"Index '{new_collection_name}' has {vector_count} vectors after import"
                     )
-                    tqdm.write(f"{vector_count - prev_vector_count} vectors were imported")
+                    tqdm.write(
+                        f"{vector_count - prev_vector_count} vectors were imported"
+                    )
                     total_imported_count += vector_count - prev_vector_count
                     if total_imported_count >= self.args["max_num_rows"]:
                         max_hit = True
