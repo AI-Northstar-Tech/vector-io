@@ -2,6 +2,7 @@ import json
 import os
 from packaging.version import Version
 import abc
+from vdf_io.constants import ID_COLUMN
 
 from vdf_io.util import expand_shorthand_path, get_final_data_path, get_parquet_files
 
@@ -27,6 +28,9 @@ class ImportVDB(abc.ABC):
             raise Exception("VDF_META.json not found in the specified directory")
         with open(vdf_meta_path) as f:
             self.vdf_meta = json.load(f)
+        self.id_column = ID_COLUMN
+        if "id_column" in self.vdf_meta:
+            self.id_column = self.vdf_meta["id_column"]
         if "indexes" not in self.vdf_meta:
             raise Exception("Invalid VDF_META.json, 'indexes' key not found")
         if "version" not in self.vdf_meta:

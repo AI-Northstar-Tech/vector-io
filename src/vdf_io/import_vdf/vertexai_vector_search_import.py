@@ -4,35 +4,33 @@ Import data to vertex ai vector search index
 
 import argparse
 from typing import Dict, List
-
-from vdf_io.names import DBNames
-from vdf_io.import_vdf.vdf_import_cls import ImportVDB
-from vdf_io.util import set_arg_from_input
-
-# gcloud config set project $PROJECT_ID - users
-import os
+import uuid
+import time
+import numpy as np
 import json
 import itertools
 import pandas as pd
 from tqdm import tqdm
-from google.cloud import aiplatform as aip
-import google.cloud.aiplatform_v1 as aipv1
+from ratelimit import limits, sleep_and_retry
+from backoff import on_exception, expo
 
+# gcloud config set project $PROJECT_ID - users
 # SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
 # NEW
-import uuid
-import time
-import numpy as np
+from google.cloud import aiplatform as aip
+import google.cloud.aiplatform_v1 as aipv1
 from google.cloud import storage
 from google.protobuf import struct_pb2
 from google.cloud.aiplatform_v1.types.index import Index
 from google.cloud.aiplatform_v1.types.index_endpoint import IndexEndpoint
 from google.cloud.aiplatform_v1.types.index_endpoint import DeployedIndex
-from ratelimit import limits, sleep_and_retry
-from backoff import on_exception, expo
 import google.api_core.exceptions as google_exceptions
 
+from vdf_io.names import DBNames
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
+from vdf_io.util import set_arg_from_input
+from vdf_io.constants import ID_COLUMN
 
 # exceptions
 class ResourceNotExistException(Exception):
@@ -365,7 +363,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
 
                     # dummy embedding - TODO: use input data from parquet(?)
                     init_embedding = {
-                        "id": str(unique_id),
+                        ID_COLUMN: str(unique_id),
                         "embedding": list(np.zeros(self.dimensions)),
                     }
 
@@ -823,7 +821,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
             invoke_time = time.strftime("%Y%m%d_%H%M%S")
             deployed_index_id = f"{self.index_name.replace('-', '_')}_{invoke_time}"
             deploy_index_config = {
-                "id": deployed_index_id,
+                ID_COLUMN: deployed_index_id,
                 "display_name": deployed_index_id,
                 "index": index.name,
                 "dedicated_resources": {
@@ -917,7 +915,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
                 for file in tqdm(parquet_files, desc="Iterating over parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
                     df = pd.read_parquet(file_path)
-                    df["id"] = df["id"].apply(lambda x: str(x))
+                    df[ID_COLUMN] = df[ID_COLUMN].apply(lambda x: str(x))
 
                     insert_datapoints_payload = []
 
@@ -926,7 +924,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
                     ):
                         row = json.loads(row.to_json())
 
-                        total_ids.append(row["id"])
+                        total_ids.append(row[ID_COLUMN])
                         row[vector_column_name] = [
                             float(emb) for emb in row[vector_column_name]
                         ]
@@ -995,7 +993,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
 
                         insert_datapoints_payload.append(
                             aipv1.IndexDatapoint(
-                                datapoint_id=row["id"],
+                                datapoint_id=row[ID_COLUMN],
                                 feature_vector=row[vector_column_name],
                                 restricts=restrict_entry_list,
                                 numeric_restricts=numeric_restrict_entry_list,

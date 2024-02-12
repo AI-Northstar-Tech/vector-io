@@ -173,16 +173,20 @@ class ImportQdrant(ImportVDB):
                 )
                 for file in parquet_files:
                     file_path = self.get_file_path(final_data_path, file)
+                    tqdm.write(f"Importing data from '{file_path}'")
                     df = pd.read_parquet(file_path)
                     vectors.update(
-                        {row["id"]: row[vector_column_name] for _, row in df.iterrows()}
+                        {
+                            row[self.id_column]: row[vector_column_name]
+                            for _, row in df.iterrows()
+                        }
                     )
                     metadata.update(
                         {
-                            row["id"]: {
+                            row[self.id_column]: {
                                 key: value
                                 for key, value in row.items()
-                                if key not in ["id"] + vector_column_names
+                                if key not in [self.id_column] + vector_column_names
                             }
                             for _, row in df.iterrows()
                         }

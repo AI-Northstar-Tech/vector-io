@@ -5,6 +5,7 @@ import os
 import abc
 
 from vdf_io.util import extract_data_hash
+from vdf_io.constants import ID_COLUMN
 
 
 class ExportVDB(abc.ABC):
@@ -44,13 +45,13 @@ class ExportVDB(abc.ABC):
         raise NotImplementedError()
 
     def save_vectors_to_parquet(self, vectors, metadata, vectors_directory):
-        vectors_df = pd.DataFrame(list(vectors.items()), columns=["id", "vector"])
+        vectors_df = pd.DataFrame(list(vectors.items()), columns=[ID_COLUMN, "vector"])
         if metadata:
-            metadata_list = [{**{"id": k}, **v} for k, v in metadata.items()]
+            metadata_list = [{**{ID_COLUMN: k}, **v} for k, v in metadata.items()]
             # Convert the list to a DataFrame
             metadata_df = pd.DataFrame.from_records(metadata_list)
             # Now merge this metadata_df with your main DataFrame
-            df = vectors_df.merge(metadata_df, on="id", how="left")
+            df = vectors_df.merge(metadata_df, on=ID_COLUMN, how="left")
         else:
             df = vectors_df
 

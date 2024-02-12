@@ -109,7 +109,7 @@ class ImportMilvus(ImportVDB):
                     # create collection
                     try:
                         f_pk = FieldSchema(
-                            name="id",
+                            name=self.id_column,
                             dtype=DataType.VARCHAR,
                             max_length=65_535,
                             is_primary=True,
@@ -163,9 +163,9 @@ class ImportMilvus(ImportVDB):
                 for file in tqdm(parquet_files, desc="Inserting data"):
                     file_path = self.get_file_path(final_data_path, file)
                     df = pd.read_parquet(file_path)
-                    df["id"] = df["id"].apply(lambda x: str(x))
+                    df[self.id_column] = df[self.id_column].apply(lambda x: str(x))
                     data_rows = []
-                            
+
                     for _, row in df.iterrows():
                         row = json.loads(row.to_json())
                         # replace old_vector_column_name with vector_column_name
@@ -179,7 +179,9 @@ class ImportMilvus(ImportVDB):
                         data_rows.append(row)
                     BATCH_SIZE = 100
                     if total_imported_count + BATCH_SIZE >= self.args["max_num_rows"]:
-                        data_rows = data_rows[:self.args["max_num_rows"]-total_imported_count]
+                        data_rows = data_rows[
+                            : self.args["max_num_rows"] - total_imported_count
+                        ]
                         max_hit = True
                     for i in tqdm(
                         range(0, len(data_rows), BATCH_SIZE),

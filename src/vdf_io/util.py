@@ -190,11 +190,11 @@ def get_parquet_files(data_path, args):
     if args.get("hf_dataset", None) or data_path.starts_with("hf://"):
         from huggingface_hub import HfFileSystem
 
-        fs = HfFileSystem(token=os.environ.get("HUGGING_FACE_TOKEN", ""))
+        fs = HfFileSystem()
         return [
             "hf://" + x
             for x in fs.glob(
-                f"datasets/{args.get('hf_dataset')}/{data_path}/**.parquet"
+                f"datasets/{args.get('hf_dataset')}/{data_path if data_path!='.' else ''}/**.parquet"
             )
         ]
     if not os.path.isdir(data_path):

@@ -4,6 +4,7 @@ import os
 import pandas as pd
 
 from vdf_io.util import expand_shorthand_path
+from vdf_io.constants import ID_COLUMN
 
 # script to get list of ids from directory of parquet files
 
@@ -22,8 +23,8 @@ def get_ids_from_parquet(directory):
                 # read only the id column
                 try:
                     # Read only the 'id' column from the parquet file
-                    df = pd.read_parquet(path, columns=["id"])
-                    ids.update(df["id"].tolist())
+                    df = pd.read_parquet(path, columns=[ID_COLUMN])
+                    ids.update(df[ID_COLUMN].tolist())
                 except Exception as e:
                     print(f"Error reading {file}: {e}")
     return ids
