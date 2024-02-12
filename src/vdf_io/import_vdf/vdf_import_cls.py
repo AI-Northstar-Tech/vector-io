@@ -2,6 +2,8 @@ import json
 import os
 from packaging.version import Version
 import abc
+
+from tqdm import tqdm
 from vdf_io.constants import ID_COLUMN
 
 from vdf_io.util import expand_shorthand_path, get_final_data_path, get_parquet_files
@@ -65,7 +67,7 @@ class ImportVDB(abc.ABC):
             vector_column_names = namespace_meta["vector_columns"]
             vector_column_name = vector_column_names[0]
             if len(vector_column_names) > 1:
-                print(
+                tqdm.write(
                     f"Warning: More than one vector column found for index {index_name}."
                     f" Only the first vector column {vector_column_name} will be imported."
                 )

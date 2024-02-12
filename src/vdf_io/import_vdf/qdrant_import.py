@@ -1,3 +1,5 @@
+import hashlib
+from uuid import UUID
 from dotenv import load_dotenv
 import pandas as pd
 from tqdm import tqdm
@@ -7,6 +9,7 @@ from typing import Any, Dict, List
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
+from vdf_io.constants import ID_COLUMN
 
 from vdf_io.names import DBNames
 from vdf_io.util import (
@@ -116,6 +119,22 @@ class ImportQdrant(ImportVDB):
             prefer_grpc=self.args.get("prefer_grpc", True),
         )
 
+    def is_str_uuid(id_str):
+        try:
+            uuid_obj = UUID(id_str)
+            return uuid_obj
+        except ValueError:
+            return False
+    
+    def get_qdrant_id_from_id(self, idx):
+        if isinstance(idx, int) or idx.isdigit():
+            return int(idx)
+        elif not self.is_str_uuid(idx):
+            hex_string = hashlib.md5(idx.encode("UTF-8")).hexdigest()
+            return UUID(hex=hex_string)
+        else:
+            return UUID(idx)
+
     def upsert_data(self):
         max_hit = False
         total_imported_count = 0
@@ -172,7 +191,6 @@ class ImportQdrant(ImportVDB):
                 )
                 for file in parquet_files:
                     file_path = self.get_file_path(final_data_path, file)
-                    tqdm.write(f"Importing data from '{file_path}'")
                     df = pd.read_parquet(file_path)
                     vectors.update(
                         {
@@ -185,54 +203,52 @@ class ImportQdrant(ImportVDB):
                             row[self.id_column]: {
                                 key: value
                                 for key, value in row.items()
-                                if key not in [self.id_column] + vector_column_names
+                                if key not in [ID_COLUMN] + vector_column_names
                             }
                             for _, row in df.iterrows()
                         }
                     )
-                vectors = {k: v.tolist() for k, v in vectors.items()}
-                points = [
-                    PointStruct(
-                        id=(
-                            int(idx)
-                            if (isinstance(idx, int) or idx.isdigit())
-                            else extract_numerical_hash(idx)
-                        ),
-                        vector=vectors[idx],
-                        payload=metadata.get(idx, {}),
-                    )
-                    for idx in vectors.keys()
-                ]
+                    vectors = {k: v.tolist() for k, v in vectors.items()}
+                    points = [
+                        PointStruct(
+                            id=self.get_qdrant_id_from_id(idx),
+                            vector=vectors[idx],
+                            payload=metadata.get(idx, {}),
+                        )
+                        for idx in vectors.keys()
+                    ]
 
-                if total_imported_count + len(points) >= self.args["max_num_rows"]:
-                    max_hit = True
-                    points = points[: self.args["max_num_rows"] - total_imported_count]
-
-                try:
-                    self.client.upload_points(
-                        collection_name=new_collection_name,
-                        points=points,
-                        batch_size=self.args.get("batch_size", 64),
-                        parallel=self.args.get("parallel", 1),
-                        max_retries=self.args.get("max_retries", 3),
-                        shard_key_selector=self.args.get("shard_key_selector", None),
-                        wait=True,
-                    )
-                except (UnexpectedResponse, RpcError, ValueError):
+                    if total_imported_count + len(points) >= self.args["max_num_rows"]:
+                        max_hit = True
+                        points = points[: self.args["max_num_rows"] - total_imported_count]
+                        tqdm.write("Truncating data to limit to max rows")
+                    try:
+                        self.client.upload_points(
+                            collection_name=new_collection_name,
+                            points=points,
+                            batch_size=self.args.get("batch_size", 64),
+                            parallel=self.args.get("parallel", 1),
+                            max_retries=self.args.get("max_retries", 3),
+                            shard_key_selector=self.args.get("shard_key_selector", None),
+                            wait=True,
+                        )
+                    except (UnexpectedResponse, RpcError, ValueError) as e:
+                        tqdm.write(
+                            f"Failed to upsert data for collection '{new_collection_name}', {e}"
+                        )
+                        continue
+                    vector_count = self.client.get_collection(
+                        collection_name=new_collection_name
+                    ).vectors_count
                     tqdm.write(
-                        f"Failed to upsert data for collection '{new_collection_name}'"
+                        f"Index '{new_collection_name}' has {vector_count} vectors after import"
                     )
-                    continue
-                vector_count = self.client.get_collection(
-                    collection_name=new_collection_name
-                ).vectors_count
-                tqdm.write(
-                    f"Index '{new_collection_name}' has {vector_count} vectors after import"
-                )
-                tqdm.write(f"{vector_count - prev_vector_count} vectors were imported")
-                total_imported_count += vector_count - prev_vector_count
-                if total_imported_count >= self.args["max_num_rows"]:
-                    max_hit = True
+                    tqdm.write(f"{vector_count - prev_vector_count} vectors were imported")
+                    total_imported_count += vector_count - prev_vector_count
+                    if total_imported_count >= self.args["max_num_rows"]:
+                        max_hit = True
+                    if max_hit:
+                        break
                 if max_hit:
                     break
             if max_hit:
