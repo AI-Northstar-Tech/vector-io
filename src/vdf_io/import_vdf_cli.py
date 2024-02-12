@@ -3,7 +3,6 @@
 import argparse
 import os
 import time
-from typing import Dict
 from dotenv import load_dotenv
 
 import sentry_sdk
@@ -60,7 +59,7 @@ def main():
     return
 
 
-slug_to_import_func: Dict[str, ImportVDB] = {
+slug_to_import_func = {
     DBNames.PINECONE: ImportPinecone.import_vdb,
     DBNames.QDRANT: ImportQdrant.import_vdb,
     DBNames.KDBAI: ImportKDBAI.import_vdb,

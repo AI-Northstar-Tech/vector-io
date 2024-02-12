@@ -14,8 +14,12 @@ from opentelemetry.sdk.trace import TracerProvider
 from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPropagator
 
 import vdf_io
-from vdf_io.export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.export_vdf.milvus_export import ExportMilvus
+from vdf_io.export_vdf.pinecone_export import ExportPinecone
+from vdf_io.export_vdf.qdrant_export import ExportQdrant
 from vdf_io.export_vdf.kdbai_export import ExportKDBAI
+from vdf_io.export_vdf.vertexai_vector_search_export import ExportVertexAIVectorSearch
+from vdf_io.names import DBNames
 from vdf_io.scripts.push_to_hub_vdf import push_to_hub
 
 # Suppress specific warnings
@@ -65,6 +69,22 @@ ARGS_ALLOWLIST = [
     "hash_value",
 ]
 
+slug_to_export_func = {
+    DBNames.PINECONE: ExportPinecone.export_vdb,
+    DBNames.QDRANT: ExportQdrant.export_vdb,
+    DBNames.KDBAI: ExportKDBAI.export_vdb,
+    DBNames.MILVUS: ExportMilvus.export_vdb,
+    DBNames.VERTEXAI: ExportVertexAIVectorSearch.export_vdb,
+}
+
+slug_to_parser_func = {
+    DBNames.PINECONE: ExportPinecone.make_parser,
+    DBNames.QDRANT: ExportQdrant.make_parser,
+    DBNames.KDBAI: ExportKDBAI.make_parser,
+    DBNames.MILVUS: ExportMilvus.make_parser,
+    DBNames.VERTEXAI: ExportVertexAIVectorSearch.make_parser,
+}
+
 
 def run_export(span):
     parser = argparse.ArgumentParser(
@@ -77,18 +97,9 @@ def run_export(span):
         dest="vector_database",
     )
 
-    db_choices = [c.DB_NAME_SLUG for c in ExportVDB.__subclasses__()]
-    db_class_map = {c.DB_NAME_SLUG: c for c in ExportVDB.__subclasses__()}
+    db_choices = slug_to_export_func.keys()
     for db in db_choices:
-        print(db_class_map[db], type(db_class_map[db]))
-        print(ExportKDBAI)
-        print(dir(ExportKDBAI))
-        print(ExportKDBAI.make_parser)
-        # call static method make_parser of the class
-        db_class_map[db].make_parser(subparsers)
-
-        print(dir(db_class_map[db]))
-        # print(db_class_map[db])
+        slug_to_parser_func[db](subparsers)
 
     args = parser.parse_args()
     # convert args to dict
@@ -105,7 +116,7 @@ def run_export(span):
         return
 
     if args["vector_database"] in db_choices:
-        export_obj = db_class_map[args["vector_database"]].export_vdb(args)
+        export_obj = slug_to_export_func[args["vector_database"]](args)
     else:
         print("Invalid vector database")
         args["vector_database"] = input("Enter the name of vector database to export: ")
