@@ -4,7 +4,6 @@ import argparse
 import re
 import subprocess
 import sys
-import shutil
 
 
 def bump_version():
