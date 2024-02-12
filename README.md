@@ -143,8 +143,7 @@ usage: export_vdf [-h] [-m MODEL_NAME]
                   {pinecone,qdrant,kdbai,milvus,vertexai_vectorsearch}
                   ...
 
-Export data from various vector databases to the VDF format
-for vector datasets
+Export data from various vector databases to the VDF format for vector datasets
 
 options:
   -h, --help            show this help message and exit
@@ -276,6 +275,12 @@ If you wish to change the VDF specification, please open an issue to discuss the
 ### Efficiency improvements
 
 If you wish to improve the efficiency of the import/export scripts, please fork the repo and send a PR.
+
+## Telemetry
+
+Running the export_vdf and import_vdf scripts will send anonymous usage data to AI Northstar Tech to help improve the library.
+
+You can opt out this by setting the environment variable `DISABLE_TELEMETRY_VECTORIO` to `1`.
 
 ## Questions
 

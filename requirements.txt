@@ -16,3 +16,4 @@ google-auth-oauthlib
 ratelimit
 backoff
 kdbai-client
+sentry-sdk[opentelemetry]

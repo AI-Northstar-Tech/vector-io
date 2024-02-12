@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 from tqdm import tqdm
 import os
@@ -6,16 +7,99 @@ from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec, PodSpec, Vector
 
 from vdf_io.names import DBNames
-from vdf_io.util import standardize_metric_reverse
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.util import (
+    set_arg_from_input,
+    set_arg_from_password,
+    standardize_metric_reverse,
+)
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
 load_dotenv()
 
 BATCH_SIZE = 1000  # Set the desired batch size
 
 
-class ImportPinecone(ImportVDF):
+class ImportPinecone(ImportVDB):
     DB_NAME_SLUG = DBNames.PINECONE
+
+    @classmethod
+    def import_vdb(cls, args):
+        """
+        Import data to Pinecone
+        """
+        set_arg_from_password(
+            args,
+            "pinecone_api_key",
+            "Enter your Pinecone API key: ",
+            "PINECONE_API_KEY",
+        )
+        if args["serverless"] is False:
+            set_arg_from_input(
+                args, "environment", "Enter the environment of Pinecone instance: "
+            )
+        else:
+            set_arg_from_input(
+                args,
+                "cloud",
+                "Enter the cloud of Pinecone Serverless instance (default: 'aws'): ",
+                str,
+                "aws",
+            )
+            set_arg_from_input(
+                args,
+                "region",
+                "Enter the region of Pinecone Serverless instance (default: 'us-west-2'): ",
+                str,
+                "us-west-2",
+            )
+
+        if args["subset"] is True:
+            if "id_list_file" not in args or args["id_list_file"] is None:
+                set_arg_from_input(
+                    args,
+                    "id_range_start",
+                    "Enter the start of id range (hit return to skip): ",
+                    int,
+                )
+                if args["id_range_start"] is not None:
+                    set_arg_from_input(
+                        args,
+                        "id_range_end",
+                        "Enter the end of id range (hit return to skip): ",
+                        int,
+                    )
+            if args["id_range_start"] is None and args["id_range_end"] is None:
+                set_arg_from_input(
+                    args,
+                    "id_list_file",
+                    "Enter the path to id list file (hit return to skip): ",
+                )
+
+        pinecone_import = ImportPinecone(args)
+        pinecone_import.upsert_data()
+        return pinecone_import
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_pinecone = subparsers.add_parser(
+            DBNames.PINECONE, help="Import data to Pinecone"
+        )
+        parser_pinecone.add_argument(
+            "-e", "--environment", type=str, help="Pinecone environment"
+        )
+        parser_pinecone.add_argument(
+            "--serverless",
+            type=bool,
+            help="Import data to Pinecone Serverless (default: False)",
+            default=False,
+            action=argparse.BooleanOptionalAction,
+        )
+        parser_pinecone.add_argument(
+            "-c", "--cloud", type=str, help="Pinecone Serverless cloud"
+        )
+        parser_pinecone.add_argument(
+            "-r", "--region", type=str, help="Pinecone Serverless region"
+        )
 
     def __init__(self, args):
         super().__init__(args)
