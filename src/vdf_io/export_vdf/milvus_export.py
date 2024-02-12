@@ -15,45 +15,50 @@ from vdf_io.names import DBNames
 MAX_FETCH_SIZE = 1_000
 
 
-def make_milvus_parser(subparsers):
-    # Milvus
-    parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
-    parser_milvus.add_argument("-u", "--uri", type=str, help="Milvus connection URI")
-    parser_milvus.add_argument(
-        "-t", "--token", type=str, required=False, help="Milvus connection token"
-    )
-    parser_milvus.add_argument(
-        "-c", "--collections", type=str, help="Names of collections to export"
-    )
-
-
-def export_milvus(args):
-    """
-    Export data from Milvus
-    """
-    set_arg_from_input(
-        args,
-        "uri",
-        "Enter the uri of Milvus (hit return for 'http://localhost:19530'): ",
-        str,
-        "http://localhost:19530",
-    )
-    set_arg_from_input(
-        args,
-        "collections",
-        "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
-        str,
-    )
-    set_arg_from_password(
-        args, "token", "Enter your Milvus Token (hit return to skip): ", "Milvus Token"
-    )
-    milvus_export = ExportMilvus(args)
-    milvus_export.get_data()
-    return milvus_export
-
-
 class ExportMilvus(ExportVDB):
     DB_NAME_SLUG = DBNames.MILVUS
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        # Milvus
+        parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
+        parser_milvus.add_argument(
+            "-u", "--uri", type=str, help="Milvus connection URI"
+        )
+        parser_milvus.add_argument(
+            "-t", "--token", type=str, required=False, help="Milvus connection token"
+        )
+        parser_milvus.add_argument(
+            "-c", "--collections", type=str, help="Names of collections to export"
+        )
+
+    @classmethod
+    def export_vdb(cls, args):
+        """
+        Export data from Milvus
+        """
+        set_arg_from_input(
+            args,
+            "uri",
+            "Enter the uri of Milvus (hit return for 'http://localhost:19530'): ",
+            str,
+            "http://localhost:19530",
+        )
+        set_arg_from_input(
+            args,
+            "collections",
+            "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
+            str,
+        )
+        set_arg_from_password(
+            args,
+            "token",
+            "Enter your Milvus Token (hit return to skip): ",
+            "Milvus Token",
+        )
+        milvus_export = ExportMilvus(args)
+        milvus_export.get_data()
+        return milvus_export
 
     def __init__(self, args: Dict):
         """
@@ -159,5 +164,6 @@ class ExportMilvus(ExportVDB):
                 collection.indexes[0].params["metric_type"], self.DB_NAME_SLUG
             ),
         )
+        self.args["exported_count"] += num_vectors_exported
 
         return [namespace_meta]

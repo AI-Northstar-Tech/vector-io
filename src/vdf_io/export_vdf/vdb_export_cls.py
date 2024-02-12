@@ -1,3 +1,4 @@
+from __future__ import annotations
 import datetime
 import pandas as pd
 import os
@@ -15,20 +16,32 @@ class ExportVDB(abc.ABC):
             )
 
     def __init__(self, args):
-        self.args = args
         self.file_structure = []
         self.file_ctr = 1
-        self.hash_value = extract_data_hash(self.args)
+        self.hash_value = extract_data_hash(args)
+        args["hash_value"] = self.hash_value
+        self.args = args
+        self.args["exported_count"] = 0
         self.timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.vdf_directory = f"vdf_{self.timestamp_in_format}_{self.hash_value}"
         os.makedirs(self.vdf_directory, exist_ok=True)
 
     @abc.abstractmethod
-    def get_data():
+    def get_data(self) -> ExportVDB:
         """
         Get data from vector database
         """
-        raise NotImplementedError
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def make_parser(cls, subparsers):
+        raise NotImplementedError()
+
+    @classmethod
+    @abc.abstractmethod
+    def export_vdb(cls, args):
+        raise NotImplementedError()
 
     def save_vectors_to_parquet(self, vectors, metadata, vectors_directory):
         vectors_df = pd.DataFrame(list(vectors.items()), columns=["id", "vector"])

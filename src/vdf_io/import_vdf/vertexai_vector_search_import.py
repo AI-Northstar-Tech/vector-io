@@ -2,11 +2,12 @@
 Import data to vertex ai vector search index
 """
 
+import argparse
 from typing import Dict, List
 
 from vdf_io.names import DBNames
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
-
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
+from vdf_io.util import set_arg_from_input
 
 # gcloud config set project $PROJECT_ID - users
 import os
@@ -41,8 +42,175 @@ class ResourceNotExistException(Exception):
         super().__init__(self.message)
 
 
-class ImportVertexAIVectorSearch(ImportVDF):
+class ImportVertexAIVectorSearch(ImportVDB):
     DB_NAME_SLUG = DBNames.VERTEXAI
+
+    @classmethod
+    def import_vdb(cls, args):
+        """
+        Import data to Vertex AI Vector Search
+        """
+        set_arg_from_input(args, "project_id", "Enter the Google Cloud Project ID:")
+        set_arg_from_input(args, "location", "Enter the region hosting your index: ")
+        set_arg_from_input(
+            args,
+            "batch_size",
+            "Enter size of upsert batches (default: 100):",
+            default_value=100,
+            type_name=int,
+        )
+        set_arg_from_input(
+            args,
+            "requests_per_minute",
+            "Optional. Enter desired requests per minute for rate limit (default: 6000): ",
+            default_value=6000,
+            type_name=int,
+        )
+        set_arg_from_input(
+            args,
+            "filter_restricts",
+            "Optional. Enter list of dicts describing string filters for each data point: ",
+        )
+        set_arg_from_input(
+            args,
+            "numeric_restricts",
+            "Optional. Enter list of dicts for each datapoint: ",
+        )
+        set_arg_from_input(
+            args,
+            "crowding_tag",
+            "Optional. CrowdingTag of the datapoint: ",
+            type_name=str,
+        )
+        if args["create_new"] is True:
+            set_arg_from_input(
+                args,
+                "gcs_bucket",
+                "Optional. Enter valid gcs bucket name (or one will be created per index_name): ",
+                type_name=str,
+            )
+            set_arg_from_input(
+                args,
+                "approx_nn_count",
+                "Optional. The default number of neighbors to find via approximate search (default: 150): ",
+                type_name=int,
+                default_value=150,
+            )
+            set_arg_from_input(
+                args,
+                "leaf_node_emb_count",
+                "Optional. Number of embeddings on each leaf node (default: 1000): ",
+                type_name=int,
+                default_value=1000,
+            )
+            set_arg_from_input(
+                args,
+                "leaf_nodes_percent",
+                "Optional. The default percentage of leaf nodes that any query may be searched (default: 10 [10%]): ",
+                type_name=int,
+                default_value=10,
+                # choices=range(1, 101)
+            )
+            set_arg_from_input(
+                args,
+                "distance_measure",
+                "Optional. The distance measure used in nearest neighbor search (default: `DOT_PRODUCT_DISTANCE`): ",
+                type_name=str,
+                default_value="DOT_PRODUCT_DISTANCE",
+                # choices=[
+                #     "DOT_PRODUCT_DISTANCE",
+                #     "COSINE_DISTANCE",
+                #     "L1_DISTANCE",
+                #     "SQUARED_L2_DISTANCE"
+                # ],
+            )
+            set_arg_from_input(
+                args,
+                "shard_size",
+                "Optional. Size of the shards (default: `SHARD_SIZE_MEDIUM`): ",
+                type_name=str,
+                default_value="SHARD_SIZE_MEDIUM",
+                # choices=[
+                #     "SHARD_SIZE_SMALL",
+                #     "SHARD_SIZE_MEDIUM",
+                #     "SHARD_SIZE_LARGE",
+                # ],
+            )
+        if args["deploy_new_index"] is True:
+            set_arg_from_input(
+                args,
+                "machine_type",
+                "Optional. The type of machine (default: `e2-standard-16`): ",
+                type_name=str,
+                default_value="e2-standard-16",
+                # choices=[
+                #     "n1-standard-16",
+                #     "n1-standard-32",
+                #     "e2-standard-2",
+                #     "e2-standard-16",
+                #     "e2-highmem-16",
+                #     "n2d-standard-32",
+                # ],
+            )
+            set_arg_from_input(
+                args,
+                "min_replicas",
+                "Optional. The minimum number of machine replicas for deployed index (default: 1): ",
+                type_name=int,
+                default_value=1,
+            )
+            set_arg_from_input(
+                args,
+                "max_replicas",
+                "Optional. The maximum number of machine replicas for deployed index (default: 1): ",
+                type_name=int,
+                default_value=1,
+            )
+
+        vertexai_vectorsearch_import = ImportVertexAIVectorSearch(args)
+        vertexai_vectorsearch_import.upsert_data()
+        return vertexai_vectorsearch_import
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_vertexai_vectorsearch = subparsers.add_parser(
+            DBNames.VERTEXAI, help="Import data to Vertex AI Vector Search"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-p", "--project-id", type=str, help="Google Cloud Project ID"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-l", "--location", type=str, help="Google Cloud region hosting your index"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-b",
+            "--batch-size",
+            type=str,
+            help="Enter size of upsert batches:",
+            default=100,
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-f", "--filter-restricts", type=str, help="string filters"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-n", "--numeric-restricts", type=str, help="numeric filters"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-r", "--requests-per-minute", type=int, help="rate limiter"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-c",
+            "--crowding-tag",
+            type=str,
+            help="string value to enforce diversity in retrieval",
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "--deploy_new_index",
+            type=bool,
+            help="deploy new index (default: False)",
+            default=False,
+            action=argparse.BooleanOptionalAction,
+        )
 
     def __init__(self, args: Dict) -> None:
         super().__init__(args)
@@ -694,6 +862,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
         return index_endpoint
 
     def upsert_data(self):
+        total_imported_count = 0
         MINUTE = 60
         CALLS_PER_PRD = self.args.get("requests_per_minute", 6000)
 
@@ -842,6 +1011,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
                             )
                             # self.index_client.upsert_datapoints(request=upsert_request)
                             upsert_in_rate(self, upsert_request=upsert_request)
+                            total_imported_count += len(upsert_request.datapoints)
                             insert_datapoints_payload = []
 
                         if len(total_ids) % CALLS_PER_PRD == 0:
@@ -852,6 +1022,7 @@ class ImportVertexAIVectorSearch(ImportVDF):
                             index=self.target_vertexai_index.resource_name,
                             datapoints=insert_datapoints_payload,
                         )
+                        total_imported_count += len(upsert_request.datapoints)
 
                         # self.index_client.upsert_datapoints(request=upsert_request)
                         upsert_in_rate(self, upsert_request=upsert_request)
@@ -860,3 +1031,4 @@ class ImportVertexAIVectorSearch(ImportVDF):
         print(
             f"Updated {self.target_vertexai_index.display_name} with {len(total_ids)} vectors"
         )
+        self.args["imported_count"] = total_imported_count

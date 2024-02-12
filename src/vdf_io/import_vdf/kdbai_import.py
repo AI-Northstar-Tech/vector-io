@@ -8,17 +8,57 @@ import pyarrow.parquet as pq
 import kdbai_client as kdbai
 
 from vdf_io.names import DBNames
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
-from vdf_io.util import standardize_metric_reverse
+from vdf_io.util import (
+    set_arg_from_input,
+    set_arg_from_password,
+    standardize_metric_reverse,
+)
 
 load_dotenv()
 
 MAX_BATCH_SIZE = 10000
 
 
-class ImportKDBAI(ImportVDF):
+class ImportKDBAI(ImportVDB):
     DB_NAME_SLUG = DBNames.KDBAI
+
+    @classmethod
+    def import_vdb(cls, args):
+        """
+        Import data to KDB.AI
+        """
+        set_arg_from_input(
+            args,
+            "url",
+            "Enter the endpoint for KDB.AI Cloud instance: ",
+            str,
+        )
+        set_arg_from_password(
+            args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
+        )
+        set_arg_from_input(
+            args,
+            "index",
+            "Enter the index type used (Flat, IVF, IVFPQ, HNSW): ",
+            str,
+        )
+        kdbai_import = ImportKDBAI(args)
+        kdbai_import.upsert_data()
+        return kdbai_import
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_kdbai = subparsers.add_parser(
+            DBNames.KDBAI, help="Import data to KDB.AI"
+        )
+        parser_kdbai.add_argument(
+            "-u", "--url", type=str, help="KDB.AI Cloud instance Endpoint url"
+        )
+        parser_kdbai.add_argument(
+            "-i", "--index", type=str, help="Index used", default="hnsw"
+        )
 
     def __init__(self, args):
         super().__init__(args)
@@ -36,6 +76,7 @@ class ImportKDBAI(ImportVDF):
         self.session = kdbai.Session(api_key=api_key, endpoint=endpoint)
 
     def upsert_data(self):
+        total_imported_count = 0
         json_file_path = os.path.join(self.dir_path, "VDF_META.json")
         # return json_file_path
         with open(json_file_path, "r") as json_file:
@@ -154,6 +195,8 @@ class ImportKDBAI(ImportVDF):
                             else:
                                 raise RuntimeError(f"Error inserting chunk: {e}")
                             continue
+                    total_imported_count += len(df)
 
         # table.insert(df)
         print("Data imported successfully")
+        self.args["imported_count"] = total_imported_count

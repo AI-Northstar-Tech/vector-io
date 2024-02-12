@@ -14,15 +14,51 @@ from pymilvus import (
 )
 
 from vdf_io.names import DBNames
-from vdf_io.util import standardize_metric_reverse
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.util import (
+    set_arg_from_input,
+    set_arg_from_password,
+    standardize_metric_reverse,
+)
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
 
 load_dotenv()
 
 
-class ImportMilvus(ImportVDF):
+class ImportMilvus(ImportVDB):
     DB_NAME_SLUG = DBNames.MILVUS
+
+    @classmethod
+    def import_vdb(cls, args):
+        """
+        Import data to Milvus
+        """
+        set_arg_from_input(
+            args,
+            "uri",
+            "Enter the Milvus URI (default: 'http://localhost:19530'): ",
+            str,
+            "http://localhost:19530",
+        )
+        set_arg_from_password(
+            args,
+            "token",
+            "Enter your Milvus token (hit enter to skip): ",
+            "Milvus Token",
+        )
+        milvus_import = ImportMilvus(args)
+        milvus_import.upsert_data()
+        return milvus_import
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_milvus = subparsers.add_parser(
+            DBNames.MILVUS, help="Import data to Milvus"
+        )
+        parser_milvus.add_argument(
+            "-u", "--uri", type=str, help="URI of Milvus instance"
+        )
+        parser_milvus.add_argument("-t", "--token", type=str, help="Milvus token")
 
     def __init__(self, args):
         # call super class constructor
@@ -37,6 +73,7 @@ class ImportMilvus(ImportVDF):
         connections.connect(uri=uri, token=token)
 
     def upsert_data(self):
+        total_imported_count = 0
         # we know that the self.vdf_meta["indexes"] is a list
         for collection_name, index_meta in self.vdf_meta["indexes"].items():
             # load data
@@ -130,8 +167,9 @@ class ImportMilvus(ImportVDF):
                     for _, row in df.iterrows():
                         row = json.loads(row.to_json())
                         # replace old_vector_column_name with vector_column_name
-                        row[vector_column_name] = row[old_vector_column_name]
-                        del row[old_vector_column_name]
+                        if old_vector_column_name != vector_column_name:
+                            row[vector_column_name] = row[old_vector_column_name]
+                            del row[old_vector_column_name]
                         assert isinstance(row[f_pk.name], str), row[f_pk.name]
                         assert isinstance(row[f_vector.name][0], float), type(
                             row[f_vector.name][0]
@@ -149,4 +187,6 @@ class ImportMilvus(ImportVDF):
                 vector_count = collection.num_entities
                 print(f"Index '{index_name}' has {vector_count} vectors after import")
                 print(f"{num_inserted} vectors were imported")
+                total_imported_count += num_inserted
         print("Data import completed successfully.")
+        self.args["imported_count"] = total_imported_count

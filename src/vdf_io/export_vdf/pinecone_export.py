@@ -1,10 +1,11 @@
 import argparse
 import datetime
-from pinecone import Pinecone, Vector
 import os
 import json
 import numpy as np
 from tqdm import tqdm
+
+from pinecone import Pinecone, Vector
 
 from vdf_io.names import DBNames
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
@@ -17,101 +18,104 @@ MAX_FETCH_SIZE = 1_000
 THREAD_POOL_SIZE = 30
 
 
-def make_pinecone_parser(subparsers):
-    parser_pinecone = subparsers.add_parser(
-        "pinecone", help="Export data from Pinecone"
-    )
-    parser_pinecone.add_argument(
-        "-e", "--environment", type=str, help="Environment of Pinecone instance"
-    )
-    parser_pinecone.add_argument(
-        "-i", "--index", type=str, help="Name of index to export"
-    )
-    parser_pinecone.add_argument(
-        "-s", "--id_range_start", type=int, help="Start of id range", default=None
-    )
-    parser_pinecone.add_argument(
-        "--id_range_end", type=int, help="End of id range", default=None
-    )
-    parser_pinecone.add_argument(
-        "-f", "--id_list_file", type=str, help="Path to id list file", default=None
-    )
-    parser_pinecone.add_argument(
-        "--modify_to_search",
-        type=bool,
-        help="Allow modifying data to search",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-    )
-    parser_pinecone.add_argument(
-        "--subset",
-        type=bool,
-        help="Export a subset of data (default: False)",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-    )
-    parser_pinecone.add_argument(
-        "--namespaces",
-        type=str,
-        help="Name of namespace(s) to export (comma-separated)",
-        default=None,
-    )
-
-
-def export_pinecone(args):
-    """
-    Export data from Pinecone
-    """
-    set_arg_from_input(
-        args, "environment", "Enter the environment of Pinecone instance: "
-    )
-    set_arg_from_input(
-        args,
-        "index",
-        "Enter the name of index to export (hit return to export all): ",
-    )
-    set_arg_from_password(
-        args, "pinecone_api_key", "Enter your Pinecone API key: ", "PINECONE_API_KEY"
-    )
-    set_arg_from_input(
-        args,
-        "modify_to_search",
-        "Allow modifying data to search, enter Y or N: ",
-        bool,
-    )
-    set_arg_from_input(
-        args,
-        "namespaces",
-        "Enter the name of namespace(s) to export (comma-separated) (hit return to export all):",
-        str,
-    )
-    if args["subset"] is True:
-        if "id_list_file" not in args or args["id_list_file"] is None:
-            set_arg_from_input(
-                args,
-                "id_range_start",
-                "Enter the start of id range (hit return to skip): ",
-                int,
-            )
-            set_arg_from_input(
-                args,
-                "id_range_end",
-                "Enter the end of id range (hit return to skip): ",
-                int,
-            )
-        if args["id_range_start"] is None and args["id_range_end"] is None:
-            set_arg_from_input(
-                args,
-                "id_list_file",
-                "Enter the path to id list file (hit return to skip): ",
-            )
-    pinecone_export = ExportPinecone(args)
-    pinecone_export.get_data()
-    return pinecone_export
-
-
 class ExportPinecone(ExportVDB):
     DB_NAME_SLUG = DBNames.PINECONE
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_pinecone = subparsers.add_parser(
+            "pinecone", help="Export data from Pinecone"
+        )
+        parser_pinecone.add_argument(
+            "-e", "--environment", type=str, help="Environment of Pinecone instance"
+        )
+        parser_pinecone.add_argument(
+            "-i", "--index", type=str, help="Name of index to export"
+        )
+        parser_pinecone.add_argument(
+            "-s", "--id_range_start", type=int, help="Start of id range", default=None
+        )
+        parser_pinecone.add_argument(
+            "--id_range_end", type=int, help="End of id range", default=None
+        )
+        parser_pinecone.add_argument(
+            "-f", "--id_list_file", type=str, help="Path to id list file", default=None
+        )
+        parser_pinecone.add_argument(
+            "--modify_to_search",
+            type=bool,
+            help="Allow modifying data to search",
+            default=False,
+            action=argparse.BooleanOptionalAction,
+        )
+        parser_pinecone.add_argument(
+            "--subset",
+            type=bool,
+            help="Export a subset of data (default: False)",
+            default=False,
+            action=argparse.BooleanOptionalAction,
+        )
+        parser_pinecone.add_argument(
+            "--namespaces",
+            type=str,
+            help="Name of namespace(s) to export (comma-separated)",
+            default=None,
+        )
+
+    @classmethod
+    def export_vdb(cls, args):
+        """
+        Export data from Pinecone
+        """
+        set_arg_from_input(
+            args, "environment", "Enter the environment of Pinecone instance: "
+        )
+        set_arg_from_input(
+            args,
+            "index",
+            "Enter the name of index to export (hit return to export all): ",
+        )
+        set_arg_from_password(
+            args,
+            "pinecone_api_key",
+            "Enter your Pinecone API key: ",
+            "PINECONE_API_KEY",
+        )
+        set_arg_from_input(
+            args,
+            "modify_to_search",
+            "Allow modifying data to search, enter Y or N: ",
+            bool,
+        )
+        set_arg_from_input(
+            args,
+            "namespaces",
+            "Enter the name of namespace(s) to export (comma-separated) (hit return to export all):",
+            str,
+        )
+        if args["subset"] is True:
+            if "id_list_file" not in args or args["id_list_file"] is None:
+                set_arg_from_input(
+                    args,
+                    "id_range_start",
+                    "Enter the start of id range (hit return to skip): ",
+                    int,
+                )
+                set_arg_from_input(
+                    args,
+                    "id_range_end",
+                    "Enter the end of id range (hit return to skip): ",
+                    int,
+                )
+            if args["id_range_start"] is None and args["id_range_end"] is None:
+                set_arg_from_input(
+                    args,
+                    "id_list_file",
+                    "Enter the path to id list file (hit return to skip): ",
+                )
+        pinecone_export = ExportPinecone(args)
+        pinecone_export.get_data()
+        return pinecone_export
 
     def __init__(self, args):
         """
@@ -543,4 +547,5 @@ class ExportPinecone(ExportVDB):
                 data_path="/".join(vectors_directory.split("/")[1:]),
             )
             index_meta.append(namespace_meta)
+            self.args["exported_count"] += total_size
         return index_meta

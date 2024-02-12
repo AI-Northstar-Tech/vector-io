@@ -16,45 +16,45 @@ from vdf_io.util import set_arg_from_input, set_arg_from_password, standardize_m
 load_dotenv()
 
 
-def make_kdbai_parser(subparsers):
-    parser_kdbai = subparsers.add_parser("kdbai", help="Export data from KDB.AI")
-    parser_kdbai.add_argument(
-        "-u", "--url", type=str, help="KDB.AI cloud endpoint to connect"
-    )
-    parser_kdbai.add_argument(
-        "-t", "--tables", type=str, help="KDB.AI tables to export (comma-separated)"
-    )
-
-
-def export_kdbai(args):
-    """
-    Export data from KDBAI
-    """
-    set_arg_from_input(
-        args,
-        "url",
-        "Enter the KDB.AI endpoint instance: ",
-        str,
-    )
-    set_arg_from_password(
-        args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
-    )
-    kdbai_export = ExportKDBAI(args)
-    set_arg_from_input(
-        args,
-        "tables",
-        f"Enter the name of table to export: {kdbai_export.get_all_table_names()}",
-        str,
-        None,
-    )
-    if args.get("tables", None) == "":
-        args["tables"] = ",".join(kdbai_export.get_all_table_names())
-    kdbai_export.get_data()
-    return kdbai_export
-
-
 class ExportKDBAI(ExportVDB):
     DB_NAME_SLUG = DBNames.KDBAI
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_kdbai = subparsers.add_parser("kdbai", help="Export data from KDB.AI")
+        parser_kdbai.add_argument(
+            "-u", "--url", type=str, help="KDB.AI cloud endpoint to connect"
+        )
+        parser_kdbai.add_argument(
+            "-t", "--tables", type=str, help="KDB.AI tables to export (comma-separated)"
+        )
+
+    @classmethod
+    def export_vdb(cls, args):
+        """
+        Export data from KDBAI
+        """
+        set_arg_from_input(
+            args,
+            "url",
+            "Enter the KDB.AI endpoint instance: ",
+            str,
+        )
+        set_arg_from_password(
+            args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
+        )
+        kdbai_export = ExportKDBAI(args)
+        set_arg_from_input(
+            args,
+            "tables",
+            f"Enter the name of table to export: {kdbai_export.get_all_table_names()}",
+            str,
+            None,
+        )
+        if args.get("tables", None) == "":
+            args["tables"] = ",".join(kdbai_export.get_all_table_names())
+        kdbai_export.get_data()
+        return kdbai_export
 
     def __init__(self, args):
         super().__init__(args)
@@ -123,4 +123,5 @@ class ExportKDBAI(ExportVDB):
             data_path="/".join(vectors_directory.split("/")[1:]),
             metric=embedding_dist,
         )
+        self.args["exported_count"] += len(table_res.index)
         return [namespace_meta]

@@ -3,22 +3,110 @@ from dotenv import load_dotenv
 import pandas as pd
 from tqdm import tqdm
 from grpc import RpcError
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
 
 from vdf_io.names import DBNames
-from vdf_io.util import extract_numerical_hash
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.util import (
+    extract_numerical_hash,
+    set_arg_from_input,
+    set_arg_from_password,
+)
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
 
 load_dotenv()
 
 
-class ImportQdrant(ImportVDF):
+class ImportQdrant(ImportVDB):
     DB_NAME_SLUG = DBNames.QDRANT
+
+    @classmethod
+    def import_vdb(cls, args):
+        """
+        Import data to Qdrant
+        """
+        set_arg_from_input(
+            args,
+            "url",
+            "Enter the URL of Qdrant instance (default: 'http://localhost:6334'): ",
+            str,
+            "http://localhost:6334",
+        )
+        set_arg_from_input(
+            args,
+            "prefer_grpc",
+            "Whether to use GRPC. Recommended. (default: True): ",
+            bool,
+            True,
+        )
+        set_arg_from_input(
+            args,
+            "parallel",
+            "Enter the batch size for upserts (default: 1): ",
+            int,
+            1,
+        )
+        set_arg_from_input(
+            args,
+            "batch_size",
+            "Enter the number of parallel processes of upload (default: 64): ",
+            int,
+            64,
+        )
+        set_arg_from_input(
+            args,
+            "max_retries",
+            "Enter the maximum number of retries in case of a failure (default: 3): ",
+            int,
+            3,
+        )
+        set_arg_from_password(
+            args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
+        )
+        qdrant_import = ImportQdrant(args)
+        qdrant_import.upsert_data()
+        return qdrant_import
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_qdrant = subparsers.add_parser(
+            DBNames.QDRANT, help="Import data to Qdrant"
+        )
+        parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
+        parser_qdrant.add_argument(
+            "--prefer_grpc",
+            type=bool,
+            help="Whether to use Qdrant's GRPC interface",
+            default=True,
+        )
+        parser_qdrant.add_argument(
+            "--batch_size",
+            type=int,
+            help="Batch size for upserts (default: 64).",
+            default=64,
+        )
+        parser_qdrant.add_argument(
+            "--parallel",
+            type=int,
+            help="Number of parallel processes of upload (default: 1).",
+            default=1,
+        )
+        parser_qdrant.add_argument(
+            "--max_retries",
+            type=int,
+            help="Maximum number of retries in case of a failure (default: 3).",
+            default=3,
+        )
+        parser_qdrant.add_argument(
+            "--shard_key_selector",
+            type=Any,
+            help="Shard to be queried (default: None)",
+            default=None,
+        )
 
     def __init__(self, args):
         # call super class constructor
@@ -30,6 +118,7 @@ class ImportQdrant(ImportVDF):
         )
 
     def upsert_data(self):
+        total_imported_count = 0
         # we know that the self.vdf_meta["indexes"] is a list
         index_meta: Dict[str, List[NamespaceMeta]] = {}
         for index_name, index_meta in tqdm(
@@ -133,4 +222,6 @@ class ImportQdrant(ImportVDF):
                     f"Index '{new_collection_name}' has {vector_count} vectors after import"
                 )
                 tqdm.write(f"{vector_count - prev_vector_count} vectors were imported")
+                total_imported_count += vector_count - prev_vector_count
         tqdm.write("Data import completed successfully.")
+        self.args["imported_count"] = total_imported_count
