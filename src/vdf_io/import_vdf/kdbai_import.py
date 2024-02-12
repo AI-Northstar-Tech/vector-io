@@ -10,7 +10,11 @@ import kdbai_client as kdbai
 from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
-from vdf_io.util import set_arg_from_input, set_arg_from_password, standardize_metric_reverse
+from vdf_io.util import (
+    set_arg_from_input,
+    set_arg_from_password,
+    standardize_metric_reverse,
+)
 
 load_dotenv()
 
@@ -43,7 +47,6 @@ class ImportKDBAI(ImportVDB):
         kdbai_import = ImportKDBAI(args)
         kdbai_import.upsert_data()
         return kdbai_import
-
 
     @classmethod
     def make_parser(cls, subparsers):

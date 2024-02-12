@@ -14,7 +14,7 @@ from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPro
 
 import vdf_io
 from vdf_io.names import DBNames
-from vdf_io.util import set_arg_from_input, set_arg_from_password
+from vdf_io.util import set_arg_from_input
 from vdf_io.import_vdf.pinecone_import import ImportPinecone
 from vdf_io.import_vdf.qdrant_import import ImportQdrant
 from vdf_io.import_vdf.kdbai_import import ImportKDBAI

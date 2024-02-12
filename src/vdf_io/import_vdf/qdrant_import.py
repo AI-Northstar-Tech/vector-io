@@ -10,7 +10,11 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
 
 from vdf_io.names import DBNames
-from vdf_io.util import extract_numerical_hash, set_arg_from_input, set_arg_from_password
+from vdf_io.util import (
+    extract_numerical_hash,
+    set_arg_from_input,
+    set_arg_from_password,
+)
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
 
