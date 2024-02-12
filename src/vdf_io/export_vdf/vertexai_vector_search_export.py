@@ -282,6 +282,7 @@ class ExportVertexAIVectorSearch(ExportVDB):
             "data_path": vectors_directory,
         }
         index_meta_list.append(namespace_meta)
+        self.args["exported_count"] += num_vectors_exported
 
         return index_meta_list
         # return {f"{index.display_name}": index_meta_list}

@@ -118,6 +118,7 @@ class ImportQdrant(ImportVDB):
         )
 
     def upsert_data(self):
+        total_imported_count = 0
         # we know that the self.vdf_meta["indexes"] is a list
         index_meta: Dict[str, List[NamespaceMeta]] = {}
         for index_name, index_meta in tqdm(
@@ -221,4 +222,6 @@ class ImportQdrant(ImportVDB):
                     f"Index '{new_collection_name}' has {vector_count} vectors after import"
                 )
                 tqdm.write(f"{vector_count - prev_vector_count} vectors were imported")
+                total_imported_count += vector_count - prev_vector_count
         tqdm.write("Data import completed successfully.")
+        self.args["imported_count"] = total_imported_count

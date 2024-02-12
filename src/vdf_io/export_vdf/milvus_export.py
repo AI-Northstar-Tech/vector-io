@@ -164,5 +164,6 @@ class ExportMilvus(ExportVDB):
                 collection.indexes[0].params["metric_type"], self.DB_NAME_SLUG
             ),
         )
+        self.args["exported_count"] += num_vectors_exported
 
         return [namespace_meta]

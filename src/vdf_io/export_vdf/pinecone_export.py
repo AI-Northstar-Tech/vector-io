@@ -547,4 +547,5 @@ class ExportPinecone(ExportVDB):
                 data_path="/".join(vectors_directory.split("/")[1:]),
             )
             index_meta.append(namespace_meta)
+            self.args["exported_count"] += total_size
         return index_meta

@@ -179,6 +179,7 @@ class ExportQdrant(ExportVDB):
             vector_columns=["vector"],
             data_path="/".join(vectors_directory.split("/")[1:]),
         )
+        self.args["exported_count"] += num_vectors_exported
         return [namespace_meta]
 
     def save_from_records(self, records, vectors_directory):

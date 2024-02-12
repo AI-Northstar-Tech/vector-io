@@ -73,6 +73,7 @@ class ImportMilvus(ImportVDB):
         connections.connect(uri=uri, token=token)
 
     def upsert_data(self):
+        total_imported_count = 0
         # we know that the self.vdf_meta["indexes"] is a list
         for collection_name, index_meta in self.vdf_meta["indexes"].items():
             # load data
@@ -186,4 +187,6 @@ class ImportMilvus(ImportVDB):
                 vector_count = collection.num_entities
                 print(f"Index '{index_name}' has {vector_count} vectors after import")
                 print(f"{num_inserted} vectors were imported")
+                total_imported_count += num_inserted
         print("Data import completed successfully.")
+        self.args["imported_count"] = total_imported_count

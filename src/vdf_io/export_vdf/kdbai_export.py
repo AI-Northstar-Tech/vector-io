@@ -123,4 +123,5 @@ class ExportKDBAI(ExportVDB):
             data_path="/".join(vectors_directory.split("/")[1:]),
             metric=embedding_dist,
         )
+        self.args["exported_count"] += len(table_res.index)
         return [namespace_meta]

@@ -67,6 +67,7 @@ ARGS_ALLOWLIST = [
     "vector_database",
     "library_version",
     "hash_value",
+    "exported_count",
 ]
 
 slug_to_export_func = {

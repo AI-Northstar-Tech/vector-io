@@ -862,6 +862,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
         return index_endpoint
 
     def upsert_data(self):
+        total_imported_count = 0
         MINUTE = 60
         CALLS_PER_PRD = self.args.get("requests_per_minute", 6000)
 
@@ -1010,6 +1011,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
                             )
                             # self.index_client.upsert_datapoints(request=upsert_request)
                             upsert_in_rate(self, upsert_request=upsert_request)
+                            total_imported_count += len(upsert_request.datapoints)
                             insert_datapoints_payload = []
 
                         if len(total_ids) % CALLS_PER_PRD == 0:
@@ -1020,6 +1022,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
                             index=self.target_vertexai_index.resource_name,
                             datapoints=insert_datapoints_payload,
                         )
+                        total_imported_count += len(upsert_request.datapoints)
 
                         # self.index_client.upsert_datapoints(request=upsert_request)
                         upsert_in_rate(self, upsert_request=upsert_request)
@@ -1028,3 +1031,4 @@ class ImportVertexAIVectorSearch(ImportVDB):
         print(
             f"Updated {self.target_vertexai_index.display_name} with {len(total_ids)} vectors"
         )
+        self.args["imported_count"] = total_imported_count

@@ -122,6 +122,7 @@ def run_import(span):
         "vector_database",
         "library_version",
         "hash_value",
+        "imported_count"
     ]
 
     for key in list(import_obj.args.keys()):

@@ -76,6 +76,7 @@ class ImportKDBAI(ImportVDB):
         self.session = kdbai.Session(api_key=api_key, endpoint=endpoint)
 
     def upsert_data(self):
+        total_imported_count = 0
         json_file_path = os.path.join(self.dir_path, "VDF_META.json")
         # return json_file_path
         with open(json_file_path, "r") as json_file:
@@ -194,6 +195,8 @@ class ImportKDBAI(ImportVDB):
                             else:
                                 raise RuntimeError(f"Error inserting chunk: {e}")
                             continue
+                    total_imported_count += len(df)
 
         # table.insert(df)
         print("Data imported successfully")
+        self.args["imported_count"] = total_imported_count

@@ -21,6 +21,7 @@ class ExportVDB(abc.ABC):
         self.hash_value = extract_data_hash(args)
         args["hash_value"] = self.hash_value
         self.args = args
+        self.args["exported_count"] = 0
         self.timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.vdf_directory = f"vdf_{self.timestamp_in_format}_{self.hash_value}"
         os.makedirs(self.vdf_directory, exist_ok=True)

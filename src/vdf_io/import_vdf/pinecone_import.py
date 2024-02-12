@@ -225,7 +225,7 @@ class ImportPinecone(ImportVDB):
                     f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files"
                 )
                 # Upsert the vectors and metadata to the Pinecone index in batches
-                imported_count = 0
+                total_imported_count = 0
                 start_idx = 0
                 while start_idx < len(vectors):
                     end_idx = min(start_idx + current_batch_size, len(vectors))
@@ -251,7 +251,7 @@ class ImportPinecone(ImportVDB):
                     ]
                     try:
                         resp = index.upsert(vectors=batch_vectors, namespace=namespace)
-                        imported_count += resp["upserted_count"]
+                        total_imported_count += resp["upserted_count"]
                         start_idx += resp["upserted_count"]
                     except Exception as e:
                         tqdm.write(
@@ -264,5 +264,6 @@ class ImportPinecone(ImportVDB):
                         tqdm.write(f"Reducing batch size to {current_batch_size}")
                         continue
         tqdm.write(
-            f"Data import completed successfully. Imported {imported_count} vectors"
+            f"Data import completed successfully. Imported {total_imported_count} vectors"
         )
+        self.args["imported_count"] = total_imported_count
