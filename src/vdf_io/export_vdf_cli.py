@@ -4,7 +4,6 @@ import argparse
 import os
 import sys
 import time
-from typing import Dict
 from dotenv import load_dotenv
 import warnings
 
