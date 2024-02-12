@@ -3,7 +3,7 @@
 import argparse
 import os
 import time
-from typing import Any, Dict
+from typing import Dict
 from dotenv import load_dotenv
 
 import sentry_sdk
@@ -324,6 +324,7 @@ def main():
     sentry_sdk.flush()
     return
 
+
 slug_to_import_func: Dict[str, ImportVDB] = {
     DBNames.PINECONE: import_pinecone,
     DBNames.QDRANT: import_qdrant,
@@ -331,6 +332,7 @@ slug_to_import_func: Dict[str, ImportVDB] = {
     DBNames.MILVUS: import_milvus,
     DBNames.VERTEXAI: import_vertexai_vectorsearch,
 }
+
 
 def run_import(span):
     parser = argparse.ArgumentParser(

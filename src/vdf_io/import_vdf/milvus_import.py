@@ -25,9 +25,13 @@ class ImportMilvus(ImportVDB):
     DB_NAME_SLUG = DBNames.MILVUS
 
     @classmethod
-    def make_parser(cls,subparsers):
-        parser_milvus = subparsers.add_parser(DBNames.MILVUS, help="Import data to Milvus")
-        parser_milvus.add_argument("-u", "--uri", type=str, help="URI of Milvus instance")
+    def make_parser(cls, subparsers):
+        parser_milvus = subparsers.add_parser(
+            DBNames.MILVUS, help="Import data to Milvus"
+        )
+        parser_milvus.add_argument(
+            "-u", "--uri", type=str, help="URI of Milvus instance"
+        )
         parser_milvus.add_argument("-t", "--token", type=str, help="Milvus token")
 
     def __init__(self, args):
