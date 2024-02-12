@@ -3,7 +3,7 @@
 import argparse
 import os
 import time
-from typing import Any, Dict
+from typing import Dict
 from dotenv import load_dotenv
 
 import sentry_sdk
