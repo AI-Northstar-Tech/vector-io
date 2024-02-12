@@ -50,6 +50,7 @@ if os.environ.get("DISABLE_TELEMETRY_VECTORIO", False) != "1":
         enable_tracing=True,
         # set the instrumenter to use OpenTelemetry instead of Sentry
         instrumenter="otel",
+        default_integrations=False,
     )
 
 slug_to_export_func: Dict[str, ExportVDB] = {
