@@ -7,14 +7,14 @@ import time
 from typing import Dict
 from dotenv import load_dotenv
 import warnings
-import vdf_io
+
 import sentry_sdk
 from opentelemetry import trace
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.sdk.trace import TracerProvider
 from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPropagator
 
-
+import vdf_io
 from vdf_io.export_vdf.pinecone_export import (
     export_pinecone,
     make_pinecone_parser,

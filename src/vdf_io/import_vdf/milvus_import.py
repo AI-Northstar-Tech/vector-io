@@ -130,8 +130,9 @@ class ImportMilvus(ImportVDF):
                     for _, row in df.iterrows():
                         row = json.loads(row.to_json())
                         # replace old_vector_column_name with vector_column_name
-                        row[vector_column_name] = row[old_vector_column_name]
-                        del row[old_vector_column_name]
+                        if old_vector_column_name != vector_column_name:
+                            row[vector_column_name] = row[old_vector_column_name]
+                            del row[old_vector_column_name]
                         assert isinstance(row[f_pk.name], str), row[f_pk.name]
                         assert isinstance(row[f_vector.name][0], float), type(
                             row[f_vector.name][0]

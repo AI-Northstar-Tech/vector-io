@@ -6,6 +6,12 @@ import time
 from typing import Any
 from dotenv import load_dotenv
 
+import sentry_sdk
+from opentelemetry import trace
+from opentelemetry.propagate import set_global_textmap
+from opentelemetry.sdk.trace import TracerProvider
+from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPropagator
+
 import vdf_io
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input, set_arg_from_password
@@ -17,6 +23,15 @@ from vdf_io.import_vdf.vertexai_vector_search_import import ImportVertexAIVector
 from vdf_io.import_vdf.vdf_import_cls import ImportVDF
 
 load_dotenv()
+
+if os.environ.get("DISABLE_TELEMETRY_VECTORIO", False) != "1":
+    sentry_sdk.init(
+        dsn="https://4826b78415eeaf0135c12416e222596d@o1284436.ingest.sentry.io/4506716331573248",
+        enable_tracing=True,
+        # set the instrumenter to use OpenTelemetry instead of Sentry
+        instrumenter="otel",
+        default_integrations=False,
+    )
 
 
 def import_milvus(args):
@@ -35,6 +50,7 @@ def import_milvus(args):
     )
     milvus_import = ImportMilvus(args)
     milvus_import.upsert_data()
+    return milvus_import
 
 
 def import_qdrant(args):
@@ -81,6 +97,7 @@ def import_qdrant(args):
     )
     qdrant_import = ImportQdrant(args)
     qdrant_import.upsert_data()
+    return qdrant_import
 
 
 def import_kdbai(args):
@@ -104,6 +121,7 @@ def import_kdbai(args):
     )
     kdbai_import = ImportKDBAI(args)
     kdbai_import.upsert_data()
+    return kdbai_import
 
 
 def import_pinecone(args):
@@ -157,6 +175,7 @@ def import_pinecone(args):
 
     pinecone_import = ImportPinecone(args)
     pinecone_import.upsert_data()
+    return pinecone_import
 
 
 def import_vertexai_vectorsearch(args):
@@ -277,12 +296,36 @@ def import_vertexai_vectorsearch(args):
 
     vertexai_vectorsearch_import = ImportVertexAIVectorSearch(args)
     vertexai_vectorsearch_import.upsert_data()
+    return vertexai_vectorsearch_import
+
+
+provider = TracerProvider()
+provider.add_span_processor(SentrySpanProcessor())
+trace.set_tracer_provider(provider)
+set_global_textmap(SentryPropagator())
+
+tracer = trace.get_tracer(__name__)
 
 
 def main():
     """
     Import data to Pinecone using a vector dataset directory in the VDF format.
     """
+    with tracer.start_as_current_span("import_vdf_cli_main") as span:
+        try:
+            run_import(span)
+            sentry_sdk.flush()
+        except Exception as e:
+            sentry_sdk.flush()
+            print(f"Error: {e}")
+            return
+        finally:
+            sentry_sdk.flush()
+    sentry_sdk.flush()
+    return
+
+
+def run_import(span):
     parser = argparse.ArgumentParser(
         description="Import data from VDF to a vector database"
     )
@@ -438,15 +481,15 @@ def main():
         print("Please choose a vector database to export data from:", db_choices)
         return
     if args["vector_database"] == DBNames.PINECONE:
-        import_pinecone(args)
+        import_obj = import_pinecone(args)
     elif args["vector_database"] == DBNames.QDRANT:
-        import_qdrant(args)  # Add the function to import data to Qdrant
+        import_obj = import_qdrant(args)  # Add the function to import data to Qdrant
     elif args["vector_database"] == DBNames.KDBAI:
-        import_kdbai(args)
+        import_obj = import_kdbai(args)
     elif args["vector_database"] == DBNames.MILVUS:
-        import_milvus(args)
+        import_obj = import_milvus(args)
     elif args["vector_database"] == DBNames.VERTEXAI:
-        import_vertexai_vectorsearch(args)
+        import_obj = import_vertexai_vectorsearch(args)
     else:
         print(
             "Unrecognized DB. Please choose a vector database to export data from:",
@@ -454,6 +497,15 @@ def main():
         )
 
     end_time = time.time()
+    ARGS_ALLOWLIST = [
+        "vector_database",
+        "library_version",
+        "hash_value",
+    ]
+
+    for key in list(import_obj.args.keys()):
+        if key in ARGS_ALLOWLIST:
+            span.set_attribute(key, import_obj.args[key])
 
     print(f"Time taken: {end_time - start_time:.2f} seconds")
 
