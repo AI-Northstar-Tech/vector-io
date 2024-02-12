@@ -1,8 +1,6 @@
-import os
 from typing import Dict, List
 from dotenv import load_dotenv
 from tqdm import tqdm
-import json
 import pyarrow.parquet as pq
 
 import kdbai_client as kdbai
@@ -97,7 +95,9 @@ class ImportKDBAI(ImportVDB):
                 )
                 parquet_files = self.get_parquet_files(final_data_path)
                 for parquet_file in tqdm(parquet_files, desc="Importing parquet files"):
-                    parquet_file_path = self.get_file_path(final_data_path, parquet_file)
+                    parquet_file_path = self.get_file_path(
+                        final_data_path, parquet_file
+                    )
                     parquet_table = pq.read_table(parquet_file_path)
                     # rename columns by replacing "-" with "_"
                     parquet_table = parquet_table.rename_columns(
@@ -108,7 +108,7 @@ class ImportKDBAI(ImportVDB):
                         {"name": field.name, "type": str(field.type)}
                         for field in parquet_schema
                     ]
-                    
+
                     # Extract information from JSON
                     # namespace = indexes_content[index_names[0]][""][0]["namespace"]
                     (
@@ -206,4 +206,3 @@ class ImportKDBAI(ImportVDB):
         # table.insert(df)
         print("Data imported successfully")
         self.args["imported_count"] = total_imported_count
-

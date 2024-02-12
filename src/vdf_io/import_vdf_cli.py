@@ -110,7 +110,7 @@ def run_import(span):
             "max_num_rows",
             "Maximum number of vectors you'd like to load",
             int,
-            2**63-1,
+            2**63 - 1,
         )
 
     args["cwd"] = os.getcwd()
@@ -162,7 +162,7 @@ def make_common_options(parser):
         "--max_num_rows",
         type=int,
         help="Maximum number of rows you'd like to load",
-        default=2**63-1,
+        default=2**63 - 1,
     )
     parser.add_argument(
         "--create_new",

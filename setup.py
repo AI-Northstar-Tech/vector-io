@@ -19,7 +19,7 @@ setup(
             "get_id_list_vdf=vdf_io.scripts.get_id_list:main",
             "push_to_hub_vdf=vdf_io.scripts.push_to_hub_vdf:main",
             "bump_version_vdf=vdf_io.scripts.bump_version:main",
-            "check_for_updates_vdf=vdf_io.scripts.check_for_updates:main"
+            "check_for_updates_vdf=vdf_io.scripts.check_for_updates:main",
         ],
     },
     install_requires=open("requirements.txt").read().splitlines(),

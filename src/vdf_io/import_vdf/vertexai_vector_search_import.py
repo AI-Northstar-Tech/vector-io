@@ -10,7 +10,6 @@ from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.util import set_arg_from_input
 
 # gcloud config set project $PROJECT_ID - users
-import os
 import json
 import itertools
 import pandas as pd
