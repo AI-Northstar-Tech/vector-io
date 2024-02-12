@@ -13,6 +13,7 @@ from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPro
 
 import vdf_io
 from vdf_io.names import DBNames
+from vdf_io.scripts.check_for_updates import check_for_updates
 from vdf_io.util import set_arg_from_input
 from vdf_io.import_vdf.pinecone_import import ImportPinecone
 from vdf_io.import_vdf.qdrant_import import ImportQdrant
@@ -103,6 +104,14 @@ def run_import(span):
     set_arg_from_input(
         args, "dir", "Enter the directory of vector dataset to be imported: ", str
     )
+    if args["subset"]:
+        set_arg_from_input(
+            args,
+            "max_num_rows",
+            "Maximum number of vectors you'd like to load",
+            int,
+            2**63-1,
+        )
 
     args["cwd"] = os.getcwd()
 
@@ -131,10 +140,16 @@ def run_import(span):
 
     print(f"Time taken: {end_time - start_time:.2f} seconds")
     span.set_attribute("import_time", end_time - start_time)
+    check_for_updates()
 
 
 def make_common_options(parser):
     parser.add_argument("-d", "--dir", type=str, help="Directory to import")
+    parser.add_argument(
+        "--hf_dataset",
+        type=str,
+        help="Hugging Face dataset name eg: 'aintech/vdf_20240125_130746_ac5a6_medium_articles'",
+    )
     parser.add_argument(
         "-s",
         "--subset",
@@ -142,6 +157,12 @@ def make_common_options(parser):
         help="Import a subset of data (default: False)",
         default=False,
         action=argparse.BooleanOptionalAction,
+    )
+    parser.add_argument(
+        "--max_num_rows",
+        type=int,
+        help="Maximum number of rows you'd like to load",
+        default=2**63-1,
     )
     parser.add_argument(
         "--create_new",

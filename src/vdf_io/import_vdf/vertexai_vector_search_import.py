@@ -862,6 +862,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
         return index_endpoint
 
     def upsert_data(self):
+        max_hit = False
         total_imported_count = 0
         MINUTE = 60
         CALLS_PER_PRD = self.args.get("requests_per_minute", 6000)
@@ -914,7 +915,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
 
                 total_ids = []
                 for file in tqdm(parquet_files, desc="Iterating over parquet files"):
-                    file_path = os.path.join(final_data_path, file)
+                    file_path = self.get_file_path(final_data_path, file)
                     df = pd.read_parquet(file_path)
                     df["id"] = df["id"].apply(lambda x: str(x))
 
@@ -1009,24 +1010,53 @@ class ImportVertexAIVectorSearch(ImportVDB):
                                 index=self.target_vertexai_index.resource_name,
                                 datapoints=insert_datapoints_payload,
                             )
+                            if (
+                                total_imported_count + len(upsert_request.datapoints)
+                                >= self.args["max_num_rows"]
+                            ):
+                                upsert_request = aipv1.UpsertDatapointsRequest(
+                                    index=self.target_vertexai_index.resource_name,
+                                    datapoints=insert_datapoints_payload[
+                                        : (
+                                            self.args["max_num_rows"]
+                                            - total_imported_count
+                                        )
+                                    ],
+                                )
+                                max_hit = True
                             # self.index_client.upsert_datapoints(request=upsert_request)
                             upsert_in_rate(self, upsert_request=upsert_request)
                             total_imported_count += len(upsert_request.datapoints)
                             insert_datapoints_payload = []
-
-                        if len(total_ids) % CALLS_PER_PRD == 0:
-                            print(f"{len(total_ids)} total vectors upserted")
+                            if max_hit:
+                                break
+                        if max_hit:
+                            break
 
                     if len(insert_datapoints_payload) > 0:
                         upsert_request = aipv1.UpsertDatapointsRequest(
                             index=self.target_vertexai_index.resource_name,
                             datapoints=insert_datapoints_payload,
                         )
-                        total_imported_count += len(upsert_request.datapoints)
-
+                        if (
+                            total_imported_count + len(upsert_request.datapoints)
+                            >= self.args["max_num_rows"]
+                        ):
+                            upsert_request = aipv1.UpsertDatapointsRequest(
+                                index=self.target_vertexai_index.resource_name,
+                                datapoints=insert_datapoints_payload[
+                                    : (self.args["max_num_rows"] - total_imported_count)
+                                ],
+                            )
+                            max_hit = True
                         # self.index_client.upsert_datapoints(request=upsert_request)
                         upsert_in_rate(self, upsert_request=upsert_request)
-
+                        total_imported_count += len(upsert_request.datapoints)
+                    if max_hit:
+                        tqdm.write(
+                            f"Max rows to be imported {self.args['max_num_rows']} hit. Exiting"
+                        )
+                        break
         print("Index import complete")
         print(
             f"Updated {self.target_vertexai_index.display_name} with {len(total_ids)} vectors"

@@ -68,7 +68,12 @@ class ImportVDB(abc.ABC):
         return vector_column_names, vector_column_name
 
     def get_parquet_files(self, data_path):
-        return get_parquet_files(data_path)
+        return get_parquet_files(data_path, self.args)
 
     def get_final_data_path(self, data_path):
-        return get_final_data_path(self.args["cwd"], self.args["dir"], data_path)
+        return get_final_data_path(self.args["cwd"], self.args["dir"], data_path, self.args)
+
+    def get_file_path(self, final_data_path, parquet_file):
+        if self.args.get("hf_dataset",None):
+            return parquet_file
+        return os.path.join(final_data_path, parquet_file)

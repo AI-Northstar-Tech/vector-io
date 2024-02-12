@@ -72,16 +72,12 @@ class ImportKDBAI(ImportVDB):
                 f"Allowed types are {', '.join(allowed_vector_types)}"
             )
 
-        self.dir_path = args.get("dir")
         self.session = kdbai.Session(api_key=api_key, endpoint=endpoint)
 
     def upsert_data(self):
         total_imported_count = 0
-        json_file_path = os.path.join(self.dir_path, "VDF_META.json")
-        # return json_file_path
-        with open(json_file_path, "r") as json_file:
-            vdf_meta = json.load(json_file)
-        indexes_content: Dict[str, List[NamespaceMeta]] = vdf_meta["indexes"]
+        max_hit = False
+        indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
         index_names: List[str] = list(indexes_content.keys())
         if len(index_names) == 0:
             raise ValueError("No indexes found in VDF_META.json")
@@ -101,20 +97,18 @@ class ImportKDBAI(ImportVDB):
                 )
                 parquet_files = self.get_parquet_files(final_data_path)
                 for parquet_file in tqdm(parquet_files, desc="Importing parquet files"):
-                    parquet_file_path = os.path.join(final_data_path, parquet_file)
+                    parquet_file_path = self.get_file_path(final_data_path, parquet_file)
                     parquet_table = pq.read_table(parquet_file_path)
                     # rename columns by replacing "-" with "_"
                     parquet_table = parquet_table.rename_columns(
                         [col.replace("-", "_") for col in parquet_table.column_names]
                     )
                     parquet_schema = parquet_table.schema
-                    tqdm.write(str(parquet_schema))
                     parquet_columns = [
                         {"name": field.name, "type": str(field.type)}
                         for field in parquet_schema
                     ]
-                    tqdm.write(str(parquet_columns))
-
+                    
                     # Extract information from JSON
                     # namespace = indexes_content[index_names[0]][""][0]["namespace"]
                     (
@@ -175,7 +169,10 @@ class ImportKDBAI(ImportVDB):
                     # insert data
                     # Set the batch size
                     df = parquet_table.to_pandas().drop(columns=cols_to_be_dropped)
-
+                    if total_imported_count + len(df) >= self.args["max_num_rows"]:
+                        max_hit = True
+                        # Take a subset of df
+                        df = df.iloc[: self.args["max_num_rows"] - total_imported_count]
                     i = 0
                     batch_size = MAX_BATCH_SIZE
                     pbar = tqdm(total=df.shape[0], desc="Inserting data")
@@ -196,7 +193,17 @@ class ImportKDBAI(ImportVDB):
                                 raise RuntimeError(f"Error inserting chunk: {e}")
                             continue
                     total_imported_count += len(df)
+                    if max_hit:
+                        break
+                if max_hit:
+                    break
+            if max_hit:
+                tqdm.write(
+                    f"Max rows to be imported {self.args['max_num_rows']} hit. Exiting"
+                )
+                break
 
         # table.insert(df)
         print("Data imported successfully")
         self.args["imported_count"] = total_imported_count
+

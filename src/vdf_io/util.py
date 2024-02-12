@@ -170,7 +170,9 @@ def standardize_metric_reverse(metric, db):
         raise Exception(f"Invalid metric '{metric}' for database '{db}'")
 
 
-def get_final_data_path(cwd, dir, data_path):
+def get_final_data_path(cwd, dir, data_path, args):
+    if args.get("hf_dataset", None):
+        return data_path
     final_data_path = os.path.join(cwd, dir, data_path)
     if not os.path.isdir(final_data_path):
         raise Exception(
@@ -183,8 +185,18 @@ def get_final_data_path(cwd, dir, data_path):
     return final_data_path
 
 
-def get_parquet_files(data_path):
+def get_parquet_files(data_path, args):
     # Load the data from the parquet files
+    if args.get("hf_dataset", None) or data_path.starts_with("hf://"):
+        from huggingface_hub import HfFileSystem
+
+        fs = HfFileSystem(token=os.environ.get("HUGGING_FACE_TOKEN", ""))
+        return [
+            "hf://" + x
+            for x in fs.glob(
+                f"datasets/{args.get('hf_dataset')}/{data_path}/**.parquet"
+            )
+        ]
     if not os.path.isdir(data_path):
         if data_path.endswith(".parquet"):
             return [data_path]

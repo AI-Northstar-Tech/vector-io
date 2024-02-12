@@ -73,6 +73,7 @@ class ImportMilvus(ImportVDB):
         connections.connect(uri=uri, token=token)
 
     def upsert_data(self):
+        max_hit = False
         total_imported_count = 0
         # we know that the self.vdf_meta["indexes"] is a list
         for collection_name, index_meta in self.vdf_meta["indexes"].items():
@@ -160,10 +161,11 @@ class ImportMilvus(ImportVDB):
 
                 num_inserted = 0
                 for file in tqdm(parquet_files, desc="Inserting data"):
-                    file_path = os.path.join(final_data_path, file)
+                    file_path = self.get_file_path(final_data_path, file)
                     df = pd.read_parquet(file_path)
                     df["id"] = df["id"].apply(lambda x: str(x))
                     data_rows = []
+                            
                     for _, row in df.iterrows():
                         row = json.loads(row.to_json())
                         # replace old_vector_column_name with vector_column_name
@@ -176,17 +178,21 @@ class ImportMilvus(ImportVDB):
                         )
                         data_rows.append(row)
                     BATCH_SIZE = 100
+                    if total_imported_count + BATCH_SIZE >= self.args["max_num_rows"]:
+                        data_rows = data_rows[:self.args["max_num_rows"]-total_imported_count]
+                        max_hit = True
                     for i in tqdm(
                         range(0, len(data_rows), BATCH_SIZE),
                         desc="Upserting in Batches",
                     ):
                         mr = collection.insert(data_rows[i : i + BATCH_SIZE])
                         num_inserted += mr.succ_count
-
+                        total_imported_count += mr.succ_count
+                    if max_hit:
+                        break
                 collection.flush()
                 vector_count = collection.num_entities
                 print(f"Index '{index_name}' has {vector_count} vectors after import")
                 print(f"{num_inserted} vectors were imported")
-                total_imported_count += num_inserted
         print("Data import completed successfully.")
         self.args["imported_count"] = total_imported_count

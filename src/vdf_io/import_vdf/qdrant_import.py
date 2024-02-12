@@ -118,6 +118,7 @@ class ImportQdrant(ImportVDB):
         )
 
     def upsert_data(self):
+        max_hit = False
         total_imported_count = 0
         # we know that the self.vdf_meta["indexes"] is a list
         index_meta: Dict[str, List[NamespaceMeta]] = {}
@@ -171,7 +172,7 @@ class ImportQdrant(ImportVDB):
                     new_collection_name, namespace_meta
                 )
                 for file in parquet_files:
-                    file_path = os.path.join(final_data_path, file)
+                    file_path = self.get_file_path(final_data_path, file)
                     df = pd.read_parquet(file_path)
                     vectors.update(
                         {row["id"]: row[vector_column_name] for _, row in df.iterrows()}
@@ -200,6 +201,10 @@ class ImportQdrant(ImportVDB):
                     for idx in vectors.keys()
                 ]
 
+                if total_imported_count + len(points) >= self.args["max_num_rows"]:
+                    max_hit = True
+                    points = points[: self.args["max_num_rows"] - total_imported_count]
+
                 try:
                     self.client.upload_points(
                         collection_name=new_collection_name,
@@ -223,5 +228,14 @@ class ImportQdrant(ImportVDB):
                 )
                 tqdm.write(f"{vector_count - prev_vector_count} vectors were imported")
                 total_imported_count += vector_count - prev_vector_count
+                if total_imported_count >= self.args["max_num_rows"]:
+                    max_hit = True
+                if max_hit:
+                    break
+            if max_hit:
+                tqdm.write(
+                    f"Max rows to be imported {self.args['max_num_rows']} hit. Exiting"
+                )
+                break
         tqdm.write("Data import completed successfully.")
         self.args["imported_count"] = total_imported_count
