@@ -10,7 +10,7 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
 
 from vdf_io.names import DBNames
-from vdf_io.util import extract_numerical_hash
+from vdf_io.util import extract_numerical_hash, set_arg_from_input, set_arg_from_password
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
 
@@ -19,6 +19,53 @@ load_dotenv()
 
 class ImportQdrant(ImportVDB):
     DB_NAME_SLUG = DBNames.QDRANT
+
+    @classmethod
+    def import_vdb(cls, args):
+        """
+        Import data to Qdrant
+        """
+        set_arg_from_input(
+            args,
+            "url",
+            "Enter the URL of Qdrant instance (default: 'http://localhost:6334'): ",
+            str,
+            "http://localhost:6334",
+        )
+        set_arg_from_input(
+            args,
+            "prefer_grpc",
+            "Whether to use GRPC. Recommended. (default: True): ",
+            bool,
+            True,
+        )
+        set_arg_from_input(
+            args,
+            "parallel",
+            "Enter the batch size for upserts (default: 1): ",
+            int,
+            1,
+        )
+        set_arg_from_input(
+            args,
+            "batch_size",
+            "Enter the number of parallel processes of upload (default: 64): ",
+            int,
+            64,
+        )
+        set_arg_from_input(
+            args,
+            "max_retries",
+            "Enter the maximum number of retries in case of a failure (default: 3): ",
+            int,
+            3,
+        )
+        set_arg_from_password(
+            args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
+        )
+        qdrant_import = ImportQdrant(args)
+        qdrant_import.upsert_data()
+        return qdrant_import
 
     @classmethod
     def make_parser(cls, subparsers):

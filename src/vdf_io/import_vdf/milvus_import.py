@@ -14,7 +14,7 @@ from pymilvus import (
 )
 
 from vdf_io.names import DBNames
-from vdf_io.util import standardize_metric_reverse
+from vdf_io.util import set_arg_from_input, set_arg_from_password, standardize_metric_reverse
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
 
@@ -23,6 +23,25 @@ load_dotenv()
 
 class ImportMilvus(ImportVDB):
     DB_NAME_SLUG = DBNames.MILVUS
+
+    @classmethod
+    def import_vdb(cls, args):
+        """
+        Import data to Milvus
+        """
+        set_arg_from_input(
+            args,
+            "uri",
+            "Enter the Milvus URI (default: 'http://localhost:19530'): ",
+            str,
+            "http://localhost:19530",
+        )
+        set_arg_from_password(
+            args, "token", "Enter your Milvus token (hit enter to skip): ", "Milvus Token"
+        )
+        milvus_import = ImportMilvus(args)
+        milvus_import.upsert_data()
+        return milvus_import
 
     @classmethod
     def make_parser(cls,subparsers):

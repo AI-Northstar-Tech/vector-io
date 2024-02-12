@@ -10,7 +10,7 @@ import kdbai_client as kdbai
 from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
-from vdf_io.util import standardize_metric_reverse
+from vdf_io.util import set_arg_from_input, set_arg_from_password, standardize_metric_reverse
 
 load_dotenv()
 
@@ -19,6 +19,31 @@ MAX_BATCH_SIZE = 10000
 
 class ImportKDBAI(ImportVDB):
     DB_NAME_SLUG = DBNames.KDBAI
+
+    @classmethod
+    def import_vdb(cls, args):
+        """
+        Import data to KDB.AI
+        """
+        set_arg_from_input(
+            args,
+            "url",
+            "Enter the endpoint for KDB.AI Cloud instance: ",
+            str,
+        )
+        set_arg_from_password(
+            args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
+        )
+        set_arg_from_input(
+            args,
+            "index",
+            "Enter the index type used (Flat, IVF, IVFPQ, HNSW): ",
+            str,
+        )
+        kdbai_import = ImportKDBAI(args)
+        kdbai_import.upsert_data()
+        return kdbai_import
+
 
     @classmethod
     def make_parser(cls, subparsers):
