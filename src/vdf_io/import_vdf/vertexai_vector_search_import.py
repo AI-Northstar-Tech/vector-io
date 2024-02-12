@@ -2,10 +2,11 @@
 Import data to vertex ai vector search index
 """
 
+import argparse
 from typing import Dict, List
 
 from vdf_io.names import DBNames
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
 
 # gcloud config set project $PROJECT_ID - users
@@ -41,8 +42,49 @@ class ResourceNotExistException(Exception):
         super().__init__(self.message)
 
 
-class ImportVertexAIVectorSearch(ImportVDF):
+class ImportVertexAIVectorSearch(ImportVDB):
     DB_NAME_SLUG = DBNames.VERTEXAI
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_vertexai_vectorsearch = subparsers.add_parser(
+            DBNames.VERTEXAI, help="Import data to Vertex AI Vector Search"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-p", "--project-id", type=str, help="Google Cloud Project ID"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-l", "--location", type=str, help="Google Cloud region hosting your index"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-b",
+            "--batch-size",
+            type=str,
+            help="Enter size of upsert batches:",
+            default=100,
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-f", "--filter-restricts", type=str, help="string filters"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-n", "--numeric-restricts", type=str, help="numeric filters"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-r", "--requests-per-minute", type=int, help="rate limiter"
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "-c",
+            "--crowding-tag",
+            type=str,
+            help="string value to enforce diversity in retrieval",
+        )
+        parser_vertexai_vectorsearch.add_argument(
+            "--deploy_new_index",
+            type=bool,
+            help="deploy new index (default: False)",
+            default=False,
+            action=argparse.BooleanOptionalAction,
+        )
 
     def __init__(self, args: Dict) -> None:
         super().__init__(args)

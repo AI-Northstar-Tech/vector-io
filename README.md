@@ -248,7 +248,7 @@ Steps to add a new vector database (ABC):
 **Export**:
 
 1. Add a new subparser in `export_vdf_cli.py` for the new vector database. Add database specific arguments to the subparser, such as the url of the database, any authentication tokens, etc.
-2. Add a new file in `src/vdf_io/export_vdf/` for the new vector database. This file should define a class ExportABC which inherits from ExportVDF.
+2. Add a new file in `src/vdf_io/export_vdf/` for the new vector database. This file should define a class ExportABC which inherits from ExportVDB.
 3. Specify a DB_NAME_SLUG for the class
 4. The class should implement the get_data() function to download points (in a batched manner) with all the metadata from the specified index of the vector database. This data should be stored in a series of parquet files/folders.
 The metadata should be stored in a json file with the [schema above](#universal-vector-dataset-format-vdf-specification).
@@ -257,7 +257,7 @@ The metadata should be stored in a json file with the [schema above](#universal-
 **Import**:
 
 1. Add a new subparser in `import_vdf_cli.py` for the new vector database. Add database specific arguments to the subparser, such as the url of the database, any authentication tokens, etc.
-2. Add a new file in `src/vdf_io/import_vdf/` for the new vector database. This file should define a class ImportABC which inherits from ImportVDF. It should implement the upsert_data() function to upload points from a vdf dataset (in a batched manner) with all the metadata to the specified index of the vector database. All metadata about the dataset should be read fro mthe VDF_META.json file in the vdf folder.
+2. Add a new file in `src/vdf_io/import_vdf/` for the new vector database. This file should define a class ImportABC which inherits from ImportVDB. It should implement the upsert_data() function to upload points from a vdf dataset (in a batched manner) with all the metadata to the specified index of the vector database. All metadata about the dataset should be read from the VDF_META.json file in the vdf folder.
 3. Use the script to import data from the example vdf dataset exported in the previous step and verify that the data is imported correctly.
 
 ### Changing the VDF specification

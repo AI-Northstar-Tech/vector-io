@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 from tqdm import tqdm
 import os
@@ -7,15 +8,37 @@ from pinecone import Pinecone, ServerlessSpec, PodSpec, Vector
 
 from vdf_io.names import DBNames
 from vdf_io.util import standardize_metric_reverse
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
 load_dotenv()
 
 BATCH_SIZE = 1000  # Set the desired batch size
 
 
-class ImportPinecone(ImportVDF):
+class ImportPinecone(ImportVDB):
     DB_NAME_SLUG = DBNames.PINECONE
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_pinecone = subparsers.add_parser(
+            DBNames.PINECONE, help="Import data to Pinecone"
+        )
+        parser_pinecone.add_argument(
+            "-e", "--environment", type=str, help="Pinecone environment"
+        )
+        parser_pinecone.add_argument(
+            "--serverless",
+            type=bool,
+            help="Import data to Pinecone Serverless (default: False)",
+            default=False,
+            action=argparse.BooleanOptionalAction,
+        )
+        parser_pinecone.add_argument(
+            "-c", "--cloud", type=str, help="Pinecone Serverless cloud"
+        )
+        parser_pinecone.add_argument(
+            "-r", "--region", type=str, help="Pinecone Serverless region"
+        )
 
     def __init__(self, args):
         super().__init__(args)

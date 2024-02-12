@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import pandas as pd
 from tqdm import tqdm
 from grpc import RpcError
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
@@ -11,14 +11,51 @@ from qdrant_client.http.models import VectorParams, Distance, PointStruct
 
 from vdf_io.names import DBNames
 from vdf_io.util import extract_numerical_hash
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
 
 load_dotenv()
 
 
-class ImportQdrant(ImportVDF):
+class ImportQdrant(ImportVDB):
     DB_NAME_SLUG = DBNames.QDRANT
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_qdrant = subparsers.add_parser(
+            DBNames.QDRANT, help="Import data to Qdrant"
+        )
+        parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
+        parser_qdrant.add_argument(
+            "--prefer_grpc",
+            type=bool,
+            help="Whether to use Qdrant's GRPC interface",
+            default=True,
+        )
+        parser_qdrant.add_argument(
+            "--batch_size",
+            type=int,
+            help="Batch size for upserts (default: 64).",
+            default=64,
+        )
+        parser_qdrant.add_argument(
+            "--parallel",
+            type=int,
+            help="Number of parallel processes of upload (default: 1).",
+            default=1,
+        )
+        parser_qdrant.add_argument(
+            "--max_retries",
+            type=int,
+            help="Maximum number of retries in case of a failure (default: 3).",
+            default=3,
+        )
+        parser_qdrant.add_argument(
+            "--shard_key_selector",
+            type=Any,
+            help="Shard to be queried (default: None)",
+            default=None,
+        )
 
     def __init__(self, args):
         # call super class constructor

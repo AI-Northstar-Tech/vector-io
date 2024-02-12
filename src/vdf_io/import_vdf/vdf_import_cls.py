@@ -6,7 +6,7 @@ import abc
 from vdf_io.util import expand_shorthand_path, get_final_data_path, get_parquet_files
 
 
-class ImportVDF(abc.ABC):
+class ImportVDB(abc.ABC):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         if not hasattr(cls, "DB_NAME_SLUG"):

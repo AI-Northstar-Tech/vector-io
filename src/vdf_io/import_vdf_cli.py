@@ -3,7 +3,7 @@
 import argparse
 import os
 import time
-from typing import Any
+from typing import Any, Dict
 from dotenv import load_dotenv
 
 import sentry_sdk
@@ -20,7 +20,7 @@ from vdf_io.import_vdf.qdrant_import import ImportQdrant
 from vdf_io.import_vdf.kdbai_import import ImportKDBAI
 from vdf_io.import_vdf.milvus_import import ImportMilvus
 from vdf_io.import_vdf.vertexai_vector_search_import import ImportVertexAIVectorSearch
-from vdf_io.import_vdf.vdf_import_cls import ImportVDF
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
 load_dotenv()
 
@@ -324,143 +324,41 @@ def main():
     sentry_sdk.flush()
     return
 
+slug_to_import_func: Dict[str, ImportVDB] = {
+    DBNames.PINECONE: import_pinecone,
+    DBNames.QDRANT: import_qdrant,
+    DBNames.KDBAI: import_kdbai,
+    DBNames.MILVUS: import_milvus,
+    DBNames.VERTEXAI: import_vertexai_vectorsearch,
+}
 
 def run_import(span):
     parser = argparse.ArgumentParser(
         description="Import data from VDF to a vector database"
     )
-    # list of all subclasses of ImportVDF
-    db_choices = [c.DB_NAME_SLUG for c in ImportVDF.__subclasses__()]
+    # list of all subclasses of ImportVDB
+    db_choices = [c.DB_NAME_SLUG for c in ImportVDB.__subclasses__()]
     subparsers = parser.add_subparsers(
         title="Vector Databases",
-        description="Choose the vectors database to export data from",
+        description="Choose the vectors database to import data from",
         dest="vector_database",
     )
 
-    parser.add_argument("-d", "--dir", type=str, help="Directory to import")
-    parser.add_argument(
-        "-s",
-        "--subset",
-        type=bool,
-        help="Import a subset of data (default: False)",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-    )
-    parser.add_argument(
-        "--create_new",
-        type=bool,
-        help="Create a new index (default: False)",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-    )
+    make_common_options(parser)
     # Milvus
-    parser_milvus = subparsers.add_parser(DBNames.MILVUS, help="Import data to Milvus")
-    parser_milvus.add_argument("-u", "--uri", type=str, help="URI of Milvus instance")
-    parser_milvus.add_argument("-t", "--token", type=str, help="Milvus token")
+    ImportMilvus.make_parser(subparsers)
 
     # Pinecone
-    parser_pinecone = subparsers.add_parser(
-        DBNames.PINECONE, help="Import data to Pinecone"
-    )
-    parser_pinecone.add_argument(
-        "-e", "--environment", type=str, help="Pinecone environment"
-    )
-    parser_pinecone.add_argument(
-        "--serverless",
-        type=bool,
-        help="Import data to Pinecone Serverless (default: False)",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-    )
-    parser_pinecone.add_argument(
-        "-c", "--cloud", type=str, help="Pinecone Serverless cloud"
-    )
-    parser_pinecone.add_argument(
-        "-r", "--region", type=str, help="Pinecone Serverless region"
-    )
+    ImportPinecone.make_parser(subparsers)
 
     # Qdrant
-    parser_qdrant = subparsers.add_parser(DBNames.QDRANT, help="Import data to Qdrant")
-    parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
-    parser_qdrant.add_argument(
-        "--prefer_grpc",
-        type=bool,
-        help="Whether to use Qdrant's GRPC interface",
-        default=True,
-    )
-    parser_qdrant.add_argument(
-        "--batch_size",
-        type=int,
-        help="Batch size for upserts (default: 64).",
-        default=64,
-    )
-    parser_qdrant.add_argument(
-        "--parallel",
-        type=int,
-        help="Number of parallel processes of upload (default: 1).",
-        default=1,
-    )
-    parser_qdrant.add_argument(
-        "--max_retries",
-        type=int,
-        help="Maximum number of retries in case of a failure (default: 3).",
-        default=3,
-    )
-    parser_qdrant.add_argument(
-        "--shard_key_selector",
-        type=Any,
-        help="Shard to be queried (default: None)",
-        default=None,
-    )
+    ImportQdrant.make_parser(subparsers)
 
     # Vertex AI VectorSearch
-    parser_vertexai_vectorsearch = subparsers.add_parser(
-        DBNames.VERTEXAI, help="Import data to Vertex AI Vector Search"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-p", "--project-id", type=str, help="Google Cloud Project ID"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-l", "--location", type=str, help="Google Cloud region hosting your index"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-b",
-        "--batch-size",
-        type=str,
-        help="Enter size of upsert batches:",
-        default=100,
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-f", "--filter-restricts", type=str, help="string filters"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-n", "--numeric-restricts", type=str, help="numeric filters"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-r", "--requests-per-minute", type=int, help="rate limiter"
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "-c",
-        "--crowding-tag",
-        type=str,
-        help="string value to enforce diversity in retrieval",
-    )
-    parser_vertexai_vectorsearch.add_argument(
-        "--deploy_new_index",
-        type=bool,
-        help="deploy new index (default: False)",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-    )
+    ImportVertexAIVectorSearch.make_parser(subparsers)
 
     # KDB.AI
-    parser_kdbai = subparsers.add_parser(DBNames.KDBAI, help="Import data to KDB.AI")
-    parser_kdbai.add_argument(
-        "-u", "--url", type=str, help="KDB.AI Cloud instance Endpoint url"
-    )
-    parser_kdbai.add_argument(
-        "-i", "--index", type=str, help="Index used", default="hnsw"
-    )
+    ImportKDBAI.make_parser(subparsers)
 
     args = parser.parse_args()
     args = vars(args)
@@ -478,23 +376,9 @@ def run_import(span):
         or (args["vector_database"] is None)
         or (args["vector_database"] not in db_choices)
     ):
-        print("Please choose a vector database to export data from:", db_choices)
+        print("Please choose a vector database to import data from:", db_choices)
         return
-    if args["vector_database"] == DBNames.PINECONE:
-        import_obj = import_pinecone(args)
-    elif args["vector_database"] == DBNames.QDRANT:
-        import_obj = import_qdrant(args)  # Add the function to import data to Qdrant
-    elif args["vector_database"] == DBNames.KDBAI:
-        import_obj = import_kdbai(args)
-    elif args["vector_database"] == DBNames.MILVUS:
-        import_obj = import_milvus(args)
-    elif args["vector_database"] == DBNames.VERTEXAI:
-        import_obj = import_vertexai_vectorsearch(args)
-    else:
-        print(
-            "Unrecognized DB. Please choose a vector database to export data from:",
-            db_choices,
-        )
+    slug_to_import_func[args["vector_database"]](args)
 
     end_time = time.time()
     ARGS_ALLOWLIST = [
@@ -508,6 +392,26 @@ def run_import(span):
             span.set_attribute(key, import_obj.args[key])
 
     print(f"Time taken: {end_time - start_time:.2f} seconds")
+    span.set_attribute("import_time", end_time - start_time)
+
+
+def make_common_options(parser):
+    parser.add_argument("-d", "--dir", type=str, help="Directory to import")
+    parser.add_argument(
+        "-s",
+        "--subset",
+        type=bool,
+        help="Import a subset of data (default: False)",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+    )
+    parser.add_argument(
+        "--create_new",
+        type=bool,
+        help="Create a new index (default: False)",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+    )
 
 
 if __name__ == "__main__":
