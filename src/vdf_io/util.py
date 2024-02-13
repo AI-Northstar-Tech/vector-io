@@ -4,6 +4,8 @@ from getpass import getpass
 import hashlib
 import json
 import os
+from uuid import UUID
+import pandas as pd
 from qdrant_client.http.models import Distance
 from io import StringIO
 import sys
@@ -75,7 +77,9 @@ def set_arg_from_input(args, arg_name, prompt, type_name=str, default_value=None
     """
     Set the value of an argument from user input if it is not already present
     """
-    if arg_name not in args or args[arg_name] is None:
+    if arg_name not in args or (
+        args[arg_name] is None and default_value != "DO_NOT_PROMPT"
+    ):
         inp = input(prompt)
         if inp == "":
             args[arg_name] = None if default_value is None else type_name(default_value)
@@ -102,6 +106,8 @@ def expand_shorthand_path(shorthand_path):
     :param shorthand_path: A string representing the shorthand path.
     :return: A Path object representing the full path.
     """
+    if shorthand_path is None:
+        return None
     # Expand '~' to the user's home directory
     expanded_path = os.path.expanduser(shorthand_path)
 
@@ -234,20 +240,35 @@ def print_help_recursively(parser, level=0):
             print_help_recursively(subparser, level + 1)
 
 
-# Create the top-level parser
-# parser = argparse.ArgumentParser(description='Top-level parser')
-# parser.add_argument('--foo', help='foo help')
+def is_str_uuid(id_str):
+    try:
+        uuid_obj = UUID(id_str)
+        return str(uuid_obj)
+    except ValueError:
+        return False
 
-# # Create a subparser
-# subparsers = parser.add_subparsers(help='sub-command help')
 
-# # Create the subparser for the "a" command
-# parser_a = subparsers.add_parser('a', help='a help')
-# parser_a.add_argument('--bar', type=int, help='bar help')
+def get_qdrant_id_from_id(idx):
+    if isinstance(idx, int) or idx.isdigit():
+        return int(idx)
+    elif not is_str_uuid(idx):
+        hex_string = hashlib.md5(idx.encode("UTF-8")).hexdigest()
+        return str(UUID(hex=hex_string))
+    else:
+        return str(UUID(idx))
 
-# # Create another subparser for the "b" command
-# parser_b = subparsers.add_parser('b', help='b help')
-# parser_b.add_argument('--baz', choices='XYZ', help='baz help')
 
-# # Recursively print help messages
-# print_help_recursively(parser)
+def read_parquet_progress(file_path):
+    if file_path.startswith("hf://"):
+        from huggingface_hub import HfFileSystem
+        from huggingface_hub import hf_hub_download
+
+        fs = HfFileSystem()
+        resolved_path = fs.resolve_path(file_path)
+        cache_path = hf_hub_download(
+            repo_id=resolved_path.repo_id,
+            filename=resolved_path.path_in_repo,
+            repo_type=resolved_path.repo_type,
+        )
+        return pd.read_parquet(cache_path)
+    return pd.read_parquet(file_path)

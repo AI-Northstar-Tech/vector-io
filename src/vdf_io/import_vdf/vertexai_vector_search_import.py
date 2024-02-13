@@ -29,7 +29,7 @@ import google.api_core.exceptions as google_exceptions
 
 from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
-from vdf_io.util import set_arg_from_input
+from vdf_io.util import read_parquet_progress, set_arg_from_input
 from vdf_io.constants import ID_COLUMN
 
 
@@ -915,7 +915,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
                 total_ids = []
                 for file in tqdm(parquet_files, desc="Iterating over parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
-                    df = pd.read_parquet(file_path)
+                    df = read_parquet_progress(file_path)
                     df[ID_COLUMN] = df[ID_COLUMN].apply(lambda x: str(x))
 
                     insert_datapoints_payload = []
