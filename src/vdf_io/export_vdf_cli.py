@@ -4,6 +4,7 @@ import argparse
 import os
 import sys
 import time
+import traceback
 from dotenv import load_dotenv
 import warnings
 
@@ -57,6 +58,7 @@ def main():
         except Exception as e:
             sentry_sdk.flush()
             print(f"Error: {e}")
+            traceback.print_exc()
             sys.exit(1)
         finally:
             sentry_sdk.flush()

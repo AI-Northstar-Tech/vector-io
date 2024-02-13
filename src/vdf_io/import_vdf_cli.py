@@ -4,6 +4,7 @@ import argparse
 import os
 import time
 from dotenv import load_dotenv
+import traceback
 
 import sentry_sdk
 from opentelemetry import trace
@@ -53,6 +54,7 @@ def main():
         except Exception as e:
             sentry_sdk.flush()
             print(f"Error: {e}")
+            traceback.print_exc()
             return
         finally:
             sentry_sdk.flush()

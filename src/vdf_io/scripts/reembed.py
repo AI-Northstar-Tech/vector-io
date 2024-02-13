@@ -5,7 +5,6 @@ import json
 import os
 import litellm
 from tqdm import tqdm
-import pandas as pd
 from dotenv import load_dotenv
 import sys
 from IPython.core import ultratb
@@ -14,6 +13,7 @@ import warnings
 from vdf_io.util import (
     get_final_data_path,
     get_parquet_files,
+    read_parquet_progress,
     set_arg_from_input,
     set_arg_from_password,
 )
@@ -136,7 +136,7 @@ def main():
                         new_vector_column += f"_{args['dimensions']}"
                     tqdm.write(f"Reembedding {file_path}")
                     # read parquet file
-                    df = pd.read_parquet(file_path)
+                    df = read_parquet_progress(file_path)
                     # get text column
                     text_column = args["text_column"]
                     if text_column not in df.columns:

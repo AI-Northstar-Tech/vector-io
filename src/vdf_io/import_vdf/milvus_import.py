@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-import pandas as pd
 from tqdm import tqdm
 import json
 
@@ -14,6 +13,7 @@ from pymilvus import (
 
 from vdf_io.names import DBNames
 from vdf_io.util import (
+    read_parquet_progress,
     set_arg_from_input,
     set_arg_from_password,
     standardize_metric_reverse,
@@ -161,7 +161,7 @@ class ImportMilvus(ImportVDB):
                 num_inserted = 0
                 for file in tqdm(parquet_files, desc="Inserting data"):
                     file_path = self.get_file_path(final_data_path, file)
-                    df = pd.read_parquet(file_path)
+                    df = read_parquet_progress(file_path)
                     df[self.id_column] = df[self.id_column].apply(lambda x: str(x))
                     data_rows = []
 

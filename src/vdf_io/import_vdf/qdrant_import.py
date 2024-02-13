@@ -1,7 +1,4 @@
-import hashlib
-from uuid import UUID
 from dotenv import load_dotenv
-import pandas as pd
 from tqdm import tqdm
 from grpc import RpcError
 from typing import Any, Dict, List
@@ -13,6 +10,9 @@ from vdf_io.constants import ID_COLUMN
 
 from vdf_io.names import DBNames
 from vdf_io.util import (
+    expand_shorthand_path,
+    get_qdrant_id_from_id,
+    read_parquet_progress,
     set_arg_from_input,
     set_arg_from_password,
 )
@@ -43,6 +43,13 @@ class ImportQdrant(ImportVDB):
             "Whether to use GRPC. Recommended. (default: True): ",
             bool,
             True,
+        )
+        set_arg_from_input(
+            args,
+            "qdrant_local_persist_path",
+            "Enter the path to the local persist directory (default: None): ",
+            str,
+            "DO_NOT_PROMPT",
         )
         set_arg_from_input(
             args,
@@ -77,12 +84,24 @@ class ImportQdrant(ImportVDB):
         parser_qdrant = subparsers.add_parser(
             DBNames.QDRANT, help="Import data to Qdrant"
         )
-        parser_qdrant.add_argument("-u", "--url", type=str, help="Qdrant url")
+        parser_qdrant.add_argument(
+            "-u",
+            "--url",
+            type=str,
+            help="Qdrant instance url",
+            default="http://localhost:6334",
+        )
         parser_qdrant.add_argument(
             "--prefer_grpc",
             type=bool,
             help="Whether to use Qdrant's GRPC interface",
             default=True,
+        )
+        parser_qdrant.add_argument(
+            "--qdrant_local_persist_path",
+            type=str,
+            help="Path to the local persist directory (default: None)",
+            default=None,
         )
         parser_qdrant.add_argument(
             "--batch_size",
@@ -93,8 +112,8 @@ class ImportQdrant(ImportVDB):
         parser_qdrant.add_argument(
             "--parallel",
             type=int,
-            help="Number of parallel processes of upload (default: 1).",
-            default=1,
+            help="Number of parallel processes of upload (default: 5).",
+            default=5,
         )
         parser_qdrant.add_argument(
             "--max_retries",
@@ -112,27 +131,22 @@ class ImportQdrant(ImportVDB):
     def __init__(self, args):
         # call super class constructor
         super().__init__(args)
-        self.client = QdrantClient(
-            url=self.args["url"],
-            api_key=self.args.get("qdrant_api_key", None),
-            prefer_grpc=self.args.get("prefer_grpc", True),
+        url, api_key, prefer_grpc, path = (
+            self.args.get("url", None),
+            self.args.get("qdrant_api_key", None),
+            self.args.get("prefer_grpc", True),
+            expand_shorthand_path(self.args.get("qdrant_local_persist_path", None)),
         )
-
-    def is_str_uuid(id_str):
-        try:
-            uuid_obj = UUID(id_str)
-            return uuid_obj
-        except ValueError:
-            return False
-
-    def get_qdrant_id_from_id(self, idx):
-        if isinstance(idx, int) or idx.isdigit():
-            return int(idx)
-        elif not self.is_str_uuid(idx):
-            hex_string = hashlib.md5(idx.encode("UTF-8")).hexdigest()
-            return UUID(hex=hex_string)
-        else:
-            return UUID(idx)
+        if path:
+            url = None
+        if url:
+            path = None
+        self.client = QdrantClient(
+            url=url,
+            api_key=api_key,
+            prefer_grpc=prefer_grpc,
+            path=path,
+        )
 
     def upsert_data(self):
         max_hit = False
@@ -188,9 +202,9 @@ class ImportQdrant(ImportVDB):
                 vector_column_names, vector_column_name = self.get_vector_column_name(
                     new_collection_name, namespace_meta
                 )
-                for file in parquet_files:
+                for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
-                    df = pd.read_parquet(file_path)
+                    df = read_parquet_progress(file_path)
                     vectors.update(
                         {
                             row[self.id_column]: row[vector_column_name]
@@ -210,7 +224,7 @@ class ImportQdrant(ImportVDB):
                     vectors = {k: v.tolist() for k, v in vectors.items()}
                     points = [
                         PointStruct(
-                            id=self.get_qdrant_id_from_id(idx),
+                            id=get_qdrant_id_from_id(idx),
                             vector=vectors[idx],
                             payload=metadata.get(idx, {}),
                         )
@@ -224,17 +238,22 @@ class ImportQdrant(ImportVDB):
                         ]
                         tqdm.write("Truncating data to limit to max rows")
                     try:
+                        tqdm.write(f"Starting bulk upload for file '{file_path}'")
                         self.client.upload_points(
                             collection_name=new_collection_name,
                             points=points,
                             batch_size=self.args.get("batch_size", 64),
-                            parallel=self.args.get("parallel", 1),
+                            parallel=self.args.get("parallel", 5),
                             max_retries=self.args.get("max_retries", 3),
                             shard_key_selector=self.args.get(
                                 "shard_key_selector", None
                             ),
                             wait=True,
                         )
+                        tqdm.write(f"Completed bulk upload for file '{file_path}'")
+                        total_imported_count += len(points)
+                        if total_imported_count >= self.args["max_num_rows"]:
+                            max_hit = True
                     except (UnexpectedResponse, RpcError, ValueError) as e:
                         tqdm.write(
                             f"Failed to upsert data for collection '{new_collection_name}', {e}"
@@ -243,23 +262,21 @@ class ImportQdrant(ImportVDB):
                     vector_count = self.client.get_collection(
                         collection_name=new_collection_name
                     ).vectors_count
-                    tqdm.write(
-                        f"Index '{new_collection_name}' has {vector_count} vectors after import"
-                    )
-                    tqdm.write(
-                        f"{vector_count - prev_vector_count} vectors were imported"
-                    )
-                    total_imported_count += vector_count - prev_vector_count
-                    if total_imported_count >= self.args["max_num_rows"]:
-                        max_hit = True
                     if max_hit:
                         break
+                    # END parquet file loop
+                tqdm.write(
+                    f"Index '{new_collection_name}' has {vector_count} vectors after import"
+                )
+                tqdm.write(f"{vector_count - prev_vector_count} vectors were imported")
                 if max_hit:
                     break
+                # END namespace loop
             if max_hit:
                 tqdm.write(
                     f"Max rows to be imported {self.args['max_num_rows']} hit. Exiting"
                 )
                 break
+            # END index loop
         tqdm.write("Data import completed successfully.")
         self.args["imported_count"] = total_imported_count
