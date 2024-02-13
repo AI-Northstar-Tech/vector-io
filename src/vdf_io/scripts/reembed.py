@@ -5,7 +5,6 @@ import json
 import os
 import litellm
 from tqdm import tqdm
-import pandas as pd
 from dotenv import load_dotenv
 import sys
 from IPython.core import ultratb

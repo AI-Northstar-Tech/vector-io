@@ -1,7 +1,4 @@
-import hashlib
-from uuid import UUID
 from dotenv import load_dotenv
-import pandas as pd
 from tqdm import tqdm
 from grpc import RpcError
 from typing import Any, Dict, List
@@ -271,9 +268,7 @@ class ImportQdrant(ImportVDB):
                 tqdm.write(
                     f"Index '{new_collection_name}' has {vector_count} vectors after import"
                 )
-                tqdm.write(
-                    f"{vector_count - prev_vector_count} vectors were imported"
-                )
+                tqdm.write(f"{vector_count - prev_vector_count} vectors were imported")
                 if max_hit:
                     break
                 # END namespace loop
