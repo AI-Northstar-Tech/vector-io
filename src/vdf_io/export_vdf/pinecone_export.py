@@ -456,7 +456,7 @@ class ExportPinecone(ExportVDB):
         vdf_meta_text = json.dumps(internal_metadata.dict(), indent=4)
         tqdm.write(vdf_meta_text)
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
-            json.dump(vdf_meta_text, json_file, indent=4)
+            json_file.write(vdf_meta_text)
         return True
 
     def get_data_for_index(self, index_name):
