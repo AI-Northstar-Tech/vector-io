@@ -441,10 +441,6 @@ class ExportPinecone(ExportVDB):
         index_metas = {}
         for index_name in tqdm(index_names, desc="Fetching indexes"):
             index_meta = self.get_data_for_index(index_name)
-            for index_meta_elem in index_meta:
-                index_meta_elem["metric"] = standardize_metric(
-                    self.pc.describe_index(index_name).metric, self.DB_NAME_SLUG
-                )
             index_metas[index_name] = index_meta
 
         # Create and save internal metadata JSON
@@ -546,6 +542,9 @@ class ExportPinecone(ExportVDB):
                 model_name=self.args["model_name"],
                 vector_columns=["vector"],
                 data_path="/".join(vectors_directory.split("/")[1:]),
+                metric=standardize_metric(
+                    self.pc.describe_index(index_name).metric, self.DB_NAME_SLUG
+                ),
             )
             index_meta.append(namespace_meta)
             self.args["exported_count"] += total_size
