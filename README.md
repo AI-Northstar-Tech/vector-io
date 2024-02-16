@@ -34,9 +34,8 @@ See the [Contributing](#contributing) section to add support for your favorite v
   
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| Azure AI Search                | 🔜     | 🔜     |
-| Rockset                        | 🔜     | 🔜     |
-| Vespa                          | 🔜     | 🔜     |
+| MongoDB Atlas                  | 🔜     | 🔜     |
+
 </details>
 <!-- line break -->
 
@@ -47,8 +46,10 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
+| Azure AI Search                | ⏳     | ⏳     |
+| Rockset                        | ⏳     | ⏳     |
+| Vespa                          | ⏳     | ⏳     |
 | Weaviate                       | ⏳     | ⏳     |
-| MongoDB Atlas                  | ⏳     | ⏳     |
 | Epsilla                        | ⏳     | ⏳     |
 | txtai                          | ⏳     | ⏳     |
 | Redis Search                   | ⏳     | ⏳     |
@@ -62,17 +63,16 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
+| DataStax Astra DB              | ❌     | ❌     |
+| Marqo                          | ❌     | ❌     |
 | Activeloop Deep Lake           | ❌     | ❌     |
-| Anari AI                       | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
 | ApertureDB                     | ❌     | ❌     |
 | Chroma                         | ❌     | ❌     |
 | ClickHouse                     | ❌     | ❌     |
 | CrateDB                        | ❌     | ❌     |
-| DataStax Astra DB              | ❌     | ❌     |
 | Elasticsearch                  | ❌     | ❌     |
 | LanceDB                        | ❌     | ❌     |
-| Marqo                          | ❌     | ❌     |
 | Meilisearch                    | ❌     | ❌     |
 | MyScale                        | ❌     | ❌     |
 | Neo4j                          | ❌     | ❌     |
@@ -82,6 +82,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Turbopuffer                    | ❌     | ❌     |
 | Typesense                      | ❌     | ❌     |
 | USearch                        | ❌     | ❌     |
+| Anari AI                       | ❌     | ❌     |
 | Vald                           | ❌     | ❌     |
 | Apache Solr                    | ❌     | ❌     |
 </details>
