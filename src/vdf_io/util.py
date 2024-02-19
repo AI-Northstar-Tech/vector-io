@@ -196,6 +196,7 @@ def get_parquet_files(data_path, args):
     if args.get("hf_dataset", None):
         if args.get("max_num_rows", None):
             from datasets import load_dataset
+
             ds = load_dataset(args.get("hf_dataset"), split="train", streaming=True)
             pd.DataFrame(ds.take(args.get("max_num_rows"))).to_parquet("temp.parquet")
             return ["temp.parquet"]
