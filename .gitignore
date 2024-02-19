@@ -30,3 +30,4 @@ MANIFEST
 *.csv
 output.txt
 src/vdf_io/notebooks/data/
+**.parquet

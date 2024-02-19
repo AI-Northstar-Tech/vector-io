@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class NamespaceMeta(BaseModel):
@@ -22,3 +22,4 @@ class VDFMeta(BaseModel):
     exported_from: str
     indexes: Dict[str, List[NamespaceMeta]]
     exported_at: str
+    id_column: Optional[str] = None

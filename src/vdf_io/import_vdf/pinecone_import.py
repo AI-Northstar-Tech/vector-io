@@ -107,6 +107,7 @@ class ImportPinecone(ImportVDB):
         self.pc = Pinecone(api_key=self.args["pinecone_api_key"])
 
     def upsert_data(self):
+        max_hit = False
         # Iterate over the indexes and import the data
         for index_name, index_meta in tqdm(
             self.vdf_meta["indexes"].items(), desc="Importing indexes"
@@ -212,6 +213,12 @@ class ImportPinecone(ImportVDB):
                                 "Invalid arguments for subset export. "
                                 "Please provide either id_list_file or id_range_start and id_range_end"
                             )
+                    if len(vectors) > self.args["max_num_rows"]:
+                        max_hit = True
+                        break
+                    if len(vectors) + len(df) > self.args["max_num_rows"]:
+                        df = df.head(self.args["max_num_rows"] - len(vectors))
+                        max_hit = True
                     vectors.update(
                         {
                             row[self.id_column]: row[vector_column_name].tolist()
@@ -228,12 +235,15 @@ class ImportPinecone(ImportVDB):
                             for _, row in df.iterrows()
                         }
                     )
+                    if max_hit:
+                        break
                 tqdm.write(
                     f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files"
                 )
                 # Upsert the vectors and metadata to the Pinecone index in batches
                 total_imported_count = 0
                 start_idx = 0
+                pbar = tqdm(total=len(vectors), desc="Upserting vectors")
                 while start_idx < len(vectors):
                     end_idx = min(start_idx + current_batch_size, len(vectors))
 
@@ -259,15 +269,16 @@ class ImportPinecone(ImportVDB):
                     try:
                         resp = index.upsert(vectors=batch_vectors, namespace=namespace)
                         total_imported_count += resp["upserted_count"]
+                        pbar.update(resp["upserted_count"])
                         start_idx += resp["upserted_count"]
                     except Exception as e:
                         tqdm.write(
-                            f"Error upserting vectors for index '{index_name}'", e
+                            f"Error upserting vectors for index '{index_name}', {e}"
                         )
                         if current_batch_size < BATCH_SIZE / 100:
                             tqdm.write("Batch size is not the issue. Aborting import")
                             raise e
-                        current_batch_size = int(9 * current_batch_size / 10)
+                        current_batch_size = int(2 * current_batch_size / 3)
                         tqdm.write(f"Reducing batch size to {current_batch_size}")
                         continue
         tqdm.write(

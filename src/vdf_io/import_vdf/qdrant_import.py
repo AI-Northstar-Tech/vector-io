@@ -173,6 +173,8 @@ class ImportQdrant(ImportVDB):
                 if new_collection_name not in collections:
                     # create index
                     try:
+                        if namespace_meta["dimensions"] == -1:
+                            namespace_meta["dimensions"] = self.resolve_dims(namespace_meta, new_collection_name)
                         self.client.create_collection(
                             collection_name=new_collection_name,
                             vectors_config=VectorParams(
@@ -185,7 +187,7 @@ class ImportQdrant(ImportVDB):
                             ),
                         )
                     except Exception as e:
-                        tqdm.write(f"Failed to create index '{new_collection_name}'", e)
+                        tqdm.write(f"Failed to create index '{new_collection_name}' {e}")
                         return
                 prev_vector_count = self.client.get_collection(
                     collection_name=new_collection_name

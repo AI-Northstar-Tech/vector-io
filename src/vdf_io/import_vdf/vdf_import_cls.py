@@ -1,12 +1,21 @@
+import datetime
 import json
 import os
 from packaging.version import Version
 import abc
-
 from tqdm import tqdm
-from vdf_io.constants import ID_COLUMN
 
-from vdf_io.util import expand_shorthand_path, get_final_data_path, get_parquet_files
+from qdrant_client.http.models import Distance
+
+import vdf_io
+from vdf_io.constants import ID_COLUMN
+from vdf_io.meta_types import NamespaceMeta, VDFMeta
+from vdf_io.util import (
+    expand_shorthand_path,
+    get_final_data_path,
+    get_parquet_files,
+    read_parquet_progress,
+)
 
 
 class ImportVDB(abc.ABC):
@@ -19,20 +28,49 @@ class ImportVDB(abc.ABC):
 
     def __init__(self, args):
         self.args = args
-        self.args["dir"] = expand_shorthand_path(self.args["dir"])
-        if not os.path.isdir(self.args["dir"]):
-            raise Exception("Invalid dir path")
-        if not os.path.isfile(os.path.join(self.args["dir"], "VDF_META.json")):
-            raise Exception("Invalid dir path, VDF_META.json not found")
-        # Check if the VDF_META.json file exists
-        vdf_meta_path = os.path.join(self.args["dir"], "VDF_META.json")
-        if not os.path.isfile(vdf_meta_path):
-            raise Exception("VDF_META.json not found in the specified directory")
-        with open(vdf_meta_path) as f:
-            self.vdf_meta = json.load(f)
-        self.id_column = ID_COLUMN
-        if "id_column" in self.vdf_meta:
-            self.id_column = self.vdf_meta["id_column"]
+        if self.args.get("hf_dataset", None) is None:
+            self.args["dir"] = expand_shorthand_path(self.args["dir"])
+            if not os.path.isdir(self.args["dir"]):
+                raise Exception("Invalid dir path")
+            if not os.path.isfile(os.path.join(self.args["dir"], "VDF_META.json")):
+                raise Exception("Invalid dir path, VDF_META.json not found")
+            # Check if the VDF_META.json file exists
+            vdf_meta_path = os.path.join(self.args["dir"], "VDF_META.json")
+            if not os.path.isfile(vdf_meta_path):
+                raise Exception("VDF_META.json not found in the specified directory")
+            with open(vdf_meta_path) as f:
+                self.vdf_meta = json.load(f)
+        else:
+            hf_dataset = self.args.get("hf_dataset", None)
+            index_name = hf_dataset.split("/")[-1]
+            self.vdf_meta = VDFMeta(
+                version=vdf_io.__version__,
+                file_structure=[],
+                author=hf_dataset.split("/")[0],
+                exported_from="hf",
+                indexes={
+                    index_name: [
+                        NamespaceMeta(
+                            namespace="",
+                            index_name=index_name,
+                            total_vector_count=self.args.get("max_num_rows"),
+                            exported_vector_count=self.args.get("max_num_rows"),
+                            dimensions=self.args.get("vector_dim", -1),
+                            model_name=self.args.get("model_name", ""),
+                            vector_columns=self.args.get(
+                                "vector_columns", "vector"
+                            ).split(","),
+                            data_path=".",
+                            metric=self.args.get("metric", Distance.COSINE),
+                        )
+                    ]
+                },
+                exported_at=datetime.datetime.now().astimezone().isoformat(),
+                id_column=self.args.get("id_column", ID_COLUMN),
+            ).dict()
+            print(json.dumps(self.vdf_meta, indent=4))
+        self.id_column = self.vdf_meta.get("id_column", ID_COLUMN)
+        print(self.id_column)
         if "indexes" not in self.vdf_meta:
             raise Exception("Invalid VDF_META.json, 'indexes' key not found")
         if "version" not in self.vdf_meta:
@@ -85,3 +123,16 @@ class ImportVDB(abc.ABC):
         if self.args.get("hf_dataset", None):
             return parquet_file
         return os.path.join(final_data_path, parquet_file)
+
+    def resolve_dims(self, namespace_meta, new_collection_name):
+        final_data_path = self.get_final_data_path(namespace_meta["data_path"])
+        parquet_files = self.get_parquet_files(final_data_path)
+        _, vector_column_name = self.get_vector_column_name(
+            new_collection_name, namespace_meta
+        )
+        for file in tqdm(parquet_files, desc="Iterating parquet files"):
+            file_path = self.get_file_path(final_data_path, file)
+            df = read_parquet_progress(file_path)
+            print(df[vector_column_name].iloc[0])
+            print(len(df[vector_column_name].iloc[0]))
+        return 384

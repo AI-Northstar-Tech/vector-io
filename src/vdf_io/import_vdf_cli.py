@@ -13,6 +13,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPropagator
 
 import vdf_io
+from vdf_io.constants import ID_COLUMN, INT_MAX
 from vdf_io.names import DBNames
 from vdf_io.scripts.check_for_updates import check_for_updates
 from vdf_io.util import set_arg_from_input
@@ -112,7 +113,7 @@ def run_import(span):
             "max_num_rows",
             "Maximum number of vectors you'd like to load",
             int,
-            2**63 - 1,
+            INT_MAX,
         )
 
     args["cwd"] = os.getcwd()
@@ -164,7 +165,7 @@ def make_common_options(parser):
         "--max_num_rows",
         type=int,
         help="Maximum number of rows you'd like to load",
-        default=2**63 - 1,
+        default=INT_MAX,
     )
     parser.add_argument(
         "--create_new",
@@ -172,6 +173,24 @@ def make_common_options(parser):
         help="Create a new index (default: False)",
         default=False,
         action=argparse.BooleanOptionalAction,
+    )
+    parser.add_argument(
+        "--vector_columns",
+        type=str,
+        help="Vector column names (comma separated) eg: 'vector1,vector2'",
+        default="vector",
+    )
+    parser.add_argument(
+        "--metric",
+        type=str,
+        help="Distance metric to use (default: 'Cosine')",
+        default="Cosine",
+    )
+    parser.add_argument(
+        "--id_column",
+        type=str,
+        help="ID column name (default: 'id')",
+        default=ID_COLUMN,
     )
 
 

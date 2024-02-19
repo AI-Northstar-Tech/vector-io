@@ -193,7 +193,12 @@ def get_final_data_path(cwd, dir, data_path, args):
 
 def get_parquet_files(data_path, args):
     # Load the data from the parquet files
-    if args.get("hf_dataset", None) or data_path.starts_with("hf://"):
+    if args.get("hf_dataset", None):
+        if args.get("max_num_rows", None):
+            from datasets import load_dataset
+            ds = load_dataset(args.get("hf_dataset"), split="train", streaming=True)
+            pd.DataFrame(ds.take(args.get("max_num_rows"))).to_parquet("temp.parquet")
+            return ["temp.parquet"]
         from huggingface_hub import HfFileSystem
 
         fs = HfFileSystem()
