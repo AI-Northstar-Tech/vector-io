@@ -104,9 +104,10 @@ def run_import(span):
     args = parser.parse_args()
     args = vars(args)
     args["library_version"] = vdf_io.__version__
-    set_arg_from_input(
-        args, "dir", "Enter the directory of vector dataset to be imported: ", str
-    )
+    if args.get("hf_dataset") is None:
+        set_arg_from_input(
+            args, "dir", "Enter the directory of vector dataset to be imported: ", str
+        )
     if args["subset"]:
         set_arg_from_input(
             args,

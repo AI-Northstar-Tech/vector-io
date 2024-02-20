@@ -6,10 +6,11 @@ import json
 import os
 from uuid import UUID
 import pandas as pd
-from qdrant_client.http.models import Distance
 from io import StringIO
 import sys
+from tqdm import tqdm
 
+from qdrant_client.http.models import Distance
 
 from vdf_io.names import DBNames
 
@@ -196,8 +197,16 @@ def get_parquet_files(data_path, args):
     if args.get("hf_dataset", None):
         if args.get("max_num_rows", None):
             from datasets import load_dataset
+
+            tqdm.write("Loading a subset of the dataset")
             ds = load_dataset(args.get("hf_dataset"), split="train", streaming=True)
-            pd.DataFrame(ds.take(args.get("max_num_rows"))).to_parquet("temp.parquet")
+            tqdm.write("Taking a subset of the dataset")
+            it_ds = ds.take(args.get("max_num_rows"))
+            tqdm.write("Converting to pandas dataframe")
+            df = pd.DataFrame(it_ds)
+            tqdm.write("Writing to parquet")
+            df.to_parquet("temp.parquet")
+            tqdm.write("Writing complete")
             return ["temp.parquet"]
         from huggingface_hub import HfFileSystem
 
