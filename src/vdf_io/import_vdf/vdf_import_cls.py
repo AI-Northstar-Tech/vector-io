@@ -1,6 +1,8 @@
 import datetime
+from functools import lru_cache
 import json
 import os
+import numpy as np
 from packaging.version import Version
 import abc
 from tqdm import tqdm
@@ -28,6 +30,7 @@ class ImportVDB(abc.ABC):
 
     def __init__(self, args):
         self.args = args
+        self.temp_file_paths = []
         if self.args.get("hf_dataset", None) is None:
             self.args["dir"] = expand_shorthand_path(self.args["dir"])
             if not os.path.isdir(self.args["dir"]):
@@ -43,34 +46,43 @@ class ImportVDB(abc.ABC):
         else:
             hf_dataset = self.args.get("hf_dataset", None)
             index_name = hf_dataset.split("/")[-1]
-            self.vdf_meta = VDFMeta(
-                version=vdf_io.__version__,
-                file_structure=[],
-                author=hf_dataset.split("/")[0],
-                exported_from="hf",
-                indexes={
-                    index_name: [
-                        NamespaceMeta(
-                            namespace="",
-                            index_name=index_name,
-                            total_vector_count=self.args.get("max_num_rows"),
-                            exported_vector_count=self.args.get("max_num_rows"),
-                            dimensions=self.args.get("vector_dim", -1),
-                            model_name=self.args.get("model_name", ""),
-                            vector_columns=self.args.get(
-                                "vector_columns", "vector"
-                            ).split(","),
-                            data_path=".",
-                            metric=self.args.get("metric", Distance.COSINE),
-                        )
-                    ]
-                },
-                exported_at=datetime.datetime.now().astimezone().isoformat(),
-                id_column=self.args.get("id_column", ID_COLUMN),
-            ).dict()
+            from huggingface_hub import HfFileSystem
+
+            fs = HfFileSystem()
+            hf_files = fs.ls(f"datasets/{hf_dataset}", detail=False)
+            if f"datasets/{hf_dataset}/VDF_META.json" in hf_files:
+                print(f"Found VDF_META.json in {hf_dataset} on HuggingFace Hub")
+                self.vdf_meta = json.loads(
+                    fs.read_text(f"datasets/{hf_dataset}/VDF_META.json")
+                )
+            else:
+                self.vdf_meta = VDFMeta(
+                    version=vdf_io.__version__,
+                    file_structure=[],
+                    author=hf_dataset.split("/")[0],
+                    exported_from="hf",
+                    indexes={
+                        index_name: [
+                            NamespaceMeta(
+                                namespace="",
+                                index_name=index_name,
+                                total_vector_count=self.args.get("max_num_rows"),
+                                exported_vector_count=self.args.get("max_num_rows"),
+                                dimensions=self.args.get("vector_dim", -1),
+                                model_name=self.args.get("model_name", ""),
+                                vector_columns=self.args.get(
+                                    "vector_columns", "vector"
+                                ).split(","),
+                                data_path=".",
+                                metric=self.args.get("metric", Distance.COSINE),
+                            )
+                        ]
+                    },
+                    exported_at=datetime.datetime.now().astimezone().isoformat(),
+                    id_column=self.args.get("id_column", ID_COLUMN),
+                ).dict()
             print(json.dumps(self.vdf_meta, indent=4))
         self.id_column = self.vdf_meta.get("id_column", ID_COLUMN)
-        print(self.id_column)
         if "indexes" not in self.vdf_meta:
             raise Exception("Invalid VDF_META.json, 'indexes' key not found")
         if "version" not in self.vdf_meta:
@@ -111,8 +123,9 @@ class ImportVDB(abc.ABC):
                 )
         return vector_column_names, vector_column_name
 
+    @lru_cache(maxsize=1)
     def get_parquet_files(self, data_path):
-        return get_parquet_files(data_path, self.args)
+        return get_parquet_files(data_path, self.args, self.temp_file_paths)
 
     def get_final_data_path(self, data_path):
         return get_final_data_path(
@@ -130,9 +143,22 @@ class ImportVDB(abc.ABC):
         _, vector_column_name = self.get_vector_column_name(
             new_collection_name, namespace_meta
         )
+        dims = -1
         for file in tqdm(parquet_files, desc="Iterating parquet files"):
             file_path = self.get_file_path(final_data_path, file)
             df = read_parquet_progress(file_path)
-            print(df[vector_column_name].iloc[0])
-            print(len(df[vector_column_name].iloc[0]))
-        return 384
+            first_el = df[vector_column_name].iloc[0]
+            if isinstance(first_el, list) and len(first_el) > 1:
+                return len(first_el)
+            if isinstance(first_el, np.ndarray):
+                if first_el.shape[0] > 1:
+                    return first_el.shape[0]
+                if first_el.shape[0] == 1:
+                    return first_el[0].shape[0]
+        return dims
+
+    # destructor
+    def cleanup(self):
+        for temp_file_path in self.temp_file_paths:
+            if os.path.isfile(temp_file_path):
+                os.remove(temp_file_path)
