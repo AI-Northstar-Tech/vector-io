@@ -144,6 +144,7 @@ def run_import(span):
 
     print(f"Time taken: {end_time - start_time:.2f} seconds")
     span.set_attribute("import_time", end_time - start_time)
+    import_obj.cleanup()
     check_for_updates()
 
 

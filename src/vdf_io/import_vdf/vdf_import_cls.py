@@ -1,4 +1,5 @@
 import datetime
+from functools import lru_cache
 import json
 import os
 import numpy as np
@@ -29,6 +30,7 @@ class ImportVDB(abc.ABC):
 
     def __init__(self, args):
         self.args = args
+        self.temp_file_paths = []
         if self.args.get("hf_dataset", None) is None:
             self.args["dir"] = expand_shorthand_path(self.args["dir"])
             if not os.path.isdir(self.args["dir"]):
@@ -121,8 +123,9 @@ class ImportVDB(abc.ABC):
                 )
         return vector_column_names, vector_column_name
 
+    @lru_cache(maxsize=1)
     def get_parquet_files(self, data_path):
-        return get_parquet_files(data_path, self.args)
+        return get_parquet_files(data_path, self.args, self.temp_file_paths)
 
     def get_final_data_path(self, data_path):
         return get_final_data_path(
@@ -153,3 +156,9 @@ class ImportVDB(abc.ABC):
                 if first_el.shape[0] == 1:
                     return first_el[0].shape[0]
         return dims
+
+    # destructor
+    def cleanup(self):
+        for temp_file_path in self.temp_file_paths:
+            if os.path.isfile(temp_file_path):
+                os.remove(temp_file_path)

@@ -192,7 +192,7 @@ def get_final_data_path(cwd, dir, data_path, args):
     return final_data_path
 
 
-def get_parquet_files(data_path, args):
+def get_parquet_files(data_path, args, temp_file_paths=[]):
     # Load the data from the parquet files
     if args.get("hf_dataset", None):
         if args.get("max_num_rows", None):
@@ -205,9 +205,11 @@ def get_parquet_files(data_path, args):
             tqdm.write("Converting to pandas dataframe")
             df = pd.DataFrame(it_ds)
             tqdm.write("Writing to parquet")
-            df.to_parquet("temp.parquet")
+            temp_file_path = f"{os.getcwd()}/temp.parquet"
+            df.to_parquet(temp_file_path)
+            temp_file_paths.append(temp_file_path)
             tqdm.write("Writing complete")
-            return ["temp.parquet"]
+            return [temp_file_path]
         from huggingface_hub import HfFileSystem
 
         fs = HfFileSystem()
