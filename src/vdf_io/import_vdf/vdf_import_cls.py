@@ -45,11 +45,14 @@ class ImportVDB(abc.ABC):
             hf_dataset = self.args.get("hf_dataset", None)
             index_name = hf_dataset.split("/")[-1]
             from huggingface_hub import HfFileSystem
+
             fs = HfFileSystem()
             hf_files = fs.ls(f"datasets/{hf_dataset}", detail=False)
             if f"datasets/{hf_dataset}/VDF_META.json" in hf_files:
                 print(f"Found VDF_META.json in {hf_dataset} on HuggingFace Hub")
-                self.vdf_meta = json.loads(fs.read_text(f"datasets/{hf_dataset}/VDF_META.json"))
+                self.vdf_meta = json.loads(
+                    fs.read_text(f"datasets/{hf_dataset}/VDF_META.json")
+                )
             else:
                 self.vdf_meta = VDFMeta(
                     version=vdf_io.__version__,

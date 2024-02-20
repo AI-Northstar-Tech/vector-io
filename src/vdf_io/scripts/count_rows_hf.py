@@ -7,6 +7,7 @@ API_URL = f"https://datasets-server.huggingface.co/size?dataset={sys.argv[1]}"
 
 print(API_URL)
 
+
 def query():
     response = requests.get(API_URL, headers=headers)
     return response.json()
