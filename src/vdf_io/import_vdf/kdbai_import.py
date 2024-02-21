@@ -17,8 +17,6 @@ from vdf_io.util import (
 
 load_dotenv()
 
-MAX_BATCH_SIZE = 10000
-
 
 class ImportKDBAI(ImportVDB):
     DB_NAME_SLUG = DBNames.KDBAI
@@ -108,25 +106,29 @@ class ImportKDBAI(ImportVDB):
                         vector_column_names,
                         vector_column_name,
                     ) = self.get_vector_column_name(index_name, namespace_meta)
-                    
+
                     parquet_file_path = self.get_file_path(
                         final_data_path, parquet_file
                     )
-                    
+
                     if self.abnormal_vector_format:
                         pandas_table = pd.read_parquet(parquet_file_path)
-                        pandas_table[vector_column_name] = pandas_table[vector_column_name].apply(
-                            lambda x: self.extract_vector(x)
-                        )
+                        pandas_table[vector_column_name] = pandas_table[
+                            vector_column_name
+                        ].apply(lambda x: self.extract_vector(x))
                         pandas_table.to_parquet(parquet_file_path)
-                    
+
                     parquet_table = pq.read_table(parquet_file_path)
                     # rename columns by replacing "-" with "_"
                     old_column_name_to_new = {
-                        col: self.compliant_name(col) for col in parquet_table.column_names
+                        col: self.compliant_name(col)
+                        for col in parquet_table.column_names
                     }
                     parquet_table = parquet_table.rename_columns(
-                        [old_column_name_to_new[col] for col in parquet_table.column_names]
+                        [
+                            old_column_name_to_new[col]
+                            for col in parquet_table.column_names
+                        ]
                     )
                     parquet_schema = parquet_table.schema
                     parquet_columns = [
@@ -194,7 +196,7 @@ class ImportKDBAI(ImportVDB):
                         # Take a subset of df
                         df = df.iloc[: self.args["max_num_rows"] - total_imported_count]
                     i = 0
-                    batch_size = MAX_BATCH_SIZE
+                    batch_size = self.args.get("batch_size", 10_000) or 10_000
                     pbar = tqdm(total=df.shape[0], desc="Inserting data")
                     while i < df.shape[0]:
                         chunk = df[i : i + batch_size].reset_index(drop=True)

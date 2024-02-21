@@ -55,16 +55,9 @@ class ImportQdrant(ImportVDB):
         set_arg_from_input(
             args,
             "parallel",
-            "Enter the batch size for upserts (default: 1): ",
-            int,
-            1,
-        )
-        set_arg_from_input(
-            args,
-            "batch_size",
             "Enter the number of parallel processes of upload (default: 64): ",
             int,
-            64,
+            1,
         )
         set_arg_from_input(
             args,
@@ -103,12 +96,6 @@ class ImportQdrant(ImportVDB):
             type=str,
             help="Path to the local persist directory (default: None)",
             default=None,
-        )
-        parser_qdrant.add_argument(
-            "--batch_size",
-            type=int,
-            help="Batch size for upserts (default: 64).",
-            default=64,
         )
         parser_qdrant.add_argument(
             "--parallel",
@@ -235,7 +222,7 @@ class ImportQdrant(ImportVDB):
                         self.client.upload_points(
                             collection_name=new_collection_name,
                             points=points,
-                            batch_size=self.args.get("batch_size", 64),
+                            batch_size=self.args.get("batch_size", 64) or 64,
                             parallel=self.args.get("parallel", 5),
                             max_retries=self.args.get("max_retries", 3),
                             shard_key_selector=self.args.get(

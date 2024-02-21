@@ -52,13 +52,6 @@ class ImportVertexAIVectorSearch(ImportVDB):
         set_arg_from_input(args, "location", "Enter the region hosting your index: ")
         set_arg_from_input(
             args,
-            "batch_size",
-            "Enter size of upsert batches (default: 100):",
-            default_value=100,
-            type_name=int,
-        )
-        set_arg_from_input(
-            args,
             "requests_per_minute",
             "Optional. Enter desired requests per minute for rate limit (default: 6000): ",
             default_value=6000,
@@ -181,13 +174,6 @@ class ImportVertexAIVectorSearch(ImportVDB):
             "-l", "--location", type=str, help="Google Cloud region hosting your index"
         )
         parser_vertexai_vectorsearch.add_argument(
-            "-b",
-            "--batch-size",
-            type=str,
-            help="Enter size of upsert batches:",
-            default=100,
-        )
-        parser_vertexai_vectorsearch.add_argument(
             "-f", "--filter-restricts", type=str, help="string filters"
         )
         parser_vertexai_vectorsearch.add_argument(
@@ -215,7 +201,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
         self.DB_NAME_SLUG = DBNames.VERTEXAI
         self.project_id = self.args["project_id"]
         self.location = self.args["location"]
-        self.batch_size = self.args.get("batch_size", 100)
+        self.batch_size = self.args.get("batch_size", 100) or 100
 
         # optional
         self.create_new_index = self.args.get("create_new_index", False)

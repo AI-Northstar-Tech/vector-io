@@ -17,8 +17,6 @@ from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
 load_dotenv()
 
-BATCH_SIZE = 1000  # Set the desired batch size
-
 
 class ImportPinecone(ImportVDB):
     DB_NAME_SLUG = DBNames.PINECONE
@@ -160,6 +158,7 @@ class ImportPinecone(ImportVDB):
                     tqdm.write(f"{e}")
                     raise Exception(f"Invalid index name '{index_name}'", e)
             index = self.pc.Index(index_name)
+            BATCH_SIZE = self.args.get("batch_size", 1000) or 1000
             current_batch_size = BATCH_SIZE
             for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
                 tqdm.write(

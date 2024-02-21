@@ -194,6 +194,11 @@ def make_common_options(parser):
         help="ID column name (default: 'id')",
         default=ID_COLUMN,
     )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        help="Batch size for import (default: based on DB)",
+    )
 
 
 if __name__ == "__main__":

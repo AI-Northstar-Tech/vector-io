@@ -78,8 +78,8 @@ class ImportMilvus(ImportVDB):
         for collection_name, index_meta in self.vdf_meta["indexes"].items():
             # load data
             print(f'Importing data for collection "{collection_name}"')
-            for namespace_meta in index_meta:
-                self.set_dims(namespace_meta["dimensions"], collection_name)
+            for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
+                self.set_dims(namespace_meta, collection_name)
                 data_path = namespace_meta["data_path"]
                 index_name = collection_name + (
                     f'_{namespace_meta["namespace"]}'
@@ -160,7 +160,7 @@ class ImportMilvus(ImportVDB):
                 parquet_files = self.get_parquet_files(final_data_path)
 
                 num_inserted = 0
-                for file in tqdm(parquet_files, desc="Inserting data"):
+                for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
                     df = read_parquet_progress(file_path)
                     df[self.id_column] = df[self.id_column].apply(lambda x: str(x))
@@ -180,19 +180,33 @@ class ImportMilvus(ImportVDB):
                             row[f_vector.name][0]
                         )
                         data_rows.append(row)
-                    BATCH_SIZE = 100
+                    BATCH_SIZE = self.args.get("batch_size", 1000) or 1000
+                    current_batch_size = BATCH_SIZE
+                    tqdm.write(
+                        f"Inserting {len(data_rows)} rows in batches of {BATCH_SIZE}"
+                    )
                     if total_imported_count + BATCH_SIZE >= self.args["max_num_rows"]:
                         data_rows = data_rows[
                             : self.args["max_num_rows"] - total_imported_count
                         ]
                         max_hit = True
-                    for i in tqdm(
-                        range(0, len(data_rows), BATCH_SIZE),
-                        desc="Upserting in Batches",
-                    ):
-                        mr = collection.insert(data_rows[i : i + BATCH_SIZE])
-                        num_inserted += mr.succ_count
-                        total_imported_count += mr.succ_count
+                    i = 0
+                    pbar = tqdm(total=len(data_rows), desc="Upserting data in batches")
+                    while i < len(data_rows):
+                        try:
+                            mr = collection.upsert(
+                                data_rows[i : i + current_batch_size]
+                            )
+                            num_inserted += mr.upsert_count
+                            total_imported_count += mr.upsert_count
+                            i += current_batch_size
+                            pbar.update(current_batch_size)
+                        except Exception as e:
+                            tqdm.write(f"Error inserting data: {e}")
+                            # reduce batch size
+                            current_batch_size = current_batch_size * 2 // 3
+                            tqdm.write(f"Reducing batch size to {current_batch_size}")
+                            continue
                     if max_hit:
                         break
                 collection.flush()
