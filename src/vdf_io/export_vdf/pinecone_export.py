@@ -108,7 +108,7 @@ class ExportPinecone(ExportVDB):
                     "Enter the end of id range (hit return to skip): ",
                     int,
                 )
-            if args["id_range_start"] is None and args["id_range_end"] is None:
+            if args.get("id_range_start") is None and args.get("id_range_end") is None:
                 set_arg_from_input(
                     args,
                     "id_list_file",

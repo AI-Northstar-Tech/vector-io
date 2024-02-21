@@ -69,7 +69,7 @@ class ImportPinecone(ImportVDB):
                         "Enter the end of id range (hit return to skip): ",
                         int,
                     )
-            if args["id_range_start"] is None and args["id_range_end"] is None:
+            if args.get("id_range_start") is None and args.get("id_range_end") is None:
                 set_arg_from_input(
                     args,
                     "id_list_file",
@@ -113,6 +113,8 @@ class ImportPinecone(ImportVDB):
             self.vdf_meta["indexes"].items(), desc="Importing indexes"
         ):
             tqdm.write(f"Importing data for index '{index_name}'")
+            for namespace_meta in index_meta:
+                self.set_dims(namespace_meta, index_name)
             # list indexes
             indexes = self.pc.list_indexes().names()
             # check if index exists
@@ -219,22 +221,8 @@ class ImportPinecone(ImportVDB):
                     if len(vectors) + len(df) > self.args["max_num_rows"]:
                         df = df.head(self.args["max_num_rows"] - len(vectors))
                         max_hit = True
-                    vectors.update(
-                        {
-                            row[self.id_column]: row[vector_column_name].tolist()
-                            for _, row in df.iterrows()
-                        }
-                    )
-                    metadata.update(
-                        {
-                            row[self.id_column]: {
-                                key: value
-                                for key, value in row.items()
-                                if key not in [self.id_column] + vector_column_names
-                            }
-                            for _, row in df.iterrows()
-                        }
-                    )
+                    self.update_vectors(vectors, vector_column_name, df)
+                    self.update_metadata(metadata, vector_column_names, df)
                     if max_hit:
                         break
                 tqdm.write(

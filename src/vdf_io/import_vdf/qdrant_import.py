@@ -159,6 +159,7 @@ class ImportQdrant(ImportVDB):
         ):
             tqdm.write(f"Importing data for index '{index_name}'")
             for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
+                self.set_dims(namespace_meta, index_name)
                 data_path = namespace_meta["data_path"]
                 final_data_path = self.get_final_data_path(data_path)
                 # list indexes
@@ -174,21 +175,6 @@ class ImportQdrant(ImportVDB):
                 if new_collection_name not in collections:
                     # create index
                     try:
-                        if namespace_meta["dimensions"] == -1:
-                            tqdm.write(
-                                f"Resolving dimensions for index '{new_collection_name}'"
-                            )
-                            dims = self.resolve_dims(
-                                namespace_meta, new_collection_name
-                            )
-                            if dims != -1:
-                                namespace_meta["dimensions"] = dims
-                                tqdm.write(f"Resolved dimensions: {dims}")
-                            else:
-                                tqdm.write(
-                                    f"Failed to resolve dimensions for index '{new_collection_name}'"
-                                )
-                                return
                         self.client.create_collection(
                             collection_name=new_collection_name,
                             vectors_config=VectorParams(
@@ -223,24 +209,8 @@ class ImportQdrant(ImportVDB):
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
                     df = read_parquet_progress(file_path)
-                    vectors.update(
-                        {
-                            row[self.id_column]: row[vector_column_name]
-                            for _, row in df.iterrows()
-                        }
-                    )
-                    metadata.update(
-                        {
-                            row[self.id_column]: {
-                                key: value
-                                for key, value in row.items()
-                                if key not in [ID_COLUMN] + vector_column_names
-                            }
-                            for _, row in df.iterrows()
-                        }
-                    )
-                    for k, v in vectors.items():
-                        vectors[k] = self.extract_vector(v)
+                    self.update_vectors(vectors, vector_column_name, df)
+                    self.update_metadata(metadata, vector_column_names, df)
                     for k, v in metadata.items():
                         for key, value in v.items():
                             if isinstance(value, np.ndarray):
@@ -303,12 +273,3 @@ class ImportQdrant(ImportVDB):
             # END index loop
         tqdm.write("Data import completed successfully.")
         self.args["imported_count"] = total_imported_count
-
-    def extract_vector(self, v):
-        if isinstance(v, list) and len(v) > 1:
-            return v
-        if isinstance(v, np.ndarray):
-            if v.shape[0] > 1:
-                return v.tolist()
-            if v.shape[0] == 1:
-                return v[0].tolist()

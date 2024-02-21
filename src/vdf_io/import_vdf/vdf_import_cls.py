@@ -31,6 +31,7 @@ class ImportVDB(abc.ABC):
     def __init__(self, args):
         self.args = args
         self.temp_file_paths = []
+        self.abnormal_vector_format = False
         if self.args.get("hf_dataset", None) is None:
             self.args["dir"] = expand_shorthand_path(self.args["dir"])
             if not os.path.isdir(self.args["dir"]):
@@ -137,25 +138,72 @@ class ImportVDB(abc.ABC):
             return parquet_file
         return os.path.join(final_data_path, parquet_file)
 
-    def resolve_dims(self, namespace_meta, new_collection_name):
+    def set_dims(self, namespace_meta, index_name):
+        if namespace_meta["dimensions"] == -1:
+            tqdm.write(f"Resolving dimensions for index '{index_name}'")
+            dims = self.resolve_dims(namespace_meta, index_name)
+            if dims != -1:
+                namespace_meta["dimensions"] = dims
+                tqdm.write(f"Resolved dimensions: {dims}")
+            else:
+                tqdm.write(
+                    f"Failed to resolve dimensions for index '{index_name}'"
+                )
+                raise ValueError(
+                    f"Failed to resolve dimensions for index '{index_name}'"
+                )
+
+    def resolve_dims(self, namespace_meta, index_name):
         final_data_path = self.get_final_data_path(namespace_meta["data_path"])
         parquet_files = self.get_parquet_files(final_data_path)
         _, vector_column_name = self.get_vector_column_name(
-            new_collection_name, namespace_meta
+            index_name, namespace_meta
         )
         dims = -1
         for file in tqdm(parquet_files, desc="Iterating parquet files"):
             file_path = self.get_file_path(final_data_path, file)
             df = read_parquet_progress(file_path)
             first_el = df[vector_column_name].iloc[0]
-            if isinstance(first_el, list) and len(first_el) > 1:
-                return len(first_el)
-            if isinstance(first_el, np.ndarray):
-                if first_el.shape[0] > 1:
-                    return first_el.shape[0]
-                if first_el.shape[0] == 1:
-                    return first_el[0].shape[0]
+            return len(self.extract_vector(first_el))
         return dims
+
+    def extract_vector(self, v):
+        ret_v = None
+        if isinstance(v, list) and len(v) > 1:
+            ret_v = v
+        elif isinstance(v, np.ndarray):
+            if v.shape[0] > 1:
+                self.abnormal_vector_format = True
+                ret_v = v.tolist()
+            if v.shape[0] == 1:
+                self.abnormal_vector_format = True
+                ret_v = v[0].tolist()
+        else:
+            ret_v = v
+        # convert each element to float
+        if ret_v is not None:
+            ret_v = [float(x) for x in ret_v]
+        return ret_v
+
+    def update_metadata(self, metadata, vector_column_names, df):
+        metadata.update(
+            {
+                row[self.id_column]: {
+                    key: value
+                    for key, value in row.items()
+                    if key not in [self.id_column] + vector_column_names
+                }
+                for _, row in df.iterrows()
+            }
+        )
+
+    def update_vectors(self, vectors, vector_column_name, df):
+        vectors.update(
+            {
+                row[self.id_column]: self.extract_vector(row[vector_column_name])
+                for _, row in df.iterrows()
+            }
+        )
 
     # destructor
     def cleanup(self):

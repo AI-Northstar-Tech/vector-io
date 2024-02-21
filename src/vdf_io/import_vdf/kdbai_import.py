@@ -1,5 +1,6 @@
 from typing import Dict, List
 from dotenv import load_dotenv
+import pandas as pd
 from tqdm import tqdm
 import pyarrow.parquet as pq
 
@@ -72,6 +73,12 @@ class ImportKDBAI(ImportVDB):
 
         self.session = kdbai.Session(api_key=api_key, endpoint=endpoint)
 
+    def compliant_name(self, name: str) -> str:
+        new_name = name.replace("-", "_")
+        if new_name.startswith("_"):
+            new_name = "col" + new_name
+        return new_name
+
     def upsert_data(self):
         total_imported_count = 0
         max_hit = False
@@ -86,6 +93,7 @@ class ImportKDBAI(ImportVDB):
             indexes_content.items(), desc="Importing indexes"
         ):
             for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
+                self.set_dims(namespace_meta, index_name)
                 data_path = namespace_meta["data_path"]
                 final_data_path = self.get_final_data_path(data_path)
                 index_name = index_name + (
@@ -93,15 +101,32 @@ class ImportKDBAI(ImportVDB):
                     if namespace_meta["namespace"]
                     else ""
                 )
+                new_index_name = self.compliant_name(index_name)
                 parquet_files = self.get_parquet_files(final_data_path)
                 for parquet_file in tqdm(parquet_files, desc="Importing parquet files"):
+                    (
+                        vector_column_names,
+                        vector_column_name,
+                    ) = self.get_vector_column_name(index_name, namespace_meta)
+                    
                     parquet_file_path = self.get_file_path(
                         final_data_path, parquet_file
                     )
+                    
+                    if self.abnormal_vector_format:
+                        pandas_table = pd.read_parquet(parquet_file_path)
+                        pandas_table[vector_column_name] = pandas_table[vector_column_name].apply(
+                            lambda x: self.extract_vector(x)
+                        )
+                        pandas_table.to_parquet(parquet_file_path)
+                    
                     parquet_table = pq.read_table(parquet_file_path)
                     # rename columns by replacing "-" with "_"
+                    old_column_name_to_new = {
+                        col: self.compliant_name(col) for col in parquet_table.column_names
+                    }
                     parquet_table = parquet_table.rename_columns(
-                        [col.replace("-", "_") for col in parquet_table.column_names]
+                        [old_column_name_to_new[col] for col in parquet_table.column_names]
                     )
                     parquet_schema = parquet_table.schema
                     parquet_columns = [
@@ -111,14 +136,10 @@ class ImportKDBAI(ImportVDB):
 
                     # Extract information from JSON
                     # namespace = indexes_content[index_names[0]][""][0]["namespace"]
-                    (
-                        vector_column_names,
-                        vector_column_name,
-                    ) = self.get_vector_column_name(index_name, namespace_meta)
                     vector_column_names = [
-                        col.replace("-", "_") for col in vector_column_names
+                        self.compliant_name(col) for col in vector_column_names
                     ]
-                    vector_column_name = vector_column_name.replace("-", "_")
+                    vector_column_name = self.compliant_name(vector_column_name)
                     # Define the schema
                     schema = {
                         "columns": [
@@ -127,8 +148,7 @@ class ImportKDBAI(ImportVDB):
                                 "vectorIndex": {
                                     "dims": namespace_meta["dimensions"],
                                     "metric": standardize_metric_reverse(
-                                        namespace_meta["metric"],
-                                        self.DB_NAME_SLUG,
+                                        namespace_meta["metric"], self.DB_NAME_SLUG
                                     ),
                                     "type": self.index.lower(),
                                 },
@@ -152,14 +172,14 @@ class ImportKDBAI(ImportVDB):
 
                     # First ensure the table does not already exist
                     try:
-                        if index_name in self.session.list():
-                            table = self.session.table(index_name)
+                        if new_index_name in self.session.list():
+                            table = self.session.table(new_index_name)
                             tqdm.write(
-                                f"Table '{index_name}' already exists. Upserting data into it."
+                                f"Table '{new_index_name}' already exists. Upserting data into it."
                             )
                             # self.session.table(index_names).drop()
                         else:
-                            table = self.session.create_table(index_name, schema)
+                            table = self.session.create_table(new_index_name, schema)
                             tqdm.write("Table created")
                         # time.sleep(5)
                     except kdbai.KDBAIException as e:

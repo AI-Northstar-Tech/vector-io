@@ -79,6 +79,7 @@ class ImportMilvus(ImportVDB):
             # load data
             print(f'Importing data for collection "{collection_name}"')
             for namespace_meta in index_meta:
+                self.set_dims(namespace_meta["dimensions"], collection_name)
                 data_path = namespace_meta["data_path"]
                 index_name = collection_name + (
                     f'_{namespace_meta["namespace"]}'
@@ -166,6 +167,9 @@ class ImportMilvus(ImportVDB):
                     data_rows = []
 
                     for _, row in df.iterrows():
+                        row[old_vector_column_name] = self.extract_vector(
+                            row[old_vector_column_name]
+                        )
                         row = json.loads(row.to_json())
                         # replace old_vector_column_name with vector_column_name
                         if old_vector_column_name != vector_column_name:

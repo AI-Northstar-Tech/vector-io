@@ -307,6 +307,8 @@ class ImportVertexAIVectorSearch(ImportVDB):
             print(f"Importing data for index: {index_name}")
             print(f"index_meta: {json.dumps(index_meta, indent=4)}")
             for namespace_meta in index_meta:
+                self.set_dims(namespace_meta, index_name)
+            
                 all_indexes = [index.display_name for index in self.list_indexes()]
                 # check if index exists
                 index_name = index_name + (
@@ -326,8 +328,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
                     if self.index_name is None:
                         self.index_name = f"my_vvs_index_{unique_id}"
                         print(f"Creating new index: {self.index_name} ...")
-                    self.dimensions = namespace_meta["dimensions"]
-                    print(f"dimensions: {self.dimensions}")
+                    print(f"dimensions: {namespace_meta['dimensions']}")
 
                     # optional; used if create_new_index = True
                     self.approx_nn_count = self.args.get("approx_nn_count", 150)
@@ -364,7 +365,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
                     # dummy embedding - TODO: use input data from parquet(?)
                     init_embedding = {
                         ID_COLUMN: str(unique_id),
-                        "embedding": list(np.zeros(self.dimensions)),
+                        "embedding": list(np.zeros(namespace_meta["dimensions"])),
                     }
 
                     # dump embedding to a local file
@@ -381,7 +382,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
                     self.target_index = self._create_index(
                         index_name=self.index_name,
                         contents_delta_uri=self.contents_delta_uri,
-                        dimensions=self.dimensions,
+                        dimensions=namespace_meta["dimensions"],
                         approximate_neighbors_count=self.approx_nn_count,
                         leaf_node_embedding_count=self.leaf_node_emb_count,
                         leaf_nodes_to_search_percent=self.leaf_nodes_percent,
@@ -925,9 +926,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
                         row = json.loads(row.to_json())
 
                         total_ids.append(row[ID_COLUMN])
-                        row[vector_column_name] = [
-                            float(emb) for emb in row[vector_column_name]
-                        ]
+                        row[vector_column_name] = self.extract_vector(row[vector_column_name])
                         numeric_restrict_entry_list = []
                         restrict_entry_list = []
                         allow_values = []
