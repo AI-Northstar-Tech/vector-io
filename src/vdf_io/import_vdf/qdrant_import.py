@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+import numpy as np
 from tqdm import tqdm
 from grpc import RpcError
 from typing import Any, Dict, List
@@ -174,9 +175,20 @@ class ImportQdrant(ImportVDB):
                     # create index
                     try:
                         if namespace_meta["dimensions"] == -1:
-                            namespace_meta["dimensions"] = self.resolve_dims(
+                            tqdm.write(
+                                f"Resolving dimensions for index '{new_collection_name}'"
+                            )
+                            dims = self.resolve_dims(
                                 namespace_meta, new_collection_name
                             )
+                            if dims != -1:
+                                namespace_meta["dimensions"] = dims
+                                tqdm.write(f"Resolved dimensions: {dims}")
+                            else:
+                                tqdm.write(
+                                    f"Failed to resolve dimensions for index '{new_collection_name}'"
+                                )
+                                return
                         self.client.create_collection(
                             collection_name=new_collection_name,
                             vectors_config=VectorParams(
@@ -227,7 +239,12 @@ class ImportQdrant(ImportVDB):
                             for _, row in df.iterrows()
                         }
                     )
-                    vectors = {k: v.tolist() for k, v in vectors.items()}
+                    for k, v in vectors.items():
+                        vectors[k] = self.extract_vector(v)
+                    for k, v in metadata.items():
+                        for key, value in v.items():
+                            if isinstance(value, np.ndarray):
+                                metadata[k][key] = value.tolist()
                     points = [
                         PointStruct(
                             id=get_qdrant_id_from_id(idx),
@@ -286,3 +303,12 @@ class ImportQdrant(ImportVDB):
             # END index loop
         tqdm.write("Data import completed successfully.")
         self.args["imported_count"] = total_imported_count
+
+    def extract_vector(self, v):
+        if isinstance(v, list) and len(v) > 1:
+            return v
+        if isinstance(v, np.ndarray):
+            if v.shape[0] > 1:
+                return v.tolist()
+            if v.shape[0] == 1:
+                return v[0].tolist()
