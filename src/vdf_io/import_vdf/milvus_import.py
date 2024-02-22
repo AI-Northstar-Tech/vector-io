@@ -162,7 +162,7 @@ class ImportMilvus(ImportVDB):
                 num_inserted = 0
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
-                    df = read_parquet_progress(file_path)
+                    df = read_parquet_progress(file_path, self.id_column)
                     df[self.id_column] = df[self.id_column].apply(lambda x: str(x))
                     data_rows = []
 

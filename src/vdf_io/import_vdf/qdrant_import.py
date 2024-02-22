@@ -196,7 +196,7 @@ class ImportQdrant(ImportVDB):
                 )
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
-                    df = read_parquet_progress(file_path)
+                    df = read_parquet_progress(file_path, self.id_column)
                     self.update_vectors(vectors, vector_column_name, df)
                     self.update_metadata(metadata, vector_column_names, df)
                     self.make_metadata_qdrant_compliant(metadata)
@@ -273,7 +273,7 @@ class ImportQdrant(ImportVDB):
         deleted_images = False
         parsed_json = False
         for key, value in v.items():
-                # for other vector columns
+            # for other vector columns
             if isinstance(value, np.ndarray):
                 metadata[k][key] = value.tolist()
             elif isinstance(value, Image.Image):
@@ -292,4 +292,4 @@ class ImportQdrant(ImportVDB):
                 deleted_images, parsed_json = self.normalize_dict(
                     metadata[k], key, value
                 )
-        return deleted_images,parsed_json
+        return deleted_images, parsed_json

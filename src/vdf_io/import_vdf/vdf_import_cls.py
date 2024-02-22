@@ -15,6 +15,7 @@ from vdf_io.constants import ID_COLUMN
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
 from vdf_io.util import (
     expand_shorthand_path,
+    extract_data_hash,
     get_final_data_path,
     get_parquet_files,
     read_parquet_progress,
@@ -31,6 +32,8 @@ class ImportVDB(abc.ABC):
 
     def __init__(self, args):
         self.args = args
+        self.args["hash_value"] = extract_data_hash(args)
+        self.hash_value = extract_data_hash(args)
         self.temp_file_paths = []
         self.abnormal_vector_format = False
         if self.args.get("hf_dataset", None) is None:
@@ -127,7 +130,7 @@ class ImportVDB(abc.ABC):
 
     @lru_cache(maxsize=1)
     def get_parquet_files(self, data_path):
-        return get_parquet_files(data_path, self.args, self.temp_file_paths)
+        return get_parquet_files(data_path, self.args, self.temp_file_paths, self.id_column)
 
     def get_final_data_path(self, data_path):
         return get_final_data_path(
@@ -159,7 +162,9 @@ class ImportVDB(abc.ABC):
         dims = -1
         for file in tqdm(parquet_files, desc="Iterating parquet files"):
             file_path = self.get_file_path(final_data_path, file)
-            df = read_parquet_progress(file_path, columns=[vector_column_name])
+            df = read_parquet_progress(
+                file_path, self.id_column, columns=[vector_column_name]
+            )
             i = 0
             while i < len(df[vector_column_name]):
                 first_el = df[vector_column_name].iloc[i]
@@ -184,7 +189,7 @@ class ImportVDB(abc.ABC):
         elif isinstance(v, bytes):
             self.abnormal_vector_format = True
             tqdm.write("Warning: Vector is in bytes format. Converting to list")
-            ret_v = ast.literal_eval(ret_v.decode('utf-8'))
+            ret_v = ast.literal_eval(ret_v.decode("utf-8"))
         elif isinstance(v, str):
             self.abnormal_vector_format = True
             ret_v = ast.literal_eval(v)
@@ -212,6 +217,7 @@ class ImportVDB(abc.ABC):
             {
                 row[self.id_column]: self.extract_vector(row[vector_column_name])
                 for _, row in df.iterrows()
+                if self.id_column in row
             }
         )
 

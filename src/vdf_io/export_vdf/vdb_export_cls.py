@@ -20,7 +20,7 @@ class ExportVDB(abc.ABC):
         self.file_structure = []
         self.file_ctr = 1
         self.hash_value = extract_data_hash(args)
-        args["hash_value"] = self.hash_value
+        self.args["hash_value"] = self.hash_value
         self.args = args
         self.args["exported_count"] = 0
         self.timestamp_in_format = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

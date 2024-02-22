@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import sys
 from IPython.core import ultratb
 import warnings
+from vdf_io.constants import ID_COLUMN
 
 from vdf_io.util import (
     get_final_data_path,
@@ -136,7 +137,7 @@ def main():
                         new_vector_column += f"_{args['dimensions']}"
                     tqdm.write(f"Reembedding {file_path}")
                     # read parquet file
-                    df = read_parquet_progress(file_path)
+                    df = read_parquet_progress(file_path, ID_COLUMN)
                     # get text column
                     text_column = args["text_column"]
                     if text_column not in df.columns:
