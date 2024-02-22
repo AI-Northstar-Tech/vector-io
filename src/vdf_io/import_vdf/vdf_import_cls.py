@@ -1,3 +1,4 @@
+import ast
 import datetime
 from functools import lru_cache
 import json
@@ -158,9 +159,15 @@ class ImportVDB(abc.ABC):
         dims = -1
         for file in tqdm(parquet_files, desc="Iterating parquet files"):
             file_path = self.get_file_path(final_data_path, file)
-            df = read_parquet_progress(file_path)
-            first_el = df[vector_column_name].iloc[0]
-            return len(self.extract_vector(first_el))
+            df = read_parquet_progress(file_path, columns=[vector_column_name])
+            i = 0
+            while i < len(df[vector_column_name]):
+                first_el = df[vector_column_name].iloc[i]
+                if first_el is None:
+                    i += 1
+                    continue
+                dims = len(self.extract_vector(first_el))
+                break
         return dims
 
     def extract_vector(self, v):
@@ -174,6 +181,13 @@ class ImportVDB(abc.ABC):
             if v.shape[0] == 1:
                 self.abnormal_vector_format = True
                 ret_v = v[0].tolist()
+        elif isinstance(v, bytes):
+            self.abnormal_vector_format = True
+            tqdm.write("Warning: Vector is in bytes format. Converting to list")
+            ret_v = ast.literal_eval(ret_v.decode('utf-8'))
+        elif isinstance(v, str):
+            self.abnormal_vector_format = True
+            ret_v = ast.literal_eval(v)
         else:
             ret_v = v
         # convert each element to float

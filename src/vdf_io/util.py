@@ -9,6 +9,7 @@ import pandas as pd
 from io import StringIO
 import sys
 from tqdm import tqdm
+from PIL import Image
 
 from qdrant_client.http.models import Distance
 
@@ -205,6 +206,7 @@ def get_parquet_files(data_path, args, temp_file_paths=[]):
             tqdm.write("Converting to pandas dataframe")
             df = pd.DataFrame(it_ds)
             tqdm.write("Writing to parquet")
+            df = cleanup_df(df)
             temp_file_path = f"{os.getcwd()}/temp.parquet"
             df.to_parquet(temp_file_path)
             temp_file_paths.append(temp_file_path)
@@ -229,6 +231,21 @@ def get_parquet_files(data_path, args, temp_file_paths=[]):
             [file for file in os.listdir(data_path) if file.endswith(".parquet")]
         )
         return parquet_files
+
+def cleanup_df(df):
+    for col in df.columns:
+        if df[col].dtype == "object":
+            first_el = df[col].iloc[0]
+            # if isinstance(first_el, bytes):
+            #     df[col] = df[col].apply(lambda x: x.decode("utf-8"))
+            if isinstance(first_el, Image.Image):
+                        # delete the image column
+                df = df.drop(columns=[col])
+                tqdm.write(
+                            f"Warning: Image column '{col}' detected. Image columns are not supported in parquet files. The column has been removed."
+                        )
+                
+    return df
 
 
 # Function to recursively print help messages
@@ -274,7 +291,7 @@ def get_qdrant_id_from_id(idx):
         return str(UUID(idx))
 
 
-def read_parquet_progress(file_path):
+def read_parquet_progress(file_path, **kwargs):
     if file_path.startswith("hf://"):
         from huggingface_hub import HfFileSystem
         from huggingface_hub import hf_hub_download
@@ -286,5 +303,7 @@ def read_parquet_progress(file_path):
             filename=resolved_path.path_in_repo,
             repo_type=resolved_path.repo_type,
         )
-        return pd.read_parquet(cache_path)
-    return pd.read_parquet(file_path)
+        df = pd.read_parquet(cache_path, **kwargs)
+    else:
+        df = pd.read_parquet(file_path, **kwargs)
+    return df

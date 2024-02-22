@@ -10,6 +10,7 @@ from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.util import (
+    read_parquet_progress,
     set_arg_from_input,
     set_arg_from_password,
     standardize_metric_reverse,
@@ -112,7 +113,7 @@ class ImportKDBAI(ImportVDB):
                     )
 
                     if self.abnormal_vector_format:
-                        pandas_table = pd.read_parquet(parquet_file_path)
+                        pandas_table = read_parquet_progress(parquet_file_path)
                         pandas_table[vector_column_name] = pandas_table[
                             vector_column_name
                         ].apply(lambda x: self.extract_vector(x))

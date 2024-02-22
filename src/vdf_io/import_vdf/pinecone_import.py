@@ -104,6 +104,9 @@ class ImportPinecone(ImportVDB):
         super().__init__(args)
         self.pc = Pinecone(api_key=self.args["pinecone_api_key"])
 
+    def compliant_name(self, name: str) -> str:
+        new_name = name.lower().replace("_", "-")
+        return new_name
     def upsert_data(self):
         max_hit = False
         # Iterate over the indexes and import the data
@@ -120,12 +123,13 @@ class ImportPinecone(ImportVDB):
             while index_name in indexes and self.args["create_new"] is True:
                 index_name = index_name + f"-{suffix}"
                 suffix += 1
-            if index_name not in indexes:
+            compliant_index_name = self.compliant_name(index_name)
+            if compliant_index_name not in indexes:
                 # create index
                 try:
                     if self.args["serverless"] is True:
                         self.pc.create_index(
-                            name=index_name,
+                            name=compliant_index_name,
                             dimension=index_meta[0]["dimensions"],
                             metric=standardize_metric_reverse(
                                 index_meta[0]["metric"], "pinecone"
@@ -137,7 +141,7 @@ class ImportPinecone(ImportVDB):
                         )
                     else:
                         self.pc.create_index(
-                            name=index_name,
+                            name=compliant_index_name,
                             dimension=index_meta[0]["dimensions"],
                             metric=standardize_metric_reverse(
                                 index_meta[0]["metric"], "pinecone"
@@ -156,8 +160,8 @@ class ImportPinecone(ImportVDB):
                         )
                 except Exception as e:
                     tqdm.write(f"{e}")
-                    raise Exception(f"Invalid index name '{index_name}'", e)
-            index = self.pc.Index(index_name)
+                    raise Exception(f"Invalid index name '{compliant_index_name}'", e)
+            index = self.pc.Index(compliant_index_name)
             BATCH_SIZE = self.args.get("batch_size", 1000) or 1000
             current_batch_size = BATCH_SIZE
             for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
@@ -260,7 +264,7 @@ class ImportPinecone(ImportVDB):
                         start_idx += resp["upserted_count"]
                     except Exception as e:
                         tqdm.write(
-                            f"Error upserting vectors for index '{index_name}', {e}"
+                            f"Error upserting vectors for index '{compliant_index_name}', {e}"
                         )
                         if current_batch_size < BATCH_SIZE / 100:
                             tqdm.write("Batch size is not the issue. Aborting import")
