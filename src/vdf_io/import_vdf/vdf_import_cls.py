@@ -130,7 +130,9 @@ class ImportVDB(abc.ABC):
 
     @lru_cache(maxsize=1)
     def get_parquet_files(self, data_path):
-        return get_parquet_files(data_path, self.args, self.temp_file_paths, self.id_column)
+        return get_parquet_files(
+            data_path, self.args, self.temp_file_paths, self.id_column
+        )
 
     def get_final_data_path(self, data_path):
         return get_final_data_path(
