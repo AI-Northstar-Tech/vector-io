@@ -1,8 +1,10 @@
+import json
 from dotenv import load_dotenv
 import numpy as np
 from tqdm import tqdm
 from grpc import RpcError
 from typing import Any, Dict, List
+from PIL import Image
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
@@ -197,10 +199,7 @@ class ImportQdrant(ImportVDB):
                     df = read_parquet_progress(file_path)
                     self.update_vectors(vectors, vector_column_name, df)
                     self.update_metadata(metadata, vector_column_names, df)
-                    for k, v in metadata.items():
-                        for key, value in v.items():
-                            if isinstance(value, np.ndarray):
-                                metadata[k][key] = value.tolist()
+                    self.make_metadata_qdrant_compliant(metadata)
                     points = [
                         PointStruct(
                             id=get_qdrant_id_from_id(idx),
@@ -259,3 +258,38 @@ class ImportQdrant(ImportVDB):
             # END index loop
         tqdm.write("Data import completed successfully.")
         self.args["imported_count"] = total_imported_count
+
+    def make_metadata_qdrant_compliant(self, metadata):
+        deleted_images = False
+        parsed_json = False
+        for k, v in metadata.items():
+            deleted_images, parsed_json = self.normalize_dict(metadata, k, v)
+        if deleted_images:
+            tqdm.write("Images were deleted from metadata")
+        if parsed_json:
+            tqdm.write("Metadata was parsed to JSON")
+
+    def normalize_dict(self, metadata, k, v):
+        deleted_images = False
+        parsed_json = False
+        for key, value in v.items():
+                # for other vector columns
+            if isinstance(value, np.ndarray):
+                metadata[k][key] = value.tolist()
+            elif isinstance(value, Image.Image):
+                del metadata[k][key]
+                deleted_images = True
+            elif isinstance(value, bytes) or isinstance(value, str):
+                if isinstance(value, bytes):
+                    metadata[k][key] = value.decode("utf-8")
+                try:
+                    metadata[k][key] = json.loads(metadata[k][key])
+                    parsed_json = True
+                except json.JSONDecodeError:
+                    pass
+            # call recursively for nested dictionaries
+            elif isinstance(value, dict):
+                deleted_images, parsed_json = self.normalize_dict(
+                    metadata[k], key, value
+                )
+        return deleted_images,parsed_json
