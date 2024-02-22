@@ -146,9 +146,7 @@ class ImportVDB(abc.ABC):
                 namespace_meta["dimensions"] = dims
                 tqdm.write(f"Resolved dimensions: {dims}")
             else:
-                tqdm.write(
-                    f"Failed to resolve dimensions for index '{index_name}'"
-                )
+                tqdm.write(f"Failed to resolve dimensions for index '{index_name}'")
                 raise ValueError(
                     f"Failed to resolve dimensions for index '{index_name}'"
                 )
@@ -156,9 +154,7 @@ class ImportVDB(abc.ABC):
     def resolve_dims(self, namespace_meta, index_name):
         final_data_path = self.get_final_data_path(namespace_meta["data_path"])
         parquet_files = self.get_parquet_files(final_data_path)
-        _, vector_column_name = self.get_vector_column_name(
-            index_name, namespace_meta
-        )
+        _, vector_column_name = self.get_vector_column_name(index_name, namespace_meta)
         dims = -1
         for file in tqdm(parquet_files, desc="Iterating parquet files"):
             file_path = self.get_file_path(final_data_path, file)

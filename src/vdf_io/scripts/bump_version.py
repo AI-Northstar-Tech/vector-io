@@ -68,7 +68,7 @@ def main():
     # run `sed -i '' "s/__version__ = .*/__version__ = '$version_number'/" src/vdf_io/__init__.py`
     # Replace the version number in the file
     init_file = "src/vdf_io/__init__.py"
-    content = f'__version__ = "{new_version}"'
+    content = f'__version__ = "{new_version}"\n'
     for line in open(init_file, "r"):
         if "__version__" in line:
             content = line.replace(line, content)

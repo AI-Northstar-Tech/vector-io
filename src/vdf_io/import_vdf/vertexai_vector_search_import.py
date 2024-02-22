@@ -294,7 +294,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
             print(f"index_meta: {json.dumps(index_meta, indent=4)}")
             for namespace_meta in index_meta:
                 self.set_dims(namespace_meta, index_name)
-            
+
                 all_indexes = [index.display_name for index in self.list_indexes()]
                 # check if index exists
                 index_name = index_name + (
@@ -912,7 +912,9 @@ class ImportVertexAIVectorSearch(ImportVDB):
                         row = json.loads(row.to_json())
 
                         total_ids.append(row[ID_COLUMN])
-                        row[vector_column_name] = self.extract_vector(row[vector_column_name])
+                        row[vector_column_name] = self.extract_vector(
+                            row[vector_column_name]
+                        )
                         numeric_restrict_entry_list = []
                         restrict_entry_list = []
                         allow_values = []

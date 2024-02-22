@@ -7,7 +7,6 @@ from typing import Any, Dict, List
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
-from vdf_io.constants import ID_COLUMN
 
 from vdf_io.names import DBNames
 from vdf_io.util import (
