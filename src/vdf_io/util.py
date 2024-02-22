@@ -232,6 +232,7 @@ def get_parquet_files(data_path, args, temp_file_paths=[]):
         )
         return parquet_files
 
+
 def cleanup_df(df):
     for col in df.columns:
         if df[col].dtype == "object":
@@ -239,12 +240,12 @@ def cleanup_df(df):
             # if isinstance(first_el, bytes):
             #     df[col] = df[col].apply(lambda x: x.decode("utf-8"))
             if isinstance(first_el, Image.Image):
-                        # delete the image column
+                # delete the image column
                 df = df.drop(columns=[col])
                 tqdm.write(
-                            f"Warning: Image column '{col}' detected. Image columns are not supported in parquet files. The column has been removed."
-                        )
-                
+                    f"Warning: Image column '{col}' detected. Image columns are not supported in parquet files. The column has been removed."
+                )
+
     return df
 
 

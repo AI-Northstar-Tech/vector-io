@@ -184,7 +184,7 @@ class ImportVDB(abc.ABC):
         elif isinstance(v, bytes):
             self.abnormal_vector_format = True
             tqdm.write("Warning: Vector is in bytes format. Converting to list")
-            ret_v = ast.literal_eval(ret_v.decode('utf-8'))
+            ret_v = ast.literal_eval(ret_v.decode("utf-8"))
         elif isinstance(v, str):
             self.abnormal_vector_format = True
             ret_v = ast.literal_eval(v)

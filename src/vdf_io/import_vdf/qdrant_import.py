@@ -273,7 +273,7 @@ class ImportQdrant(ImportVDB):
         deleted_images = False
         parsed_json = False
         for key, value in v.items():
-                # for other vector columns
+            # for other vector columns
             if isinstance(value, np.ndarray):
                 metadata[k][key] = value.tolist()
             elif isinstance(value, Image.Image):
@@ -292,4 +292,4 @@ class ImportQdrant(ImportVDB):
                 deleted_images, parsed_json = self.normalize_dict(
                     metadata[k], key, value
                 )
-        return deleted_images,parsed_json
+        return deleted_images, parsed_json

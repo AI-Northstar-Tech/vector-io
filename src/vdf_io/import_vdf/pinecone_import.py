@@ -107,6 +107,7 @@ class ImportPinecone(ImportVDB):
     def compliant_name(self, name: str) -> str:
         new_name = name.lower().replace("_", "-")
         return new_name
+
     def upsert_data(self):
         max_hit = False
         # Iterate over the indexes and import the data
