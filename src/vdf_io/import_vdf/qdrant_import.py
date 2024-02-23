@@ -263,33 +263,68 @@ class ImportQdrant(ImportVDB):
         deleted_images = False
         parsed_json = False
         for k, v in metadata.items():
-            deleted_images, parsed_json = self.normalize_dict(metadata, k, v)
+            deleted_images, parsed_json, zeroed_nan = self.normalize_dict(
+                metadata, k, v
+            )
         if deleted_images:
             tqdm.write("Images were deleted from metadata")
         if parsed_json:
             tqdm.write("Metadata was parsed to JSON")
+        if zeroed_nan:
+            tqdm.write("NaN values were replaced with 0 in metadata")
+
+    def replace_nan_with_zero(self, data, zeroed_nan=False):
+        if isinstance(data, dict):
+            ret_val = {k: self.replace_nan_with_zero(v) for k, v in data.items()}
+            for _, v in ret_val.items():
+                if v[1]:
+                    zeroed_nan = True
+            return {k: v[0] for k, v in ret_val.items()}, zeroed_nan
+        elif isinstance(data, list):
+            ret_val = [self.replace_nan_with_zero(item) for item in data]
+            return [x[0] for x in ret_val], any(x[1] for x in ret_val)
+        elif isinstance(data, float) and np.isnan(data):
+            return 0, True
+        else:
+            return data, False
 
     def normalize_dict(self, metadata, k, v):
         deleted_images = False
         parsed_json = False
-        for key, value in v.items():
-            # for other vector columns
-            if isinstance(value, np.ndarray):
-                metadata[k][key] = value.tolist()
-            elif isinstance(value, Image.Image):
-                del metadata[k][key]
-                deleted_images = True
-            elif isinstance(value, bytes) or isinstance(value, str):
-                if isinstance(value, bytes):
-                    metadata[k][key] = value.decode("utf-8")
-                try:
-                    metadata[k][key] = json.loads(metadata[k][key])
-                    parsed_json = True
-                except json.JSONDecodeError:
-                    pass
-            # call recursively for nested dictionaries
-            elif isinstance(value, dict):
-                deleted_images, parsed_json = self.normalize_dict(
-                    metadata[k], key, value
+        zeroed_nan = False
+        # Check for np.nan and convert to 0 for scalar values
+        if np.isscalar(v) and (
+            (isinstance(v, (float, int)) and np.isnan(v))
+            or (isinstance(v, str) and v.lower() == "nan")
+        ):
+            metadata[k] = 0
+            zeroed_nan = True
+        elif isinstance(v, np.ndarray):
+            metadata[k] = v.tolist()
+        elif isinstance(v, Image.Image):
+            del metadata[k]
+            deleted_images = True
+        elif isinstance(v, bytes) or isinstance(v, str):
+            if isinstance(v, bytes):
+                metadata[k] = v.decode("utf-8")
+            try:
+                parsed_value = json.loads(metadata[k])
+                # Replace nan with 0 in the parsed JSON object
+                metadata[k], zeroed_nan_rec = self.replace_nan_with_zero(parsed_value)
+                if zeroed_nan_rec:
+                    zeroed_nan = True
+                parsed_json = True
+            except json.JSONDecodeError:
+                pass
+        elif isinstance(v, dict):
+            for k2, v2 in v.items():
+                deleted_images_rec, parsed_json_rec, zeroed_nan_rec = (
+                    self.normalize_dict(v, k2, v2)
                 )
-        return deleted_images, parsed_json
+                if zeroed_nan_rec:
+                    zeroed_nan = True
+                if deleted_images_rec:
+                    deleted_images = True
+                if parsed_json_rec:
+                    parsed_json = True
+        return deleted_images, parsed_json, zeroed_nan
