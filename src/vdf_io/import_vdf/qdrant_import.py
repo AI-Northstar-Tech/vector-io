@@ -14,7 +14,6 @@ from vdf_io.names import DBNames
 from vdf_io.util import (
     expand_shorthand_path,
     get_qdrant_id_from_id,
-    read_parquet_progress,
     set_arg_from_input,
     set_arg_from_password,
 )
