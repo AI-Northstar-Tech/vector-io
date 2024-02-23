@@ -66,6 +66,8 @@ class ImportVDB(abc.ABC):
                     file_structure=[],
                     author=hf_dataset.split("/")[0],
                     exported_from="hf",
+                    exported_at=datetime.datetime.now().astimezone().isoformat(),
+                    id_column=self.args.get("id_column", ID_COLUMN) or ID_COLUMN,
                     indexes={
                         index_name: [
                             NamespaceMeta(
@@ -83,11 +85,9 @@ class ImportVDB(abc.ABC):
                             )
                         ]
                     },
-                    exported_at=datetime.datetime.now().astimezone().isoformat(),
-                    id_column=self.args.get("id_column", ID_COLUMN),
                 ).dict()
             print(json.dumps(self.vdf_meta, indent=4))
-        self.id_column = self.vdf_meta.get("id_column", ID_COLUMN)
+        self.id_column = self.vdf_meta.get("id_column", ID_COLUMN) or ID_COLUMN
         if "indexes" not in self.vdf_meta:
             raise Exception("Invalid VDF_META.json, 'indexes' key not found")
         if "version" not in self.vdf_meta:

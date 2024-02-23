@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 class NamespaceMeta(BaseModel):
@@ -12,6 +12,7 @@ class NamespaceMeta(BaseModel):
     vector_columns: List[str] = ["vector"]
     data_path: str
     metric: str
+    index_config: Optional[Dict[Any, Any]] = None
     model_config = ConfigDict(protected_namespaces=())
 
 
