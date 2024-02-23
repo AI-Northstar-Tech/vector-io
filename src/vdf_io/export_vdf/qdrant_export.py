@@ -178,6 +178,7 @@ class ExportQdrant(ExportVDB):
             model_name=self.args["model_name"],
             vector_columns=["vector"],
             data_path="/".join(vectors_directory.split("/")[1:]),
+            index_config=self.client.get_collection(collection_name).config.dict(),
         )
         self.args["exported_count"] += num_vectors_exported
         return [namespace_meta]

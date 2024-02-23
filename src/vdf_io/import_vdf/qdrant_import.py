@@ -6,6 +6,8 @@ from grpc import RpcError
 from typing import Any, Dict, List
 from PIL import Image
 
+from halo import Halo
+
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
@@ -162,17 +164,63 @@ class ImportQdrant(ImportVDB):
                 if new_collection_name not in collections:
                     # create index
                     try:
+
+                        def get_nested_config(config, keys, default=None):
+                            """Helper function to get nested dictionary values."""
+                            for key in keys:
+                                config = config.get(key, {})
+                            return config or default
+
+                        index_config = namespace_meta.get("index_config", {})
+                        dims = (
+                            namespace_meta["dimensions"]
+                            if "dimensions" in namespace_meta
+                            else get_nested_config(
+                                namespace_meta,
+                                ["index_config", "params", "vectors"],
+                                {},
+                            ).get("size")
+                        )
+                        on_disk = get_nested_config(
+                            namespace_meta,
+                            ["index_config", "params", "vectors", "on_disk"],
+                            None,
+                        )
+                        configs = [
+                            "hnsw_config",
+                            "optimizers_config",
+                            "wal_config",
+                            "quantization_config",
+                            "on_disk_payload",
+                            "sparse_vectors_config",
+                        ]
+                        (
+                            hnsw_config,
+                            optimizers_config,
+                            wal_config,
+                            quantization_config,
+                            on_disk_payload,
+                            sparse_vectors_config,
+                        ) = [
+                            get_nested_config(index_config, [config], None)
+                            for config in configs
+                        ]
+
+                        distance = namespace_meta.get("metric", Distance.COSINE)
+
                         self.client.create_collection(
                             collection_name=new_collection_name,
                             vectors_config=VectorParams(
-                                size=namespace_meta["dimensions"],
-                                distance=(
-                                    namespace_meta["metric"]
-                                    if "metric" in namespace_meta
-                                    else Distance.COSINE
-                                ),
+                                size=dims, distance=distance, on_disk=on_disk
                             ),
+                            sparse_vectors_config=sparse_vectors_config,
+                            hnsw_config=hnsw_config,
+                            optimizers_config=optimizers_config,
+                            wal_config=wal_config,
+                            quantization_config=quantization_config,
+                            on_disk_payload=on_disk_payload,
                         )
+
                     except Exception as e:
                         tqdm.write(
                             f"Failed to create index '{new_collection_name}' {e}"
@@ -215,19 +263,20 @@ class ImportQdrant(ImportVDB):
                         ]
                         tqdm.write("Truncating data to limit to max rows")
                     try:
-                        tqdm.write(f"Starting bulk upload for file '{file_path}'")
-                        self.client.upload_points(
-                            collection_name=new_collection_name,
-                            points=points,
-                            batch_size=self.args.get("batch_size", 64) or 64,
-                            parallel=self.args.get("parallel", 5),
-                            max_retries=self.args.get("max_retries", 3),
-                            shard_key_selector=self.args.get(
-                                "shard_key_selector", None
-                            ),
-                            wait=True,
-                        )
-                        tqdm.write(f"Completed bulk upload for file '{file_path}'")
+                        with Halo(
+                            text=f"Bulk uploading data from {file_path}", spinner="dots"
+                        ):
+                            self.client.upload_points(
+                                collection_name=new_collection_name,
+                                points=points,
+                                batch_size=self.args.get("batch_size", 64) or 64,
+                                parallel=self.args.get("parallel", 5),
+                                max_retries=self.args.get("max_retries", 3),
+                                shard_key_selector=self.args.get(
+                                    "shard_key_selector", None
+                                ),
+                                wait=True,
+                            )
                         total_imported_count += len(points)
                         if total_imported_count >= self.args["max_num_rows"]:
                             max_hit = True
