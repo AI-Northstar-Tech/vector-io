@@ -317,9 +317,11 @@ class ImportQdrant(ImportVDB):
                 pass
         elif isinstance(v, dict):
             for k2, v2 in v.items():
-                deleted_images_rec, parsed_json_rec, zeroed_nan_rec = (
-                    self.normalize_dict(v, k2, v2)
-                )
+                (
+                    deleted_images_rec,
+                    parsed_json_rec,
+                    zeroed_nan_rec,
+                ) = self.normalize_dict(v, k2, v2)
                 if zeroed_nan_rec:
                     zeroed_nan = True
                 if deleted_images_rec:
