@@ -8,7 +8,6 @@ from pinecone import Pinecone, ServerlessSpec, PodSpec, Vector
 
 from vdf_io.names import DBNames
 from vdf_io.util import (
-    read_parquet_progress,
     set_arg_from_input,
     set_arg_from_password,
     standardize_metric_reverse,
@@ -107,6 +106,7 @@ class ImportPinecone(ImportVDB):
     def compliant_name(self, name: str) -> str:
         new_name = name.lower().replace("_", "-")
         return new_name
+
     def upsert_data(self):
         max_hit = False
         # Iterate over the indexes and import the data
@@ -185,7 +185,7 @@ class ImportPinecone(ImportVDB):
 
                 for file in tqdm(parquet_files, desc="Loading data from parquet files"):
                     file_path = os.path.join(final_data_path, file)
-                    df = read_parquet_progress(file_path)
+                    df = self.read_parquet_progress(file_path)
 
                     if self.args["subset"] is True:
                         if (

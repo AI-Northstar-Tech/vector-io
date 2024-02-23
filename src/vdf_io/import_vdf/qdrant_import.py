@@ -1,8 +1,10 @@
+import json
 from dotenv import load_dotenv
 import numpy as np
 from tqdm import tqdm
 from grpc import RpcError
 from typing import Any, Dict, List
+from PIL import Image
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
@@ -12,7 +14,6 @@ from vdf_io.names import DBNames
 from vdf_io.util import (
     expand_shorthand_path,
     get_qdrant_id_from_id,
-    read_parquet_progress,
     set_arg_from_input,
     set_arg_from_password,
 )
@@ -194,13 +195,10 @@ class ImportQdrant(ImportVDB):
                 )
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
-                    df = read_parquet_progress(file_path)
+                    df = self.read_parquet_progress(file_path)
                     self.update_vectors(vectors, vector_column_name, df)
                     self.update_metadata(metadata, vector_column_names, df)
-                    for k, v in metadata.items():
-                        for key, value in v.items():
-                            if isinstance(value, np.ndarray):
-                                metadata[k][key] = value.tolist()
+                    self.make_metadata_qdrant_compliant(metadata)
                     points = [
                         PointStruct(
                             id=get_qdrant_id_from_id(idx),
@@ -259,3 +257,75 @@ class ImportQdrant(ImportVDB):
             # END index loop
         tqdm.write("Data import completed successfully.")
         self.args["imported_count"] = total_imported_count
+
+    def make_metadata_qdrant_compliant(self, metadata):
+        deleted_images = False
+        parsed_json = False
+        for k, v in metadata.items():
+            deleted_images, parsed_json, zeroed_nan = self.normalize_dict(
+                metadata, k, v
+            )
+        if deleted_images:
+            tqdm.write("Images were deleted from metadata")
+        if parsed_json:
+            tqdm.write("Metadata was parsed to JSON")
+        if zeroed_nan:
+            tqdm.write("NaN values were replaced with 0 in metadata")
+
+    def replace_nan_with_zero(self, data, zeroed_nan=False):
+        if isinstance(data, dict):
+            ret_val = {k: self.replace_nan_with_zero(v) for k, v in data.items()}
+            for _, v in ret_val.items():
+                if v[1]:
+                    zeroed_nan = True
+            return {k: v[0] for k, v in ret_val.items()}, zeroed_nan
+        elif isinstance(data, list):
+            ret_val = [self.replace_nan_with_zero(item) for item in data]
+            return [x[0] for x in ret_val], any(x[1] for x in ret_val)
+        elif isinstance(data, float) and np.isnan(data):
+            return 0, True
+        else:
+            return data, False
+
+    def normalize_dict(self, metadata, k, v):
+        deleted_images = False
+        parsed_json = False
+        zeroed_nan = False
+        # Check for np.nan and convert to 0 for scalar values
+        if np.isscalar(v) and (
+            (isinstance(v, (float, int)) and np.isnan(v))
+            or (isinstance(v, str) and v.lower() == "nan")
+        ):
+            metadata[k] = 0
+            zeroed_nan = True
+        elif isinstance(v, np.ndarray):
+            metadata[k] = v.tolist()
+        elif isinstance(v, Image.Image):
+            del metadata[k]
+            deleted_images = True
+        elif isinstance(v, bytes) or isinstance(v, str):
+            if isinstance(v, bytes):
+                metadata[k] = v.decode("utf-8")
+            try:
+                parsed_value = json.loads(metadata[k])
+                # Replace nan with 0 in the parsed JSON object
+                metadata[k], zeroed_nan_rec = self.replace_nan_with_zero(parsed_value)
+                if zeroed_nan_rec:
+                    zeroed_nan = True
+                parsed_json = True
+            except json.JSONDecodeError:
+                pass
+        elif isinstance(v, dict):
+            for k2, v2 in v.items():
+                (
+                    deleted_images_rec,
+                    parsed_json_rec,
+                    zeroed_nan_rec,
+                ) = self.normalize_dict(v, k2, v2)
+                if zeroed_nan_rec:
+                    zeroed_nan = True
+                if deleted_images_rec:
+                    deleted_images = True
+                if parsed_json_rec:
+                    parsed_json = True
+        return deleted_images, parsed_json, zeroed_nan

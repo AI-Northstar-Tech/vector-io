@@ -12,6 +12,7 @@ from tqdm import tqdm
 from PIL import Image
 
 from qdrant_client.http.models import Distance
+from vdf_io.constants import ID_COLUMN
 
 from vdf_io.names import DBNames
 
@@ -193,25 +194,67 @@ def get_final_data_path(cwd, dir, data_path, args):
     return final_data_path
 
 
-def get_parquet_files(data_path, args, temp_file_paths=[]):
+def list_configs_and_splits(name):
+    if "HUGGING_FACE_TOKEN" not in os.environ:
+        yield "train", None
+    import requests
+
+    headers = {"Authorization": f"Bearer {os.environ['HUGGING_FACE_TOKEN']}"}
+    API_URL = f"https://datasets-server.huggingface.co/splits?dataset={name}"
+
+    def query():
+        response = requests.get(API_URL, headers=headers)
+        return response.json()
+
+    data = query()
+    if "splits" in data:
+        for split in data["splits"]:
+            if "config" in split:
+                yield split["split"], split["config"]
+            else:
+                yield split["split"], None
+    else:
+        yield "train", None
+
+
+def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
     # Load the data from the parquet files
     if args.get("hf_dataset", None):
         if args.get("max_num_rows", None):
             from datasets import load_dataset
 
             tqdm.write("Loading a subset of the dataset")
-            ds = load_dataset(args.get("hf_dataset"), split="train", streaming=True)
-            tqdm.write("Taking a subset of the dataset")
-            it_ds = ds.take(args.get("max_num_rows"))
-            tqdm.write("Converting to pandas dataframe")
-            df = pd.DataFrame(it_ds)
-            tqdm.write("Writing to parquet")
-            df = cleanup_df(df)
-            temp_file_path = f"{os.getcwd()}/temp.parquet"
-            df.to_parquet(temp_file_path)
-            temp_file_paths.append(temp_file_path)
+            total_rows_loaded = 0
+            for i, (split, config) in enumerate(
+                list_configs_and_splits(args.get("hf_dataset"))
+            ):
+                tqdm.write(f"Split: {split}, Config: {config}")
+                ds = load_dataset(
+                    args.get("hf_dataset"), name=config, split=split, streaming=True
+                )
+                tqdm.write("Taking a subset of the dataset")
+                it_ds = ds.take(args.get("max_num_rows") - total_rows_loaded)
+                tqdm.write("Converting to pandas dataframe")
+                df = pd.DataFrame(it_ds)
+                tqdm.write("Writing to parquet")
+                df = cleanup_df(df)
+                if id_column not in df.columns:
+                    # remove all rows
+                    tqdm.write(
+                        (
+                            f"ID column '{id_column}' not found in parquet file '{data_path}'."
+                            f" Skipping split '{split}', config '{config}'."
+                        )
+                    )
+                    continue
+                total_rows_loaded += len(df)
+                temp_file_path = f"{os.getcwd()}/temp_{args['hash_value']}_{i}.parquet"
+                df.to_parquet(temp_file_path)
+                temp_file_paths.append(temp_file_path)
+                if total_rows_loaded >= args.get("max_num_rows"):
+                    break
             tqdm.write("Writing complete")
-            return [temp_file_path]
+            return temp_file_paths
         from huggingface_hub import HfFileSystem
 
         fs = HfFileSystem()
@@ -232,6 +275,7 @@ def get_parquet_files(data_path, args, temp_file_paths=[]):
         )
         return parquet_files
 
+
 def cleanup_df(df):
     for col in df.columns:
         if df[col].dtype == "object":
@@ -239,12 +283,12 @@ def cleanup_df(df):
             # if isinstance(first_el, bytes):
             #     df[col] = df[col].apply(lambda x: x.decode("utf-8"))
             if isinstance(first_el, Image.Image):
-                        # delete the image column
+                # delete the image column
                 df = df.drop(columns=[col])
                 tqdm.write(
-                            f"Warning: Image column '{col}' detected. Image columns are not supported in parquet files. The column has been removed."
-                        )
-                
+                    f"Warning: Image column '{col}' detected. Image columns are not supported in parquet files. The column has been removed."
+                )
+
     return df
 
 
@@ -291,7 +335,7 @@ def get_qdrant_id_from_id(idx):
         return str(UUID(idx))
 
 
-def read_parquet_progress(file_path, **kwargs):
+def read_parquet_progress(file_path, id_column, **kwargs):
     if file_path.startswith("hf://"):
         from huggingface_hub import HfFileSystem
         from huggingface_hub import hf_hub_download
@@ -303,7 +347,28 @@ def read_parquet_progress(file_path, **kwargs):
             filename=resolved_path.path_in_repo,
             repo_type=resolved_path.repo_type,
         )
-        df = pd.read_parquet(cache_path, **kwargs)
+        file_path_to_be_read = cache_path
     else:
-        df = pd.read_parquet(file_path, **kwargs)
+        file_path_to_be_read = file_path
+    # read schema of the parquet file to check if columns are present
+    from pyarrow import parquet as pq
+
+    schema = pq.read_schema(file_path_to_be_read)
+    # list columns
+    columns = schema.names
+    # if kwargs has columns, check if all columns are present
+    cols = set()
+    cols.add(id_column)
+    return_empty = False
+    if "columns" in kwargs:
+        for col in kwargs["columns"]:
+            cols.add(col)
+            if col not in columns:
+                tqdm.write(
+                    f"Column '{col}' not found in parquet file '{file_path_to_be_read}'. Returning empty DataFrame."
+                )
+                return_empty = True
+    if return_empty:
+        return pd.DataFrame(columns=list(cols))
+    df = pd.read_parquet(file_path_to_be_read, **kwargs)
     return df

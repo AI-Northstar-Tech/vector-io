@@ -901,7 +901,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
                 total_ids = []
                 for file in tqdm(parquet_files, desc="Iterating over parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
-                    df = read_parquet_progress(file_path)
+                    df = read_parquet_progress(file_path, self.id_column)
                     df[ID_COLUMN] = df[ID_COLUMN].apply(lambda x: str(x))
 
                     insert_datapoints_payload = []

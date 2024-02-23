@@ -23,7 +23,7 @@ def get_ids_from_parquet(directory):
                 # read only the id column
                 try:
                     # Read only the 'id' column from the parquet file
-                    df = read_parquet_progress(path, columns=[ID_COLUMN])
+                    df = read_parquet_progress(path, ID_COLUMN, columns=[ID_COLUMN])
                     ids.update(df[ID_COLUMN].tolist())
                 except Exception as e:
                     print(f"Error reading {file}: {e}")
