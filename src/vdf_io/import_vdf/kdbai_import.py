@@ -9,7 +9,6 @@ from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.util import (
-    read_parquet_progress,
     set_arg_from_input,
     set_arg_from_password,
     standardize_metric_reverse,

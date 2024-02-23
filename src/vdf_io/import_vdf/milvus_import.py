@@ -42,7 +42,7 @@ class ImportMilvus(ImportVDB):
             args,
             "token",
             "Enter your Milvus/Zilliz token (hit enter to skip): ",
-            "ZILLIZ_CLOUD_TOKEN"
+            "ZILLIZ_CLOUD_TOKEN",
         )
         milvus_import = ImportMilvus(args)
         milvus_import.upsert_data()
