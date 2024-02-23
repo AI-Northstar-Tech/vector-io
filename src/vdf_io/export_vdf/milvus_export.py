@@ -53,8 +53,8 @@ class ExportMilvus(ExportVDB):
         set_arg_from_password(
             args,
             "token",
-            "Enter your Milvus Token (hit return to skip): ",
-            "Milvus Token",
+            "Enter your Milvus/Zilliz Token (hit return to skip): ",
+            "ZILLIZ_CLOUD_TOKEN",
         )
         milvus_export = ExportMilvus(args)
         milvus_export.get_data()

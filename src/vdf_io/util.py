@@ -240,7 +240,13 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
                 df = cleanup_df(df)
                 if id_column not in df.columns:
                     # remove all rows
-                    df = df.iloc[0:0]
+                    tqdm.write(
+                        (
+                            f"ID column '{id_column}' not found in parquet file '{data_path}'."
+                            f" Skipping split '{split}', config '{config}'."
+                        )
+                    )
+                    continue
                 total_rows_loaded += len(df)
                 temp_file_path = f"{os.getcwd()}/temp_{args['hash_value']}_{i}.parquet"
                 df.to_parquet(temp_file_path)
@@ -347,9 +353,9 @@ def read_parquet_progress(file_path, id_column, **kwargs):
     # read schema of the parquet file to check if columns are present
     from pyarrow import parquet as pq
 
-    parquet_file = pq.read_table(file_path_to_be_read)
+    schema = pq.read_schema(file_path_to_be_read)
     # list columns
-    columns = parquet_file.column_names
+    columns = schema.names
     # if kwargs has columns, check if all columns are present
     cols = set()
     cols.add(id_column)

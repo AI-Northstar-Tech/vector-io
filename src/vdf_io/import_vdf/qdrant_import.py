@@ -196,7 +196,7 @@ class ImportQdrant(ImportVDB):
                 )
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
-                    df = read_parquet_progress(file_path, self.id_column)
+                    df = self.read_parquet_progress(file_path)
                     self.update_vectors(vectors, vector_column_name, df)
                     self.update_metadata(metadata, vector_column_names, df)
                     self.make_metadata_qdrant_compliant(metadata)

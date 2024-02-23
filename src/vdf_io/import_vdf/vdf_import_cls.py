@@ -162,8 +162,8 @@ class ImportVDB(abc.ABC):
         dims = -1
         for file in tqdm(parquet_files, desc="Iterating parquet files"):
             file_path = self.get_file_path(final_data_path, file)
-            df = read_parquet_progress(
-                file_path, self.id_column, columns=[vector_column_name]
+            df = self.read_parquet_progress(
+                file_path, columns=[vector_column_name]
             )
             i = 0
             while i < len(df[vector_column_name]):
@@ -208,7 +208,7 @@ class ImportVDB(abc.ABC):
                     for key, value in row.items()
                     if key not in [self.id_column] + vector_column_names
                 }
-                for _, row in df.iterrows()
+                for _, row in df.iterrows() if self.id_column in row
             }
         )
 
@@ -220,6 +220,9 @@ class ImportVDB(abc.ABC):
                 if self.id_column in row
             }
         )
+        
+    def read_parquet_progress(self, file_path, **kwargs):
+        return read_parquet_progress(file_path, self.id_column, **kwargs)
 
     # destructor
     def cleanup(self):

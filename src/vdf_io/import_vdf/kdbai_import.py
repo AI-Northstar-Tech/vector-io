@@ -112,7 +112,7 @@ class ImportKDBAI(ImportVDB):
                     )
 
                     if self.abnormal_vector_format:
-                        pandas_table = read_parquet_progress(parquet_file_path)
+                        pandas_table = self.read_parquet_progress(parquet_file_path)
                         pandas_table[vector_column_name] = pandas_table[
                             vector_column_name
                         ].apply(lambda x: self.extract_vector(x))

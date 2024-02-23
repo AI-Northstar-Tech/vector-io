@@ -186,7 +186,7 @@ class ImportPinecone(ImportVDB):
 
                 for file in tqdm(parquet_files, desc="Loading data from parquet files"):
                     file_path = os.path.join(final_data_path, file)
-                    df = read_parquet_progress(file_path, self.id_column)
+                    df = self.read_parquet_progress(file_path)
 
                     if self.args["subset"] is True:
                         if (
