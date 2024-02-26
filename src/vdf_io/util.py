@@ -10,10 +10,11 @@ from io import StringIO
 import sys
 from tqdm import tqdm
 from PIL import Image
+from halo import Halo
 
 from qdrant_client.http.models import Distance
-from vdf_io.constants import ID_COLUMN
 
+from vdf_io.constants import ID_COLUMN
 from vdf_io.names import DBNames
 
 
@@ -223,7 +224,8 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
         if args.get("max_num_rows", None):
             from datasets import load_dataset
 
-            tqdm.write("Loading a subset of the dataset")
+            spinner1 = Halo(text='Loading a subset of the dataset', spinner='dots')
+            spinner1.start()
             total_rows_loaded = 0
             for i, (split, config) in enumerate(
                 list_configs_and_splits(args.get("hf_dataset"))
@@ -232,11 +234,10 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
                 ds = load_dataset(
                     args.get("hf_dataset"), name=config, split=split, streaming=True
                 )
-                tqdm.write("Taking a subset of the dataset")
-                it_ds = ds.take(args.get("max_num_rows") - total_rows_loaded)
-                tqdm.write("Converting to pandas dataframe")
-                df = pd.DataFrame(it_ds)
-                tqdm.write("Writing to parquet")
+                with Halo(text="Taking a subset of the dataset", spinner="dots"):
+                    it_ds = ds.take(args.get("max_num_rows") - total_rows_loaded)
+                with Halo(text="Converting to pandas dataframe", spinner="dots"):
+                    df = pd.DataFrame(it_ds)
                 df = cleanup_df(df)
                 if id_column not in df.columns:
                     # remove all rows
@@ -249,11 +250,12 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
                     continue
                 total_rows_loaded += len(df)
                 temp_file_path = f"{os.getcwd()}/temp_{args['hash_value']}_{i}.parquet"
-                df.to_parquet(temp_file_path)
+                with Halo(text="Saving to parquet", spinner="dots"):
+                    df.to_parquet(temp_file_path)
                 temp_file_paths.append(temp_file_path)
                 if total_rows_loaded >= args.get("max_num_rows"):
                     break
-            tqdm.write("Writing complete")
+            spinner1.stop()
             return temp_file_paths
         from huggingface_hub import HfFileSystem
 

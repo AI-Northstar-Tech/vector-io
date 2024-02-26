@@ -5,8 +5,10 @@ from tqdm import tqdm
 from grpc import RpcError
 from typing import Any, Dict, List
 from PIL import Image
+from tqdm import tqdm
 
-from halo import Halo
+
+import concurrent.futures
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
@@ -167,8 +169,12 @@ class ImportQdrant(ImportVDB):
 
                         def get_nested_config(config, keys, default=None):
                             """Helper function to get nested dictionary values."""
+                            if not config:
+                                return default
                             for key in keys:
-                                config = config.get(key, {})
+                                if not config:
+                                    return default
+                                config = config.get(key, {}) or {}
                             return config or default
 
                         index_config = namespace_meta.get("index_config", {})
@@ -205,7 +211,6 @@ class ImportQdrant(ImportVDB):
                             get_nested_config(index_config, [config], None)
                             for config in configs
                         ]
-
                         distance = namespace_meta.get("metric", Distance.COSINE)
 
                         self.client.create_collection(
@@ -263,20 +268,36 @@ class ImportQdrant(ImportVDB):
                         ]
                         tqdm.write("Truncating data to limit to max rows")
                     try:
-                        with Halo(
-                            text=f"Bulk uploading data from {file_path}", spinner="dots"
-                        ):
-                            self.client.upload_points(
-                                collection_name=new_collection_name,
-                                points=points,
-                                batch_size=self.args.get("batch_size", 64) or 64,
-                                parallel=self.args.get("parallel", 5),
-                                max_retries=self.args.get("max_retries", 3),
-                                shard_key_selector=self.args.get(
-                                    "shard_key_selector", None
-                                ),
-                                wait=True,
-                            )
+                        BATCH_SIZE = self.args.get("batch_size", 64) or 64
+                        batches = list(divide_into_batches(points, BATCH_SIZE))
+                        total_points = len(points)
+
+                        num_parallel_threads = self.args.get("parallel", 5) or 5
+                        with concurrent.futures.ThreadPoolExecutor(
+                            max_workers=num_parallel_threads
+                        ) as executor, tqdm(
+                            total=total_points, desc=f"Uploading points in batches of {BATCH_SIZE} in {num_parallel_threads} threads"
+                        ) as pbar:
+                            # Create a future to batch mapping to update progress bar correctly after each batch completion
+                            future_to_batch = {
+                                executor.submit(
+                                    self.upsert_batch, batch, new_collection_name
+                                ): batch
+                                for batch in batches
+                            }
+
+                            for future in concurrent.futures.as_completed(
+                                future_to_batch
+                            ):
+                                batch = future_to_batch[future]
+                                try:
+                                    # Attempt to get the result, which will re-raise any exceptions
+                                    future.result()
+                                    # Update the progress bar by the size of the successfully processed batch
+                                    pbar.update(len(batch))
+                                except Exception as e:
+                                    tqdm.write(f"Batch upsert failed with error: {e}")
+                                    # Optionally, you might want to handle failed batches differently
                         total_imported_count += len(points)
                         if total_imported_count >= self.args["max_num_rows"]:
                             max_hit = True
@@ -378,3 +399,27 @@ class ImportQdrant(ImportVDB):
                 if parsed_json_rec:
                     parsed_json = True
         return deleted_images, parsed_json, zeroed_nan
+
+    def upsert_batch(self, batch, new_collection_name):
+        RETRIES = self.args.get("max_retries", 3)
+        for attempt in range(RETRIES):
+            try:
+                self.client.upsert(
+                    collection_name=new_collection_name,
+                    points=batch,
+                    shard_key_selector=self.args.get("shard_key_selector", None),
+                    wait=True,
+                )
+                break  # Break the loop on success
+            except Exception:
+                if attempt == RETRIES - 1:
+                    raise  # Re-raise the last exception if all retries fail
+                else:
+                    continue
+        return len(batch)
+
+
+# Function to divide your points into batches
+def divide_into_batches(points, batch_size):
+    for i in range(0, len(points), batch_size):
+        yield points[i : i + batch_size]
