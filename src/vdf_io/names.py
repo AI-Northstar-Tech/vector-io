@@ -4,3 +4,4 @@ class DBNames:
     MILVUS = "milvus"
     VERTEXAI = "vertexai_vectorsearch"
     KDBAI = "kdbai"
+    LLAMA_INDEX = "llamaindex"

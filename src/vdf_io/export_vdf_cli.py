@@ -15,6 +15,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPropagator
 
 import vdf_io
+from vdf_io.export_vdf.llamaindex_export import ExportLlamaIndex
 from vdf_io.export_vdf.milvus_export import ExportMilvus
 from vdf_io.export_vdf.pinecone_export import ExportPinecone
 from vdf_io.export_vdf.qdrant_export import ExportQdrant
@@ -79,6 +80,7 @@ slug_to_export_func = {
     DBNames.KDBAI: ExportKDBAI.export_vdb,
     DBNames.MILVUS: ExportMilvus.export_vdb,
     DBNames.VERTEXAI: ExportVertexAIVectorSearch.export_vdb,
+    DBNames.LLAMA_INDEX: ExportLlamaIndex.export_vdb,
 }
 
 slug_to_parser_func = {
@@ -87,6 +89,7 @@ slug_to_parser_func = {
     DBNames.KDBAI: ExportKDBAI.make_parser,
     DBNames.MILVUS: ExportMilvus.make_parser,
     DBNames.VERTEXAI: ExportVertexAIVectorSearch.make_parser,
+    DBNames.LLAMA_INDEX: ExportLlamaIndex.make_parser,
 }
 
 
