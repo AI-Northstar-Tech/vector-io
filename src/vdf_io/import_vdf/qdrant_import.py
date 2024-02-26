@@ -5,7 +5,6 @@ from tqdm import tqdm
 from grpc import RpcError
 from typing import Any, Dict, List
 from PIL import Image
-from tqdm import tqdm
 
 
 import concurrent.futures
@@ -276,7 +275,8 @@ class ImportQdrant(ImportVDB):
                         with concurrent.futures.ThreadPoolExecutor(
                             max_workers=num_parallel_threads
                         ) as executor, tqdm(
-                            total=total_points, desc=f"Uploading points in batches of {BATCH_SIZE} in {num_parallel_threads} threads"
+                            total=total_points,
+                            desc=f"Uploading points in batches of {BATCH_SIZE} in {num_parallel_threads} threads",
                         ) as pbar:
                             # Create a future to batch mapping to update progress bar correctly after each batch completion
                             future_to_batch = {

@@ -1,7 +1,6 @@
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.names import DBNames
 
-from llama_index.core import VectorStoreIndex
 from llama_index.core import StorageContext, load_index_from_storage
 
 from vdf_io.util import set_arg_from_input
