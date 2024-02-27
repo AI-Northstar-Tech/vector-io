@@ -1,8 +1,8 @@
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.names import DBNames
 
-from llama_index.core import VectorStoreIndex
 from llama_index.core import StorageContext, load_index_from_storage
+from llama_index.core.vector_stores import VectorStoreQuery
 
 from vdf_io.util import set_arg_from_input
 
@@ -48,6 +48,13 @@ class ExportLlamaIndex(ExportVDB):
         # load index
         index = load_index_from_storage(storage_context)
         self.index = index
+        from rich import print
 
-        print(self.index.__dict__)
+        docs = self.index._storage_context.docstore.docs
+        # print(docs)
+        print(
+            self.index._storage_context.vector_store.query(
+                query=VectorStoreQuery(node_ids=docs.keys())
+            )
+        )
         return self
