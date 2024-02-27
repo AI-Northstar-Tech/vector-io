@@ -18,3 +18,5 @@ backoff
 kdbai-client
 sentry-sdk[opentelemetry]
 halo
+llama-index
+llama-index-llms-openrouter

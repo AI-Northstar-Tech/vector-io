@@ -224,7 +224,7 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
         if args.get("max_num_rows", None):
             from datasets import load_dataset
 
-            spinner1 = Halo(text='Loading a subset of the dataset', spinner='dots')
+            spinner1 = Halo(text="Loading a subset of the dataset", spinner="dots")
             spinner1.start()
             total_rows_loaded = 0
             for i, (split, config) in enumerate(
