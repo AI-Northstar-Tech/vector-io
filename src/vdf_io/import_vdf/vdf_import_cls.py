@@ -206,7 +206,7 @@ class ImportVDB(abc.ABC):
                 row[self.id_column]: {
                     key: value
                     for key, value in row.items()
-                    if key not in [self.id_column] + vector_column_names
+                    if key not in vector_column_names
                 }
                 for _, row in df.iterrows()
                 if self.id_column in row

@@ -224,8 +224,6 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
         if args.get("max_num_rows", None):
             from datasets import load_dataset
 
-            spinner1 = Halo(text='Loading a subset of the dataset', spinner='dots')
-            spinner1.start()
             total_rows_loaded = 0
             for i, (split, config) in enumerate(
                 list_configs_and_splits(args.get("hf_dataset"))
@@ -255,7 +253,6 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
                 temp_file_paths.append(temp_file_path)
                 if total_rows_loaded >= args.get("max_num_rows"):
                     break
-            spinner1.stop()
             return temp_file_paths
         from huggingface_hub import HfFileSystem
 

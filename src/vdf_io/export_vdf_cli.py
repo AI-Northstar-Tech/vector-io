@@ -8,24 +8,32 @@ import traceback
 from dotenv import load_dotenv
 import warnings
 
-import sentry_sdk
-from opentelemetry import trace
-from opentelemetry.propagate import set_global_textmap
-from opentelemetry.sdk.trace import TracerProvider
-from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPropagator
-
-import vdf_io
-from vdf_io.export_vdf.milvus_export import ExportMilvus
-from vdf_io.export_vdf.pinecone_export import ExportPinecone
-from vdf_io.export_vdf.qdrant_export import ExportQdrant
-from vdf_io.export_vdf.kdbai_export import ExportKDBAI
-from vdf_io.export_vdf.vertexai_vector_search_export import ExportVertexAIVectorSearch
-from vdf_io.names import DBNames
-from vdf_io.scripts.check_for_updates import check_for_updates
-from vdf_io.scripts.push_to_hub_vdf import push_to_hub
-
 # Suppress specific warnings
 warnings.simplefilter("ignore", ResourceWarning)
+warnings.filterwarnings("ignore", module="numpy")
+
+
+import sentry_sdk  # noqa: E402
+from opentelemetry import trace  # noqa: E402
+from opentelemetry.propagate import set_global_textmap  # noqa: E402
+from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
+from sentry_sdk.integrations.opentelemetry import (  # noqa: E402
+    SentrySpanProcessor,  # noqa: E402
+    SentryPropagator,  # noqa: E402
+)  # noqa: E402
+
+import vdf_io  # noqa: E402
+from vdf_io.export_vdf.milvus_export import ExportMilvus  # noqa: E402
+from vdf_io.export_vdf.pinecone_export import ExportPinecone  # noqa: E402
+from vdf_io.export_vdf.qdrant_export import ExportQdrant  # noqa: E402
+from vdf_io.export_vdf.kdbai_export import ExportKDBAI  # noqa: E402
+from vdf_io.export_vdf.vertexai_vector_search_export import (  # noqa: E402
+    ExportVertexAIVectorSearch,  # noqa: E402
+)  # noqa: E402
+from vdf_io.names import DBNames  # noqa: E402
+from vdf_io.scripts.check_for_updates import check_for_updates  # noqa: E402
+from vdf_io.scripts.push_to_hub_vdf import push_to_hub  # noqa: E402
+
 
 load_dotenv()
 
