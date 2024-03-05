@@ -85,7 +85,7 @@ class ImportVDB(abc.ABC):
                             )
                         ]
                     },
-                ).dict()
+                ).model_dump()
             print(json.dumps(self.vdf_meta, indent=4))
         self.id_column = self.vdf_meta.get("id_column", ID_COLUMN) or ID_COLUMN
         if "indexes" not in self.vdf_meta:

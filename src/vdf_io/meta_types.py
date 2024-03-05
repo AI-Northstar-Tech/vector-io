@@ -8,10 +8,10 @@ class NamespaceMeta(BaseModel):
     total_vector_count: int
     exported_vector_count: int
     dimensions: int
-    model_name: str
+    model_name: str | None = None
     vector_columns: List[str] = ["vector"]
     data_path: str
-    metric: str
+    metric: str | None = None
     index_config: Optional[Dict[Any, Any]] = None
     model_config = ConfigDict(protected_namespaces=())
 
