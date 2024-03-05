@@ -162,6 +162,9 @@ class ImportQdrant(ImportVDB):
                     if namespace_meta["namespace"]
                     else ""
                 )
+                new_collection_name = self.create_new_name(
+                    new_collection_name, collections
+                )
                 if new_collection_name not in collections:
                     # create index
                     try:
@@ -210,7 +213,7 @@ class ImportQdrant(ImportVDB):
                             get_nested_config(index_config, [config], None)
                             for config in configs
                         ]
-                        distance = namespace_meta.get("metric", Distance.COSINE)
+                        distance = namespace_meta.get("metric", Distance.COSINE) or Distance.COSINE
 
                         self.client.create_collection(
                             collection_name=new_collection_name,

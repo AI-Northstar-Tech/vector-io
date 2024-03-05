@@ -225,6 +225,13 @@ class ImportVDB(abc.ABC):
     def read_parquet_progress(self, file_path, **kwargs):
         return read_parquet_progress(file_path, self.id_column, **kwargs)
 
+    def create_new_name(self, index_name, indexes):
+        suffix = 2
+        while index_name in indexes and self.args["create_new"] is True:
+            index_name = index_name + f"-{suffix}"
+            suffix += 1
+        return index_name
+
     # destructor
     def cleanup(self):
         for temp_file_path in self.temp_file_paths:

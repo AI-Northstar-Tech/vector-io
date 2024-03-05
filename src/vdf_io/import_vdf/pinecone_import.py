@@ -119,10 +119,7 @@ class ImportPinecone(ImportVDB):
             # list indexes
             indexes = self.pc.list_indexes().names()
             # check if index exists
-            suffix = 2
-            while index_name in indexes and self.args["create_new"] is True:
-                index_name = index_name + f"-{suffix}"
-                suffix += 1
+            index_name = self.create_new_name(index_name, indexes)
             compliant_index_name = self.compliant_name(index_name)
             if compliant_index_name not in indexes:
                 # create index
@@ -276,3 +273,4 @@ class ImportPinecone(ImportVDB):
             f"Data import completed successfully. Imported {total_imported_count} vectors"
         )
         self.args["imported_count"] = total_imported_count
+
