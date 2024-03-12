@@ -1,4 +1,4 @@
-""" 
+"""
 Import data to vertex ai vector search index
 """
 

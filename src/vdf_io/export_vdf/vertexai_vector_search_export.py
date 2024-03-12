@@ -1,4 +1,4 @@
-""" 
+"""
 Export data from vertex ai vector search index
 """
 
