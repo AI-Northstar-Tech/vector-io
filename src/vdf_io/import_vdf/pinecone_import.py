@@ -273,4 +273,3 @@ class ImportPinecone(ImportVDB):
             f"Data import completed successfully. Imported {total_imported_count} vectors"
         )
         self.args["imported_count"] = total_imported_count
-
