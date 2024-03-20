@@ -33,3 +33,4 @@ src/vdf_io/notebooks/data/
 **.parquet
 **.jpg
 src/vdf_io/notebooks/~
+src/vdf_io/notebooks/parquet_inspect.ipynb
