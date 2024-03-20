@@ -1,5 +1,4 @@
 import argparse
-import datetime
 import json
 from typing import Dict, List
 from qdrant_client import QdrantClient
@@ -9,8 +8,8 @@ from dotenv import load_dotenv
 
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.names import DBNames
-from vdf_io.meta_types import NamespaceMeta, VDFMeta
-from vdf_io.util import set_arg_from_input, set_arg_from_password, standardize_metric
+from vdf_io.meta_types import NamespaceMeta
+from vdf_io.util import set_arg_from_input, set_arg_from_password
 
 load_dotenv()
 

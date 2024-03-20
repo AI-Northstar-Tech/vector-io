@@ -2,7 +2,6 @@ import os
 
 from tqdm import tqdm
 import weaviate
-import weaviate.classes.query as wvq
 
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.names import DBNames
@@ -83,7 +82,7 @@ class ExportWeaviate(ExportVDB):
             collection = self.client.collections.get(class_name)
             response = collection.aggregate.over_all(total_count=True)
             print(f"{response.total_count=}")
-            
+
             # objects = self.client.query.get(
             #     wvq.Objects(wvq.Class(class_name)).with_limit(1000)
             # )
