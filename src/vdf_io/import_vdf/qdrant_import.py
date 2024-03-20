@@ -79,7 +79,7 @@ class ImportQdrant(ImportVDB):
     @classmethod
     def make_parser(cls, subparsers):
         parser_qdrant = subparsers.add_parser(
-            DBNames.QDRANT, help="Import data to Qdrant"
+            cls.DB_NAME_SLUG, help="Import data to Qdrant"
         )
         parser_qdrant.add_argument(
             "-u",
@@ -213,7 +213,10 @@ class ImportQdrant(ImportVDB):
                             get_nested_config(index_config, [config], None)
                             for config in configs
                         ]
-                        distance = namespace_meta.get("metric", Distance.COSINE) or Distance.COSINE
+                        distance = (
+                            namespace_meta.get("metric", Distance.COSINE)
+                            or Distance.COSINE
+                        )
 
                         self.client.create_collection(
                             collection_name=new_collection_name,

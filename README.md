@@ -14,7 +14,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 ## Supported Vector Databases
 
 <details open>
-  <summary>Supported</summary>
+  <summary>Fully Supported</summary>
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
@@ -30,11 +30,14 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 <details open>
 
-  <summary>Coming Soon</summary>
+  <summary>Partial</summary>
   
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| MongoDB Atlas                  | 🔜     | 🔜     |
+| LanceDB                        | ❌     | ✅     |
+| Chroma                         | ❌     | ✅     |
+| txtai                          | ❌     | ✅     |
+| Vespa                          | ❌     | ✅     |
 
 </details>
 <!-- line break -->
@@ -46,14 +49,6 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| Azure AI Search                | ⏳     | ⏳     |
-| Rockset                        | ⏳     | ⏳     |
-| Vespa                          | ⏳     | ⏳     |
-| Weaviate                       | ⏳     | ⏳     |
-| Epsilla                        | ⏳     | ⏳     |
-| txtai                          | ⏳     | ⏳     |
-| Redis Search                   | ⏳     | ⏳     |
-| OpenSearch                     | ⏳     | ⏳     |
 </details>
 
 -----
@@ -63,16 +58,21 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
+| Azure AI Search                | ❌     | ❌     |
+| Rockset                        | ❌     | ❌     |
+| MongoDB Atlas                  | ❌     | ❌     |
+| Weaviate                       | ❌     | ❌     |
+| Epsilla                        | ❌     | ❌     |
+| Redis Search                   | ❌     | ❌     |
+| OpenSearch                     | ❌     | ❌     |
 | DataStax Astra DB              | ❌     | ❌     |
 | Marqo                          | ❌     | ❌     |
 | Activeloop Deep Lake           | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
 | ApertureDB                     | ❌     | ❌     |
-| Chroma                         | ❌     | ❌     |
 | ClickHouse                     | ❌     | ❌     |
 | CrateDB                        | ❌     | ❌     |
 | Elasticsearch                  | ❌     | ❌     |
-| LanceDB                        | ❌     | ❌     |
 | Meilisearch                    | ❌     | ❌     |
 | MyScale                        | ❌     | ❌     |
 | Neo4j                          | ❌     | ❌     |

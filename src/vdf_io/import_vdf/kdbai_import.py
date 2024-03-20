@@ -47,7 +47,7 @@ class ImportKDBAI(ImportVDB):
     @classmethod
     def make_parser(cls, subparsers):
         parser_kdbai = subparsers.add_parser(
-            DBNames.KDBAI, help="Import data to KDB.AI"
+            cls.DB_NAME_SLUG, help="Import data to KDB.AI"
         )
         parser_kdbai.add_argument(
             "-u", "--url", type=str, help="KDB.AI Cloud instance Endpoint url"

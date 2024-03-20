@@ -22,7 +22,9 @@ class ExportQdrant(ExportVDB):
 
     @classmethod
     def make_parser(cls, subparsers):
-        parser_qdrant = subparsers.add_parser("qdrant", help="Export data from Qdrant")
+        parser_qdrant = subparsers.add_parser(
+            cls.DB_NAME_SLUG, help="Export data from Qdrant"
+        )
         parser_qdrant.add_argument(
             "-u", "--url", type=str, help="Location of Qdrant instance"
         )
@@ -80,7 +82,7 @@ class ExportQdrant(ExportVDB):
             prefer_grpc=self.args.get("prefer_grpc", True),
         )
 
-    def get_all_collection_names(self):
+    def get_index_names(self) -> List[str]:
         """
         Get all collection names from Qdrant
         """
@@ -90,7 +92,7 @@ class ExportQdrant(ExportVDB):
 
     def get_data(self):
         if "collections" not in self.args or self.args["collections"] is None:
-            collection_names = self.get_all_collection_names()
+            collection_names = self.get_index_names()
         else:
             collection_names = self.args["collections"].split(",")
 
@@ -101,15 +103,8 @@ class ExportQdrant(ExportVDB):
 
         # Create and save internal metadata JSON
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
-        internal_metadata = VDFMeta(
-            version=self.args["library_version"],
-            file_structure=self.file_structure,
-            author=os.environ.get("USER"),
-            exported_from=self.DB_NAME_SLUG,
-            indexes=index_metas,
-            exported_at=datetime.datetime.now().astimezone().isoformat(),
-        )
-        meta_text = json.dumps(internal_metadata.dict(), indent=4)
+        internal_metadata = self.get_basic_vdf_meta(index_metas)
+        meta_text = json.dumps(internal_metadata.model_dump(), indent=4)
         tqdm.write(meta_text)
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
             json_file.write(meta_text)
@@ -163,22 +158,18 @@ class ExportQdrant(ExportVDB):
             )
             pbar.update(len(records))
 
-        namespace_meta = NamespaceMeta(
-            index_name=collection_name,
-            namespace="",
-            total_vector_count=total,
-            exported_vector_count=num_vectors_exported,
-            metric=standardize_metric(
-                self.client.get_collection(
-                    collection_name
-                ).config.params.vectors.distance,
-                self.DB_NAME_SLUG,
-            ),
-            dimensions=dim,
-            model_name=self.args["model_name"],
-            vector_columns=["vector"],
-            data_path="/".join(vectors_directory.split("/")[1:]),
-            index_config=self.client.get_collection(collection_name).config.dict(),
+        namespace_meta = self.get_namespace_meta(
+            collection_name,
+            vectors_directory,
+            total,
+            num_vectors_exported,
+            dim,
+            index_config=self.client.get_collection(
+                collection_name
+            ).config.model_dump(),
+            distance=self.client.get_collection(
+                collection_name
+            ).config.params.vectors.distance,
         )
         self.args["exported_count"] += num_vectors_exported
         return [namespace_meta]

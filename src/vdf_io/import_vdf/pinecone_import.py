@@ -80,7 +80,7 @@ class ImportPinecone(ImportVDB):
     @classmethod
     def make_parser(cls, subparsers):
         parser_pinecone = subparsers.add_parser(
-            DBNames.PINECONE, help="Import data to Pinecone"
+            cls.DB_NAME_SLUG, help="Import data to Pinecone"
         )
         parser_pinecone.add_argument(
             "-e", "--environment", type=str, help="Pinecone environment"
@@ -273,4 +273,3 @@ class ImportPinecone(ImportVDB):
             f"Data import completed successfully. Imported {total_imported_count} vectors"
         )
         self.args["imported_count"] = total_imported_count
-

@@ -32,3 +32,4 @@ output.txt
 src/vdf_io/notebooks/data/
 **.parquet
 **.jpg
+src/vdf_io/notebooks/~

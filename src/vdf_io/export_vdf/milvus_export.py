@@ -21,7 +21,7 @@ class ExportMilvus(ExportVDB):
     @classmethod
     def make_parser(cls, subparsers):
         # Milvus
-        parser_milvus = subparsers.add_parser("milvus", help="Export data from Milvus")
+        parser_milvus = subparsers.add_parser(cls.DB_NAME_SLUG, help="Export data from Milvus")
         parser_milvus.add_argument(
             "-u", "--uri", type=str, help="Milvus connection URI"
         )
