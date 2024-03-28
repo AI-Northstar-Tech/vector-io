@@ -4,6 +4,7 @@ from getpass import getpass
 import hashlib
 import json
 import os
+import time
 from uuid import UUID
 import pandas as pd
 from io import StringIO
@@ -234,8 +235,16 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
                 )
                 with Halo(text="Taking a subset of the dataset", spinner="dots"):
                     it_ds = ds.take(args.get("max_num_rows") - total_rows_loaded)
-                with Halo(text="Converting to pandas dataframe", spinner="dots"):
+                start_time = time.time()
+                with Halo(
+                    text="Converting to pandas dataframe (this may take a while)",
+                    spinner="dots",
+                ):
                     df = pd.DataFrame(it_ds)
+                end_time = time.time()
+                tqdm.write(
+                    f"Time taken to convert to pandas dataframe: {end_time - start_time:.2f} seconds"
+                )
                 df = cleanup_df(df)
                 if id_column not in df.columns:
                     # remove all rows

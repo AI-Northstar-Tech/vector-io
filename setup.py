@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="vdf_io",
-    version="0.1.218",
+    version="0.1.221",
     description="This library uses a universal format for vector datasets to easily export and import data from all vector databases.",
     long_description="Check out the README for more information: https://github.com/AI-Northstar-Tech/vector-io/blob/main/README.md",
     license="Apache 2.0",
