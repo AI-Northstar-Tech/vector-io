@@ -287,7 +287,8 @@ def cleanup_df(df):
                 tqdm.write(
                     f"Warning: Image column '{col}' detected. Image columns are not supported in parquet files. The column has been removed."
                 )
-
+    # for float columns, replace inf with nan
+    df = df.replace([float("inf"), float("-inf")], pd.NA)
     return df
 
 
