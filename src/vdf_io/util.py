@@ -77,18 +77,30 @@ def extract_numerical_hash(string_value):
     return int(hashlib.md5(string_value.encode("utf-8")).hexdigest(), 16)
 
 
-def set_arg_from_input(args, arg_name, prompt, type_name=str, default_value=None):
+def set_arg_from_input(
+    args, arg_name, prompt, type_name=str, default_value=None, choices=None
+):
     """
     Set the value of an argument from user input if it is not already present
     """
     if arg_name not in args or (
         args[arg_name] is None and default_value != "DO_NOT_PROMPT"
     ):
-        inp = input(prompt)
-        if inp == "":
-            args[arg_name] = None if default_value is None else type_name(default_value)
-        else:
-            args[arg_name] = type_name(inp)
+        while True:
+            inp = input(
+                prompt + (" " + str(list(choices)) if choices is not None else "")
+            )
+            if inp == "":
+                args[arg_name] = (
+                    None if default_value is None else type_name(default_value)
+                )
+                break
+            elif choices is not None and inp not in choices:
+                print(f"Invalid input. Please choose from {choices}")
+                continue
+            else:
+                args[arg_name] = type_name(inp)
+                break
     return
 
 
@@ -148,6 +160,16 @@ db_metric_to_standard_metric = {
         "SQUARED_L2_DISTANCE": Distance.EUCLID,
         "COSINE_DISTANCE": Distance.COSINE,
         "L1_DISTANCE": Distance.MANHATTAN,
+    },
+    DBNames.LANCEDB: {
+        "L2": Distance.EUCLID,
+        "Cosine": Distance.COSINE,
+        "Dot": Distance.DOT,
+    },
+    DBNames.CHROMA: {
+        "l2": Distance.EUCLID,
+        "cosine": Distance.COSINE,
+        "ip": Distance.DOT,
     },
 }
 

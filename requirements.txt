@@ -19,3 +19,8 @@ kdbai-client
 sentry-sdk[opentelemetry]
 halo
 sentence-transformers
+pyvespa
+lancedb
+chromadb
+txtai
+weaviate-client>=4.0.0

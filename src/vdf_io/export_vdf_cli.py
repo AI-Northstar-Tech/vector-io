@@ -8,10 +8,12 @@ import traceback
 from dotenv import load_dotenv
 import warnings
 
+from vdf_io.export_vdf.weaviate_export import ExportWeaviate
+
 # Suppress specific warnings
 warnings.simplefilter("ignore", ResourceWarning)
 warnings.filterwarnings("ignore", module="numpy")
-
+warnings.simplefilter("ignore", DeprecationWarning)
 
 import sentry_sdk  # noqa: E402
 from opentelemetry import trace  # noqa: E402
@@ -30,6 +32,10 @@ from vdf_io.export_vdf.kdbai_export import ExportKDBAI  # noqa: E402
 from vdf_io.export_vdf.vertexai_vector_search_export import (  # noqa: E402
     ExportVertexAIVectorSearch,  # noqa: E402
 )  # noqa: E402
+from vdf_io.export_vdf.vespa_export import ExportVespa  # noqa: E402
+from vdf_io.export_vdf.lancedb_export import ExportLanceDB  # noqa: E402
+from vdf_io.export_vdf.txtai_export import ExportTxtai  # noqa: E402
+from vdf_io.export_vdf.chroma_export import ExportChroma  # noqa: E402
 from vdf_io.names import DBNames  # noqa: E402
 from vdf_io.scripts.check_for_updates import check_for_updates  # noqa: E402
 from vdf_io.scripts.push_to_hub_vdf import push_to_hub  # noqa: E402
@@ -87,6 +93,11 @@ slug_to_export_func = {
     DBNames.KDBAI: ExportKDBAI.export_vdb,
     DBNames.MILVUS: ExportMilvus.export_vdb,
     DBNames.VERTEXAI: ExportVertexAIVectorSearch.export_vdb,
+    DBNames.VESPA: ExportVespa.export_vdb,
+    DBNames.LANCEDB: ExportLanceDB.export_vdb,
+    DBNames.TXTAI: ExportTxtai.export_vdb,
+    DBNames.CHROMA: ExportChroma.export_vdb,
+    DBNames.WEAVIATE: ExportWeaviate.export_vdb,
 }
 
 slug_to_parser_func = {
@@ -95,6 +106,11 @@ slug_to_parser_func = {
     DBNames.KDBAI: ExportKDBAI.make_parser,
     DBNames.MILVUS: ExportMilvus.make_parser,
     DBNames.VERTEXAI: ExportVertexAIVectorSearch.make_parser,
+    DBNames.VESPA: ExportVespa.make_parser,
+    DBNames.LANCEDB: ExportLanceDB.make_parser,
+    DBNames.TXTAI: ExportTxtai.make_parser,
+    DBNames.CHROMA: ExportChroma.make_parser,
+    DBNames.WEAVIATE: ExportWeaviate.make_parser,
 }
 
 

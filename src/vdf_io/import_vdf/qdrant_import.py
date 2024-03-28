@@ -79,7 +79,7 @@ class ImportQdrant(ImportVDB):
     @classmethod
     def make_parser(cls, subparsers):
         parser_qdrant = subparsers.add_parser(
-            DBNames.QDRANT, help="Import data to Qdrant"
+            cls.DB_NAME_SLUG, help="Import data to Qdrant"
         )
         parser_qdrant.add_argument(
             "-u",

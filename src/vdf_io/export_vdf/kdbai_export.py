@@ -21,7 +21,9 @@ class ExportKDBAI(ExportVDB):
 
     @classmethod
     def make_parser(cls, subparsers):
-        parser_kdbai = subparsers.add_parser("kdbai", help="Export data from KDB.AI")
+        parser_kdbai = subparsers.add_parser(
+            cls.DB_NAME_SLUG, help="Export data from KDB.AI"
+        )
         parser_kdbai.add_argument(
             "-u", "--url", type=str, help="KDB.AI cloud endpoint to connect"
         )
