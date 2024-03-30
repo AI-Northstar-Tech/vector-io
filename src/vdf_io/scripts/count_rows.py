@@ -35,7 +35,11 @@ def main():
     )
 
     args = parser.parse_args()
-    directory = args.directory
+    args = vars(args)
+    if "directory" not in args or args["directory"] is None:
+        args["directory"] = input("Enter the directory containing your parquet files: ")
+        args["directory"] = os.path.join(os.getcwd(), args["directory"])
+    directory = args["directory"]
     cnt = 0
     for filename in os.listdir(directory):
         if filename.endswith(".parquet"):

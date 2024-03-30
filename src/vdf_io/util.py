@@ -278,9 +278,12 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
         else:
             raise Exception(f"Invalid data path '{data_path}'")
     else:
-        parquet_files = sorted(
-            [file for file in os.listdir(data_path) if file.endswith(".parquet")]
-        )
+        # recursively find all parquet files (it should be a file acc to OS)
+        parquet_files = []
+        for root, _, files in os.walk(data_path):
+            for file in files:
+                if file.endswith(".parquet"):
+                    parquet_files.append(os.path.join(root, file))
         return parquet_files
 
 
@@ -358,6 +361,7 @@ def read_parquet_progress(file_path, id_column, **kwargs):
         )
         file_path_to_be_read = cache_path
     else:
+        file_path = os.path.abspath(file_path)
         file_path_to_be_read = file_path
     # read schema of the parquet file to check if columns are present
     from pyarrow import parquet as pq

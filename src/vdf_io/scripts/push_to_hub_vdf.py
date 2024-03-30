@@ -33,7 +33,11 @@ def push_to_hub(export_obj, args):
     # put current working directory + vdf_directory in new variable
     data_path = os.path.join(os.getcwd(), export_obj.vdf_directory)
     export_obj.vdf_directory = os.path.basename(export_obj.vdf_directory)
-    repo_id = f"{os.environ['HF_USERNAME']}/{export_obj.vdf_directory}"
+    if args["name"] is not None:
+        args["name"] = "vdf_" + args["name"]
+    else:
+        args["name"] = export_obj.vdf_directory.replace("/", "_")
+    repo_id = f"{os.environ['HF_USERNAME']}/{args['name']}"
     dataset_url = hf_api.create_repo(
         token=os.environ["HUGGING_FACE_TOKEN"],
         repo_id=repo_id,
@@ -68,7 +72,9 @@ This is a dataset created using [vector-io](https://github.com/ai-northstar-tech
         path_in_repo="README.md",
         repo_type="dataset",
     )
-    print(f"Created a private HuggingFace dataset repo at {dataset_url}")
+    print(
+        f"Created a {'public' if args['public'] else 'private'} dataset at {dataset_url}"
+    )
 
 
 def main():
@@ -80,6 +86,12 @@ def main():
         "--vdf_directory",
         type=str,
         help="Path to the directory containing the vector dataset",
+    )
+    parser.add_argument(
+        "--name",
+        type=str,
+        help="Name of the dataset (default: name of the directory)",
+        default=None,
     )
     parser.add_argument(
         "--public",
