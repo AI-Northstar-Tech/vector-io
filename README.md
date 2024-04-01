@@ -1,11 +1,15 @@
 # Vector IO
 
-[![PyPI version](https://badge.fury.io/py/vdf-io.svg)](https://badge.fury.io/py/vdf-io)
-![Discord](https://img.shields.io/discord/1223707915827937321?style=flat&logo=discord)
+<p>
+  <img alt="PyPI - Version" src="https://img.shields.io/pypi/v/vdf-io">
+  <img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/vdf-io?style=flat&link=https%3A%2F%2Fpypi.org%2Fproject%2Fvdf-io%2F">
+  <a href="https://discord.gg/HGxDZxNt9G"><img alt="Discord" src="https://img.shields.io/discord/1223707915827937321?style=flat&logo=discord&link=https%3A%2F%2Fdiscord.gg%2FHGxDZxNt9G"></a>
+</p>
 
-
+<p align=center>
 <!-- include photo -->
 <img src="assets/vector-io-logo.png" width="200"/>
+</p>
 
 This library uses a universal format for vector datasets to easily export and import data from all vector databases.
 
