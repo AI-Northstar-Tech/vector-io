@@ -1,6 +1,8 @@
 # Vector IO
 
 [![PyPI version](https://badge.fury.io/py/vdf-io.svg)](https://badge.fury.io/py/vdf-io)
+![Discord](https://img.shields.io/discord/1223707915827937321?style=flat&logo=discord)
+
 
 <!-- include photo -->
 <img src="assets/vector-io-logo.png" width="200"/>
