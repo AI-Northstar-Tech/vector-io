@@ -316,7 +316,7 @@ def add_arguments_to_parser(parser):
         default=False,
         action=argparse.BooleanOptionalAction,
     )
-    
+
     parser.add_argument(
         "--input_type",
         type=str,
