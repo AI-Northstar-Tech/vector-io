@@ -111,7 +111,9 @@ class ImportVDB(abc.ABC):
         """
         raise NotImplementedError
 
-    def get_vector_column_name(self, index_name, namespace_meta):
+    def get_vector_column_name(
+        self, index_name, namespace_meta, multi_vector_supported=False
+    ):
         if "vector_columns" not in namespace_meta:
             print(
                 "vector_columns not found in namespace metadata. Using 'vector' as the vector column name."
@@ -121,7 +123,7 @@ class ImportVDB(abc.ABC):
         else:
             vector_column_names = namespace_meta["vector_columns"]
             vector_column_name = vector_column_names[0]
-            if len(vector_column_names) > 1:
+            if len(vector_column_names) > 1 and not multi_vector_supported:
                 tqdm.write(
                     f"Warning: More than one vector column found for index {index_name}."
                     f" Only the first vector column {vector_column_name} will be imported."

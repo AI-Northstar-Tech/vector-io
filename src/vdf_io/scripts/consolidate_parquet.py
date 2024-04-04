@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
 import json
+import pandas as pd
 import pyarrow.parquet as pq
 import os
 import argparse
 from tqdm import tqdm
+from pyarrow import Table
+from collections import defaultdict
 
 
 def get_file_size_in_gb(file_path):
@@ -61,6 +64,7 @@ def main():
     new_file_set = set()
     # add metadata to file_structure
     old_files = os.listdir(directory)
+    all_columns = set()
     for filename in tqdm(old_files):
         if filename.endswith(".parquet"):
             filepath = os.path.join(directory, filename)
@@ -70,12 +74,37 @@ def main():
             ]
             # Read the parquet file as a PyArrow table
             table = pq.read_table(filepath)
+            all_columns.update(table.column_names)
+
+    for filename in tqdm(old_files):
+        if filename.endswith(".parquet"):
+            filepath = os.path.join(directory, filename)
+            # Read the parquet file as a PyArrow table
+            table = pq.read_table(filepath)
+            # Rearrange the table columns according to the union of all columns
+            data = defaultdict(list)
+            for column in all_columns:
+                if column in table.column_names:
+                    data[column] = table[column]
+                else:
+                    data[column] = [None] * len(table)
+            table = Table.from_pandas(pd.DataFrame(data))
 
             if pqwriter is None:
                 output_file = os.path.join(
                     output_directory, f"combined_file_{file_count}.parquet"
                 )
                 pqwriter = pq.ParquetWriter(output_file, table.schema)
+            else:
+                # If the schema of the new table is different, close the current writer and start a new file
+                if table.schema != pqwriter.schema:
+                    new_file_set.add(output_file)
+                    pqwriter.close()
+                    file_count += 1
+                    output_file = os.path.join(
+                        output_directory, f"combined_file_{file_count}.parquet"
+                    )
+                    pqwriter = pq.ParquetWriter(output_file, table.schema)
 
             # Write the table to the output file
             pqwriter.write_table(table)

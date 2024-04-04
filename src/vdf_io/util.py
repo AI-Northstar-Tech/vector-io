@@ -4,6 +4,7 @@ from getpass import getpass
 import hashlib
 import json
 import os
+import time
 from uuid import UUID
 import pandas as pd
 from io import StringIO
@@ -256,8 +257,16 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
                 )
                 with Halo(text="Taking a subset of the dataset", spinner="dots"):
                     it_ds = ds.take(args.get("max_num_rows") - total_rows_loaded)
-                with Halo(text="Converting to pandas dataframe", spinner="dots"):
+                start_time = time.time()
+                with Halo(
+                    text="Converting to pandas dataframe (this may take a while)",
+                    spinner="dots",
+                ):
                     df = pd.DataFrame(it_ds)
+                end_time = time.time()
+                tqdm.write(
+                    f"Time taken to convert to pandas dataframe: {end_time - start_time:.2f} seconds"
+                )
                 df = cleanup_df(df)
                 if id_column not in df.columns:
                     # remove all rows
@@ -291,9 +300,12 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
         else:
             raise Exception(f"Invalid data path '{data_path}'")
     else:
-        parquet_files = sorted(
-            [file for file in os.listdir(data_path) if file.endswith(".parquet")]
-        )
+        # recursively find all parquet files (it should be a file acc to OS)
+        parquet_files = []
+        for root, _, files in os.walk(data_path):
+            for file in files:
+                if file.endswith(".parquet"):
+                    parquet_files.append(os.path.join(root, file))
         return parquet_files
 
 
@@ -309,7 +321,8 @@ def cleanup_df(df):
                 tqdm.write(
                     f"Warning: Image column '{col}' detected. Image columns are not supported in parquet files. The column has been removed."
                 )
-
+    # for float columns, replace inf with nan
+    df = df.replace([float("inf"), float("-inf")], pd.NA)
     return df
 
 
@@ -370,6 +383,7 @@ def read_parquet_progress(file_path, id_column, **kwargs):
         )
         file_path_to_be_read = cache_path
     else:
+        file_path = os.path.abspath(file_path)
         file_path_to_be_read = file_path
     # read schema of the parquet file to check if columns are present
     from pyarrow import parquet as pq

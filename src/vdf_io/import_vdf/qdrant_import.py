@@ -165,6 +165,9 @@ class ImportQdrant(ImportVDB):
                 new_collection_name = self.create_new_name(
                     new_collection_name, collections
                 )
+                vector_column_names, _ = self.get_vector_column_name(
+                    new_collection_name, namespace_meta, multi_vector_supported=True
+                )
                 if new_collection_name not in collections:
                     # create index
                     try:
@@ -217,12 +220,17 @@ class ImportQdrant(ImportVDB):
                             namespace_meta.get("metric", Distance.COSINE)
                             or Distance.COSINE
                         )
-
+                        vectors_config = {
+                            vector_column_name: VectorParams(
+                                size=dims,
+                                distance=distance,
+                                on_disk=on_disk,
+                            )
+                            for vector_column_name in vector_column_names
+                        }
                         self.client.create_collection(
                             collection_name=new_collection_name,
-                            vectors_config=VectorParams(
-                                size=dims, distance=distance, on_disk=on_disk
-                            ),
+                            vectors_config=vectors_config,
                             sparse_vectors_config=sparse_vectors_config,
                             hnsw_config=hnsw_config,
                             optimizers_config=optimizers_config,
@@ -246,24 +254,31 @@ class ImportQdrant(ImportVDB):
                 # Load the data from the parquet files
                 parquet_files = self.get_parquet_files(final_data_path)
 
-                vectors = {}
+                vectors_all = {}
+                for vec_col in namespace_meta.get("vector_columns", []):
+                    vectors_all[vec_col] = {}
                 metadata = {}
-                vector_column_names, vector_column_name = self.get_vector_column_name(
-                    new_collection_name, namespace_meta
-                )
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
                     df = self.read_parquet_progress(file_path)
-                    self.update_vectors(vectors, vector_column_name, df)
+                    for vec_col in namespace_meta.get("vector_columns", []):
+                        self.update_vectors(vectors_all[vec_col], vec_col, df)
                     self.update_metadata(metadata, vector_column_names, df)
                     self.make_metadata_qdrant_compliant(metadata)
+                    # union of all keys in vectors_all
+                    keys = set().union(
+                        *[vectors_all[vec_col].keys() for vec_col in vectors_all.keys()]
+                    )
                     points = [
                         PointStruct(
                             id=get_qdrant_id_from_id(idx),
-                            vector=vectors[idx],
+                            vector={
+                                vec_col: vectors_all[vec_col].get(idx, [])
+                                for vec_col in vectors_all.keys()
+                            },
                             payload=metadata.get(idx, {}),
                         )
-                        for idx in vectors.keys()
+                        for idx in keys
                     ]
 
                     if total_imported_count + len(points) >= self.args["max_num_rows"]:
@@ -302,7 +317,9 @@ class ImportQdrant(ImportVDB):
                                     # Update the progress bar by the size of the successfully processed batch
                                     pbar.update(len(batch))
                                 except Exception as e:
-                                    tqdm.write(f"Batch upsert failed with error: {e}")
+                                    tqdm.write(
+                                        f"Batch upsert failed with error: {e} "  # {batch}
+                                    )
                                     # Optionally, you might want to handle failed batches differently
                         total_imported_count += len(points)
                         if total_imported_count >= self.args["max_num_rows"]:

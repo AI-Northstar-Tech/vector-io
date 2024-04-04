@@ -36,11 +36,13 @@ sys.excepthook = ultratb.FormattedTB(color_scheme="Linux", call_pdb=False)
 
 load_dotenv()
 
+
 def main():
     start_time = time.time()
     reembed()
     end_time = time.time()
     print(f"Time taken: {end_time - start_time:.2f} seconds")
+
 
 def reembed():
     parser = argparse.ArgumentParser(description="Reembed a vector dataset")
@@ -51,7 +53,7 @@ def reembed():
     args = vars(args)
 
     if args.get("env_file_path"):
-        load_dotenv(args.get("env_file_path"))
+        load_dotenv(os.path.join(os.getcwd(), args.get("env_file_path")))
 
     take_input_from_cli_prompt(args)
 
@@ -59,6 +61,7 @@ def reembed():
     # open VDF_META.json
     handle_new_dataset(args)
     reembed_impl(args, reembed_count)
+
 
 def reembed_impl(args, reembed_count):
     with open(os.path.join(args["dir"], "VDF_META.json"), "r+") as f:
@@ -82,6 +85,8 @@ def reembed_impl(args, reembed_count):
                 )
                 for file in tqdm(parquet_files, desc="Iterating over parquet files"):
                     file_path = os.path.join(final_data_path, file)
+                    if "vector_columns" not in namespace_meta:
+                        namespace_meta["vector_columns"] = []
                     if (
                         new_vector_column in namespace_meta["vector_columns"]
                         and not overwrite_bool
@@ -152,9 +157,9 @@ def reembed_impl(args, reembed_count):
                     namespace_meta["model_map"] = {}
                     for vector_column in namespace_meta["vector_columns"]:
                         namespace_meta["model_map"][vector_column] = {
-                            "model_name": namespace_meta["model_name"],
+                            "model_name": namespace_meta.get("model_name"),
                             "text_column": args["text_column"],
-                            "dimensions": namespace_meta["dimensions"],
+                            "dimensions": namespace_meta.get("dimensions"),
                             "vector_column": vector_column,
                         }
                 namespace_meta["model_map"][new_vector_column] = {
@@ -172,6 +177,7 @@ def reembed_impl(args, reembed_count):
             f"Reembedding complete. Computed {reembed_count} vectors. Updated VDF_META.json"
         )
 
+
 def handle_new_dataset(args):
     if not os.path.exists(os.path.join(args["dir"], "VDF_META.json")):
         # create VDF_META.json
@@ -180,40 +186,45 @@ def handle_new_dataset(args):
             index_name = os.path.basename(args["dir"])
             # find parquet files in dir recursively
             import glob
-            parquet_files = glob.glob(os.path.join(args["dir"], "**", "*.parquet"), recursive=True)
+
+            parquet_files = glob.glob(
+                os.path.join(args["dir"], "**", "*.parquet"), recursive=True
+            )
             if len(parquet_files) == 0:
                 raise Exception("No parquet files found in the specified directory")
             total_vector_count = 0
             for file in parquet_files:
                 # read schema of parquet file using pyarrow and get count of rows
                 import pyarrow.parquet as pq
+
                 table = pq.read_table(file)
                 row_count = table.num_rows
                 total_vector_count += row_count
             vdf_meta = VDFMeta(
-                    version=vdf_io.__version__,
-                    file_structure=[],
-                    author=os.environ.get("USER"),
-                    exported_from="reembed",
-                    exported_at=datetime.datetime.now().astimezone().isoformat(),
-                    id_column=ID_COLUMN,
-                    indexes={
-                        index_name: [
-                            NamespaceMeta(
-                                namespace="",
-                                index_name=index_name,
-                                total_vector_count=total_vector_count,
-                                exported_vector_count=total_vector_count,
-                                dimensions=-1,
-                                model_name=None,
-                                vector_columns=[],
-                                data_path=".",
-                                metric=None,
-                            )
-                        ]
-                    },
-                ).model_dump()
+                version=vdf_io.__version__,
+                file_structure=[],
+                author=os.environ.get("USER"),
+                exported_from="reembed",
+                exported_at=datetime.datetime.now().astimezone().isoformat(),
+                id_column=ID_COLUMN,
+                indexes={
+                    index_name: [
+                        NamespaceMeta(
+                            namespace="",
+                            index_name=index_name,
+                            total_vector_count=total_vector_count,
+                            exported_vector_count=total_vector_count,
+                            dimensions=-1,
+                            model_name=None,
+                            vector_columns=[],
+                            data_path=".",
+                            metric=None,
+                        )
+                    ]
+                },
+            ).model_dump()
             json.dump(vdf_meta, f, indent=4)
+
 
 def take_input_from_cli_prompt(args):
     set_arg_from_input(
@@ -254,6 +265,7 @@ def take_input_from_cli_prompt(args):
         str,
     )
 
+
 def add_arguments_to_parser(parser):
     parser.add_argument(
         "-d",
@@ -289,14 +301,14 @@ def add_arguments_to_parser(parser):
         type=str,
         help="Path to the .env file",
     )
-    
+
     parser.add_argument(
         "--batch_size",
         type=int,
         help="Batch size for reembedding",
         default=100,
     )
-    
+
     parser.add_argument(
         "--overwrite",
         type=bool,
@@ -304,7 +316,17 @@ def add_arguments_to_parser(parser):
         default=False,
         action=argparse.BooleanOptionalAction,
     )
+
+    parser.add_argument(
+        "--input_type",
+        type=str,
+        help="Input type for the model",
+        default=None,
+    )
+
+
 use_sentence_transformers = False
+
 
 @retry(
     wait=wait_random_exponential(multiplier=1, max=10),
@@ -322,6 +344,7 @@ def call_litellm(args, batch_text):
             model=args["new_model_name"],
             input=batch_text,
             dimensions=args.get("dimensions"),
+            input_type=args.get("input_type"),
         )
     except Exception as e:
         if e.message.startswith("Huggingface"):
@@ -338,6 +361,7 @@ model = None
 
 def call_sentence_transformers(args, batch_text):
     from sentence_transformers import SentenceTransformer
+
     # check global model
     global model
     if model is None:

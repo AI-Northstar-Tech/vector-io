@@ -3,6 +3,7 @@
 import argparse
 import os
 import time
+import warnings
 from dotenv import load_dotenv
 import traceback
 
@@ -23,6 +24,8 @@ from vdf_io.import_vdf.kdbai_import import ImportKDBAI
 from vdf_io.import_vdf.milvus_import import ImportMilvus
 from vdf_io.import_vdf.vertexai_vector_search_import import ImportVertexAIVectorSearch
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
+
+warnings.filterwarnings("ignore", module="numpy")
 
 load_dotenv()
 
