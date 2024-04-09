@@ -71,7 +71,7 @@ class ExportWeaviate(ExportVDB):
             input_classes = self.args["classes"].split(",")
             if set(input_classes) - set(self.all_classes):
                 tqdm.write(
-                    f"These classes are not present in the Weaviate instance: {set(input_classes) - set(all_classes)}"
+                    f"These classes are not present in the Weaviate instance: {set(input_classes) - set(self.all_classes)}"
                 )
             return [c for c in self.all_classes if c in input_classes]
 

@@ -40,6 +40,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
   
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
+| DataStax Astra DB              | ❌     | ✅     |
 | LanceDB                        | ❌     | ✅     |
 | Chroma                         | ❌     | ✅     |
 | txtai                          | ❌     | ✅     |
@@ -71,7 +72,6 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Epsilla                        | ❌     | ❌     |
 | Redis Search                   | ❌     | ❌     |
 | OpenSearch                     | ❌     | ❌     |
-| DataStax Astra DB              | ❌     | ❌     |
 | Marqo                          | ❌     | ❌     |
 | Activeloop Deep Lake           | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |

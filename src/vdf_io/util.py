@@ -79,24 +79,39 @@ def extract_numerical_hash(string_value):
 
 
 def set_arg_from_input(
-    args, arg_name, prompt, type_name=str, default_value=None, choices=None
+    args,
+    arg_name,
+    prompt,
+    type_name=str,
+    default_value=None,
+    choices=None,
+    env_var=None,
 ):
     """
     Set the value of an argument from user input if it is not already present
     """
+    if (
+        (default_value is None)
+        and (env_var is not None)
+        and (os.getenv(env_var) is not None)
+    ):
+        default_value = os.getenv(env_var)
     if arg_name not in args or (
         args[arg_name] is None and default_value != "DO_NOT_PROMPT"
     ):
         while True:
             inp = input(
-                prompt + (" " + str(list(choices)) if choices is not None else "")
+                prompt
+                + (" " + str(list(choices)) + ": " if choices is not None else "")
             )
             if inp == "":
                 args[arg_name] = (
                     None if default_value is None else type_name(default_value)
                 )
                 break
-            elif choices is not None and inp not in choices:
+            elif choices is not None and not all(
+                choice in choices for choice in inp.split(",")
+            ):
                 print(f"Invalid input. Please choose from {choices}")
                 continue
             else:
@@ -171,6 +186,22 @@ db_metric_to_standard_metric = {
         "l2": Distance.EUCLID,
         "cosine": Distance.COSINE,
         "ip": Distance.DOT,
+    },
+    DBNames.ASTRADB: {
+        "cosine": Distance.COSINE,
+        "euclidean": Distance.EUCLID,
+        "dot_product": Distance.DOT,
+    },
+    DBNames.WEAVIATE: {
+        "cosine": Distance.COSINE,
+        "l2-squared": Distance.EUCLID,
+        "dot": Distance.DOT,
+        "manhattan": Distance.MANHATTAN,
+    },
+    DBNames.VESPA: {
+        "angular": Distance.COSINE,
+        "euclidean": Distance.EUCLID,
+        "dotproduct": Distance.DOT,
     },
 }
 
