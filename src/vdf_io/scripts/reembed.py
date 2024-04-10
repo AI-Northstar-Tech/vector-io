@@ -71,6 +71,11 @@ def reembed_impl(args, reembed_count):
         ):
             new_vector_column = (
                 f"vec_{args['text_column']}_{args['new_model_name'].replace('/', '_')}"
+                + (
+                    "_" + args["quantize"]
+                    if (args.get("quantize") != "float32")
+                    else ""
+                )
             )
             overwrite_bool = args["overwrite"]
             for namespace_meta in tqdm(index_meta, desc="Iterating over namespaces"):
@@ -306,7 +311,7 @@ def add_arguments_to_parser(parser):
         "--batch_size",
         type=int,
         help="Batch size for reembedding",
-        default=100,
+        default=96,
     )
 
     parser.add_argument(
@@ -322,6 +327,23 @@ def add_arguments_to_parser(parser):
         type=str,
         help="Input type for the model",
         default=None,
+    )
+
+    quantize_options = [
+        "int8",
+        "binary",
+        "float32",
+        "int8",
+        "uint8",
+        "binary",
+        "ubinary",
+    ]
+    parser.add_argument(
+        "--quantize",
+        type=str,
+        choices=quantize_options,
+        help=f"Quantization method ({', '.join(quantize_options)})",
+        default="float32",
     )
 
 
@@ -368,7 +390,7 @@ def call_sentence_transformers(args, batch_text):
         model = SentenceTransformer(
             args["new_model_name"].replace("huggingface/", ""), trust_remote_code=True
         )
-    embeddings = model.encode(batch_text, show_progress_bar=True)
+    embeddings = model.encode(batch_text, precision=args.get("quantize"))
     return EmbeddingResponse(
         data=[
             {"index": i, "embedding": emb.tolist()} for i, emb in enumerate(embeddings)

@@ -30,14 +30,15 @@ def push_to_hub(export_obj, args):
     else:
         os.environ["HF_USERNAME"] = args["HF_USERNAME"]
     hf_api = HfApi(token=os.environ["HUGGING_FACE_TOKEN"])
-    # put current working directory + vdf_directory in new variable
     data_path = os.path.join(os.getcwd(), export_obj.vdf_directory)
-    export_obj.vdf_directory = os.path.basename(export_obj.vdf_directory)
+    export_obj.vdf_directory = os.path.basename(export_obj.vdf_directory.rstrip("/"))
+
     if args["name"] is not None:
         args["name"] = "vdf_" + args["name"]
     else:
         args["name"] = export_obj.vdf_directory.replace("/", "_")
     repo_id = f"{os.environ['HF_USERNAME']}/{args['name']}"
+    print(f"Creating a new dataset at {repo_id}")
     dataset_url = hf_api.create_repo(
         token=os.environ["HUGGING_FACE_TOKEN"],
         repo_id=repo_id,
