@@ -72,7 +72,6 @@ slug_to_import_func = {
     DBNames.KDBAI: ImportKDBAI.import_vdb,
     DBNames.MILVUS: ImportMilvus.import_vdb,
     DBNames.VERTEXAI: ImportVertexAIVectorSearch.import_vdb,
-    
 }
 
 slug_to_parser_func = {

@@ -1,8 +1,6 @@
 from typing import Dict, List
 from dotenv import load_dotenv
-import pandas as pd
 from tqdm import tqdm
-import pyarrow.parquet as pq
 
 from astrapy.db import AstraDB
 
