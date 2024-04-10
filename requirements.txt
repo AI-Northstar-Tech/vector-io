@@ -18,7 +18,7 @@ backoff
 kdbai-client
 sentry-sdk[opentelemetry]
 halo
-sentence-transformers
+sentence-transformers>=2.6.1
 pyvespa
 lancedb
 chromadb
