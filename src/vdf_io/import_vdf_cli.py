@@ -4,7 +4,7 @@ import argparse
 import os
 import time
 import warnings
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 import traceback
 
 import sentry_sdk
@@ -27,7 +27,7 @@ from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
 warnings.filterwarnings("ignore", module="numpy")
 
-load_dotenv()
+load_dotenv(find_dotenv(), override=True)
 
 if os.environ.get("DISABLE_TELEMETRY_VECTORIO", False) != "1":
     sentry_sdk.init(

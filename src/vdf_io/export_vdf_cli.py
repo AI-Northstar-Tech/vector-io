@@ -5,14 +5,10 @@ import os
 import sys
 import time
 import traceback
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 import warnings
 
 
-# Suppress specific warnings
-warnings.simplefilter("ignore", ResourceWarning)
-warnings.filterwarnings("ignore", module="numpy")
-warnings.simplefilter("ignore", DeprecationWarning)
 
 import sentry_sdk  # noqa: E402
 from opentelemetry import trace  # noqa: E402
@@ -41,8 +37,12 @@ from vdf_io.names import DBNames  # noqa: E402
 from vdf_io.scripts.check_for_updates import check_for_updates  # noqa: E402
 from vdf_io.scripts.push_to_hub_vdf import push_to_hub  # noqa: E402
 
+# Suppress specific warnings
+warnings.simplefilter("ignore", ResourceWarning)
+warnings.filterwarnings("ignore", module="numpy")
+warnings.simplefilter("ignore", DeprecationWarning)
 
-load_dotenv()
+load_dotenv(find_dotenv(), override=True)
 
 DEFAULT_MAX_FILE_SIZE = 1024  # in MB
 

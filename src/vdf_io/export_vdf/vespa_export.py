@@ -1,4 +1,8 @@
+from typing import List
 from vespa.application import Vespa
+from vdf_io.marqo_vespa_util import VespaClient
+from rich import print as rprint
+
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input, set_arg_from_password
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
@@ -24,6 +28,7 @@ class ExportVespa(ExportVDB):
         parser_vespa.add_argument(
             "--cert_file", type=str, help="Path to the certificate file"
         )
+        parser_vespa.add_argument("--schemas", type=str, help="")
 
     @classmethod
     def export_vdb(cls, args):
@@ -32,7 +37,8 @@ class ExportVespa(ExportVDB):
             "endpoint",
             "Enter the URL of Vespa instance (default: 'http://localhost:8080'): ",
             str,
-            "http://localhost:8080",
+            None,
+            env_var="VESPA_HOST",
         )
         if not args.get("cert_file"):
             set_arg_from_password(
@@ -47,6 +53,7 @@ class ExportVespa(ExportVDB):
                 "cert_file",
                 "Enter the path to the certificate file: ",
                 str,
+                default_value=None,
             )
         vespa_export = ExportVespa(args)
         vespa_export.get_data()
@@ -56,24 +63,27 @@ class ExportVespa(ExportVDB):
         super().__init__(args)
         self.app = Vespa(
             url=self.args["endpoint"],
-            vespa_cloud_secret_token=self.args.get("vespa_cloud_secret_token"),
-            cert=self.args.get("cert_file"),
+            vespa_cloud_secret_token=(
+                self.args.get("vespa_cloud_secret_token", None) or None
+            ),
+            cert=self.args.get("cert_file", None) or None,
         )
 
+    def get_index_names(self) -> List[str]:
+        raise NotImplementedError()  # not available in pyvespa
+
     def get_data(self):
+        schemas = self.args.get("schemas", []).split(",")
+        for schema in schemas:
+            self.get_data_for_index(schema)
         # Add code here to fetch the data from Vespa
-        with self.app.syncio() as session:
-            print(
-                session.query(
-                    yql="select * from music where true",
-                )
-            )
 
     def get_data_for_index(self, index_name):
-        # Add code here to fetch the data for a specific index
-        for doc in self.app.query(
-            body={
-                "yql": f"select * from sources * where indexname() contains '{index_name}'"
-            }
-        ).hits:
-            print(doc)
+        self.vespa_client = VespaClient(
+            config_url=self.args["endpoint"],
+            query_url=self.args["endpoint"],
+            document_url=self.args["endpoint"],
+            content_cluster_name=index_name,
+        )
+        all_docs = self.vespa_client.get_all_documents(index_name)
+        rprint(all_docs.document_count)
