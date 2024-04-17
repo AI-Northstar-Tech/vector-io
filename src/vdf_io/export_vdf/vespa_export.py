@@ -1,5 +1,4 @@
 from typing import List
-from vespa.application import Vespa
 from vdf_io.marqo_vespa_util import VespaClient
 from rich import print as rprint
 
