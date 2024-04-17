@@ -1,6 +1,8 @@
+import ssl
 from typing import Any, Dict, List, Optional
 import httpx
 from pydantic import BaseModel, Field
+from rich import print as rprint
 
 
 class Document(BaseModel):
@@ -22,6 +24,8 @@ class VespaClient:
         document_url: str,
         query_url: str,
         content_cluster_name: str,
+        cert_file: Optional[str] = None,
+        pk_file: Optional[str] = None,
         pool_size: int = 10,
         feed_pool_size: int = 10,
         get_pool_size: int = 10,
@@ -43,11 +47,16 @@ class VespaClient:
         self.config_url = config_url.strip("/")
         self.document_url = document_url.strip("/")
         self.query_url = query_url.strip("/")
-        self.http_client = httpx.Client(
-            limits=httpx.Limits(
-                max_keepalive_connections=pool_size, max_connections=pool_size
+        try:
+            self.http_client = httpx.Client(
+                limits=httpx.Limits(
+                    max_keepalive_connections=pool_size, max_connections=pool_size
+                ),
+                verify=True if cert_file else False,
+                cert=(cert_file, pk_file) if cert_file else None,
             )
-        )
+        except ssl.SSLError as e:  # noqa: F821
+            raise VespaError("Failed to create http client due to SSL error", cause=e)
         self.content_cluster_name = content_cluster_name
         self.feed_pool_size = feed_pool_size
         self.get_pool_size = get_pool_size
@@ -82,6 +91,7 @@ class VespaClient:
         except httpx.HTTPError as e:
             raise VespaError(e) from e
         self._raise_for_status(resp)
+        rprint(resp.json())
         return VisitDocumentsResponse(**resp.json())
 
     def _raise_for_status(self, resp: httpx.Response) -> None:

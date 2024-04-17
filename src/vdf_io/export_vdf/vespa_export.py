@@ -28,6 +28,9 @@ class ExportVespa(ExportVDB):
         parser_vespa.add_argument(
             "--cert_file", type=str, help="Path to the certificate file"
         )
+        parser_vespa.add_argument(
+            "--pk_file", type=str, help="Path to the private key file"
+        )
         parser_vespa.add_argument("--schemas", type=str, help="")
 
     @classmethod
@@ -47,6 +50,14 @@ class ExportVespa(ExportVDB):
                 "Enter the Vespa cloud secret token (hit return to enter cert file path instead): ",
                 "VESPA_CLOUD_SECRET_TOKEN",
             )
+        if args.get("cert_file"):
+            set_arg_from_input(
+                args,
+                "pk_file",
+                "Enter the path to the private key file: ",
+                str,
+                default_value=None,
+            )
         if not args["vespa_cloud_secret_token"]:
             set_arg_from_input(
                 args,
@@ -61,13 +72,6 @@ class ExportVespa(ExportVDB):
 
     def __init__(self, args):
         super().__init__(args)
-        self.app = Vespa(
-            url=self.args["endpoint"],
-            vespa_cloud_secret_token=(
-                self.args.get("vespa_cloud_secret_token", None) or None
-            ),
-            cert=self.args.get("cert_file", None) or None,
-        )
 
     def get_index_names(self) -> List[str]:
         raise NotImplementedError()  # not available in pyvespa
@@ -84,6 +88,8 @@ class ExportVespa(ExportVDB):
             query_url=self.args["endpoint"],
             document_url=self.args["endpoint"],
             content_cluster_name=index_name,
+            cert_file=self.args.get("cert_file", None),
+            pk_file=self.args.get("pk_file", None),
         )
-        all_docs = self.vespa_client.get_all_documents(index_name)
+        all_docs = self.vespa_client.get_all_documents(index_name, stream=True)
         rprint(all_docs.document_count)
