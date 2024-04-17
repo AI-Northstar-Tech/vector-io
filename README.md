@@ -40,11 +40,8 @@ See the [Contributing](#contributing) section to add support for your favorite v
   
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| DataStax Astra DB              | ❌     | ✅     |
 | LanceDB                        | ❌     | ✅     |
-| Chroma                         | ❌     | ✅     |
-| txtai                          | ❌     | ✅     |
-| Vespa                          | ❌     | ✅     |
+| DataStax Astra DB              | ❌     | ✅     |
 
 </details>
 <!-- line break -->
@@ -56,6 +53,9 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
+| Chroma                         | ❌     | ✅  (pending)   |
+| txtai                          | ❌     | ✅    (pending) |
+| Vespa                          | ❌     | ✅    (pending) |
 </details>
 
 -----

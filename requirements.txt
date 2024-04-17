@@ -25,3 +25,4 @@ chromadb
 txtai
 weaviate-client>=4.0.0
 astrapy
+cassandra-driver

@@ -1,9 +1,12 @@
+import argparse
 import json
 import os
 import sys
 from typing import Dict, List
 from astrapy.db import AstraDB
 from tqdm import tqdm
+from cassandra.cluster import Cluster
+from cassandra.auth import PlainTextAuthProvider
 
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
@@ -46,21 +49,58 @@ class ExportAstraDB(ExportVDB):
                 "dot_product",
             ],
         )
+        parser_astradb.add_argument(
+            "--via_cql",
+            type=bool,
+            action=argparse.BooleanOptionalAction,
+            help="Whether to use CQL to export data",
+            default=False,
+        )
+        parser_astradb.add_argument(
+            "--secure_connect_bundle",
+            type=str,
+            help="Path to the secure connect bundle",
+        )
+        parser_astradb.add_argument(
+            "--keyspace",
+            type=str,
+            help="Keyspace to connect to",
+            default="default_keyspace",
+        )
 
     @classmethod
     def export_vdb(cls, args):
+        set_arg_from_password(
+            args,
+            "astradb_api_key",
+            "Enter the AstraDB API key (default: value of os.environ['ASTRA_DB_APPLICATION_TOKEN']): ",
+            "ASTRA_DB_APPLICATION_TOKEN",
+        )
+        if args.get("via_cql"):
+            set_arg_from_input(
+                args,
+                "secure_connect_bundle",
+                "Enter the path to the secure connect bundle: ",
+                str,
+            )
+            astradb_export = ExportAstraDB(args)
+            astradb_export.all_collections = astradb_export.get_all_index_names_cql()
+            set_arg_from_input(
+                args,
+                "collections",
+                "Enter the name of collections to export (comma-separated, all will be exported by default): ",
+                str,
+                None,
+                choices=astradb_export.all_collections,
+            )
+            astradb_export.get_data_from_cql()
+            return astradb_export
         set_arg_from_input(
             args,
             "endpoint",
             "Enter the URL of AstraDB instance (default: value of os.environ['ASTRA_DB_API_ENDPOINT']): ",
             str,
             env_var="ASTRA_DB_API_ENDPOINT",
-        )
-        set_arg_from_password(
-            args,
-            "astradb_api_key",
-            "Enter the AstraDB API key (default: value of os.environ['ASTRA_DB_APPLICATION_TOKEN']): ",
-            "ASTRA_DB_APPLICATION_TOKEN",
         )
         astradb_export = ExportAstraDB(args)
         astradb_export.all_collections = astradb_export.get_all_index_names()
@@ -77,10 +117,21 @@ class ExportAstraDB(ExportVDB):
 
     def __init__(self, args):
         super().__init__(args)
-        self.db = AstraDB(
-            token=self.args.get("astradb_api_key"),
-            api_endpoint=self.args.get("endpoint"),
-        )
+        if not self.args.get("via_cql"):
+            self.db = AstraDB(
+                token=self.args.get("astradb_api_key"),
+                api_endpoint=self.args.get("endpoint"),
+            )
+        else:
+            self.session = Cluster(
+                cloud={"secure_connect_bundle": self.args["secure_connect_bundle"]},
+                auth_provider=PlainTextAuthProvider(
+                    "token", self.args.get("astradb_api_key")
+                ),
+            ).connect()
+            self.session.execute(
+                "USE " + self.args.get("keyspace", "default_keyspace"), timeout=100.0
+            )
 
     def get_all_index_names(self):
         return self.db.get_collections()["status"]["collections"]
@@ -89,6 +140,95 @@ class ExportAstraDB(ExportVDB):
         if self.args.get("collections", None) is not None:
             return self.args["collections"].split(",")
         return self.db.get_collections()["status"]["collections"]
+
+    def get_all_index_names_cql(self):
+        res = self.session.execute(
+            f"SELECT * FROM system_schema.tables where keyspace_name='{self.args['keyspace']}'",
+            timeout=100.0,
+        )
+        return [row.table_name for row in res]
+
+    def get_data_from_cql(self):
+        index_names = (
+            self.get_all_index_names_cql()
+            if self.args.get("collections") is None
+            else self.args.get("collections").split(",")
+        )
+        index_metas: Dict[str, List[NamespaceMeta]] = {}
+        self.paging_state = None
+        for index_name in tqdm(index_names, desc="Fetching indexes"):
+            tqdm.write(f"Exporting collection: {index_name}")
+            namespace_metas = []
+            vectors_directory = os.path.join(self.vdf_directory, index_name)
+            os.makedirs(vectors_directory, exist_ok=True)
+            pbar = tqdm(desc="Exporting data", unit="documents")
+            no_queries_run = True
+            exported_count = 0
+            while no_queries_run or self.paging_state:
+                rows = self.execute_select_all_once(index_name)
+                rows = [json.loads(r.doc_json) for r in rows]
+                no_queries_run = False
+                vectors = {}
+                metadatas = {}
+                for row in rows:
+                    if "vector" in row:
+                        vectors[row["_id"]] = row["vector"]
+                    elif "$vector" in row:
+                        vectors[row["_id"]] = row["$vector"]
+                    metadatas[row["_id"]] = {
+                        k: v
+                        for k, v in row.items()
+                        if k not in ["_id", "$vector", "vector"]
+                    }
+                    pbar.update(1)
+                    if (
+                        sys.getsizeof(vectors) + sys.getsizeof(metadatas)
+                        > DISK_SPACE_LIMIT
+                    ):
+                        tqdm.write("Flushing to parquet files on disk")
+                        exported_count += self.save_vectors_to_parquet(
+                            vectors, metadatas, vectors_directory
+                        )
+                        vectors = {}
+                        metadatas = {}
+            exported_count += self.save_vectors_to_parquet(
+                vectors, metadatas, vectors_directory
+            )
+            tqdm.write("Flushing to parquet files on disk")
+            sample_doc = rows[0]
+            if "$vector" in sample_doc:
+                dims = len(sample_doc["$vector"])
+            elif "vector" in sample_doc:
+                dims = len(sample_doc["vector"])
+            else:
+                dims = -1
+            namespace_metas = [
+                self.get_namespace_meta(
+                    index_name,
+                    vectors_directory,
+                    total=exported_count,
+                    num_vectors_exported=exported_count,
+                    dim=dims,
+                    vector_columns=["vector"],
+                    distance=self.args.get("distance_metric"),
+                )
+            ]
+            index_metas[index_name] = namespace_metas
+        self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
+        internal_metadata = self.get_basic_vdf_meta(index_metas)
+        meta_text = json.dumps(internal_metadata.model_dump(), indent=4)
+        tqdm.write(meta_text)
+        with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
+            json_file.write(meta_text)
+        return True
+
+    def execute_select_all_once(self, index_name):
+        query = f"SELECT * FROM {index_name}"
+        rows = self.session.execute(
+            query, paging_state=self.paging_state, timeout=100.0
+        )
+        self.paging_state = rows.paging_state
+        return list(rows)
 
     def get_data(self):
         index_names = self.get_index_names()
