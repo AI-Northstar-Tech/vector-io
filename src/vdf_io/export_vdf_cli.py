@@ -9,7 +9,6 @@ from dotenv import find_dotenv, load_dotenv
 import warnings
 
 
-
 import sentry_sdk  # noqa: E402
 from opentelemetry import trace  # noqa: E402
 from opentelemetry.propagate import set_global_textmap  # noqa: E402
