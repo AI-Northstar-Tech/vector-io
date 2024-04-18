@@ -69,7 +69,7 @@ class ExportVDB(abc.ABC):
                 columns={col: f"metadata_{col}" for col in common_columns}, inplace=True
             )
 
-            df = vectors_df.merge(metadata_df, on=ID_COLUMN, how="left")
+            df = vectors_df.merge(metadata_df, on=ID_COLUMN, how="outer")
         else:
             df = vectors_df
 

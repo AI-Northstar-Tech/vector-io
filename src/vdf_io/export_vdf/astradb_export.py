@@ -7,6 +7,7 @@ from astrapy.db import AstraDB
 from tqdm import tqdm
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
+from cassandra.query import SimpleStatement
 
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
@@ -67,6 +68,12 @@ class ExportAstraDB(ExportVDB):
             help="Keyspace to connect to",
             default="default_keyspace",
         )
+        parser_astradb.add_argument(
+            "--fetch_size",
+            type=int,
+            help="Fetch size for CQL queries",
+            default=10000,
+        )
 
     @classmethod
     def export_vdb(cls, args):
@@ -92,6 +99,13 @@ class ExportAstraDB(ExportVDB):
                 str,
                 None,
                 choices=astradb_export.all_collections,
+            )
+            set_arg_from_input(
+                args,
+                "fetch_size",
+                "Enter the fetch size for CQL queries (default: 10000): ",
+                int,
+                10000,
             )
             astradb_export.get_data_from_cql()
             return astradb_export
@@ -157,19 +171,23 @@ class ExportAstraDB(ExportVDB):
         index_metas: Dict[str, List[NamespaceMeta]] = {}
         self.paging_state = None
         for index_name in tqdm(index_names, desc="Fetching indexes"):
+            # count rows using execute()
+            count_query = f"SELECT COUNT(*) FROM {index_name}"
+            count = self.session.execute(count_query, timeout=100.0).one()
+            tqdm.write(f"Total rows in {index_name}: {count[0]}")
             tqdm.write(f"Exporting collection: {index_name}")
             namespace_metas = []
             vectors_directory = os.path.join(self.vdf_directory, index_name)
             os.makedirs(vectors_directory, exist_ok=True)
-            pbar = tqdm(desc="Exporting data", unit="documents")
+            pbar = tqdm(desc="Exporting data", unit="documents", total=count[0])
             no_queries_run = True
             exported_count = 0
+            vectors = {}
+            metadatas = {}
             while no_queries_run or self.paging_state:
                 rows = self.execute_select_all_once(index_name)
                 rows = [json.loads(r.doc_json) for r in rows]
                 no_queries_run = False
-                vectors = {}
-                metadatas = {}
                 for row in rows:
                     if "vector" in row:
                         vectors[row["_id"]] = row["vector"]
@@ -191,9 +209,10 @@ class ExportAstraDB(ExportVDB):
                         )
                         vectors = {}
                         metadatas = {}
-            exported_count += self.save_vectors_to_parquet(
+            vectors_added = self.save_vectors_to_parquet(
                 vectors, metadatas, vectors_directory
             )
+            exported_count += vectors_added
             tqdm.write("Flushing to parquet files on disk")
             sample_doc = rows[0]
             if "$vector" in sample_doc:
@@ -224,9 +243,18 @@ class ExportAstraDB(ExportVDB):
 
     def execute_select_all_once(self, index_name):
         query = f"SELECT * FROM {index_name}"
-        rows = self.session.execute(
-            query, paging_state=self.paging_state, timeout=100.0
-        )
+        fetch_size = self.args.get("fetch_size", 10000)
+        while True:
+            try:
+                statement = SimpleStatement(query, fetch_size=fetch_size)
+                rows = self.session.execute(
+                    statement, paging_state=self.paging_state, timeout=100.0
+                )
+                self.paging_state = rows.paging_state
+                break
+            except Exception as e:
+                tqdm.write(f"Error occurred: {e}. Reducing fetch size by 10%.")
+                fetch_size = int(fetch_size * 0.9)  # reduce fetch size by 10%
         self.paging_state = rows.paging_state
         return list(rows)
 
