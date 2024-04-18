@@ -13,6 +13,7 @@ from tenacity import (
     stop_after_attempt,
     wait_random_exponential,
 )
+import torch
 from tqdm import tqdm
 from dotenv import load_dotenv
 import sys
@@ -365,10 +366,14 @@ def call_sentence_transformers(args, batch_text):
     # check global model
     global model
     if model is None:
+        # figure out device map
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         model = SentenceTransformer(
-            args["new_model_name"].replace("huggingface/", ""), trust_remote_code=True
+            args["new_model_name"].replace("huggingface/", ""),
+            trust_remote_code=True,
+            device=device,
         )
-    embeddings = model.encode(batch_text, show_progress_bar=True)
+    embeddings = model.encode(batch_text)
     return EmbeddingResponse(
         data=[
             {"index": i, "embedding": emb.tolist()} for i, emb in enumerate(embeddings)

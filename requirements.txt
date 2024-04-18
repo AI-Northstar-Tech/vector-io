@@ -20,3 +20,5 @@ sentry-sdk[opentelemetry]
 halo
 sentence-transformers>=2.0.0
 tenacity
+torch
+twine
