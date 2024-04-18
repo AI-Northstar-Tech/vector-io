@@ -18,4 +18,5 @@ backoff
 kdbai-client
 sentry-sdk[opentelemetry]
 halo
-sentence-transformers
+sentence-transformers>=2.0.0
+tenacity
