@@ -13,6 +13,7 @@ class NamespaceMeta(BaseModel):
     data_path: str
     metric: str | None = None
     index_config: Optional[Dict[Any, Any]] = None
+    schema_dict: Optional[Dict[str, Any]] = None
     model_config = ConfigDict(protected_namespaces=())
 
 

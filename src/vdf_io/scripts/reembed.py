@@ -13,11 +13,14 @@ from tenacity import (
     stop_after_attempt,
     wait_random_exponential,
 )
+import torch
 from tqdm import tqdm
 from dotenv import load_dotenv
 import sys
 from IPython.core import ultratb
 import warnings
+from rich import print as rprint
+
 import vdf_io
 from vdf_io.constants import ID_COLUMN
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
@@ -59,8 +62,20 @@ def reembed():
 
     reembed_count = 0
     # open VDF_META.json
-    handle_new_dataset(args)
+    vdf_meta_path = os.path.join(args["dir"], "VDF_META.json")
+    if not os.path.exists(vdf_meta_path) or not valid_json(vdf_meta_path):
+        handle_new_dataset(args)
     reembed_impl(args, reembed_count)
+
+
+def valid_json(file_path):
+    try:
+        with open(file_path) as f:
+            json.load(f)
+            return True
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}")
+        return False
 
 
 def reembed_impl(args, reembed_count):
@@ -77,6 +92,12 @@ def reembed_impl(args, reembed_count):
                     else ""
                 )
             )
+            if "dimensions" in args and args["dimensions"] is not None:
+                new_vector_column += f"_dim{args['dimensions']}"
+            else:
+                litellm_embed_response = call_litellm(args, ["dummy"])
+                dims = len(litellm_embed_response.data[0]["embedding"])
+                new_vector_column += f"_dim{dims}"
             overwrite_bool = args["overwrite"]
             for namespace_meta in tqdm(index_meta, desc="Iterating over namespaces"):
                 data_path = namespace_meta["data_path"]
@@ -107,8 +128,6 @@ def reembed_impl(args, reembed_count):
                                 "Aborting reembedding."
                             )
                             exit()
-                    if "dimensions" in args and args["dimensions"] is not None:
-                        new_vector_column += f"_{args['dimensions']}"
                     tqdm.write(f"Reembedding {file_path}")
                     # read parquet file
                     df = read_parquet_progress(file_path, ID_COLUMN)
@@ -184,51 +203,60 @@ def reembed_impl(args, reembed_count):
 
 
 def handle_new_dataset(args):
-    if not os.path.exists(os.path.join(args["dir"], "VDF_META.json")):
+    # create VDF_META.json
+    with open(os.path.join(args["dir"], "VDF_META.json"), "w") as f:
+        # index_name is folder name of dir
+        index_name = os.path.basename(args["dir"])
+        # find parquet files in dir recursively
+        import glob
+
+        parquet_files = glob.glob(
+            os.path.join(args["dir"], "**", "*.parquet"), recursive=True
+        )
+        if len(parquet_files) == 0:
+            raise Exception("No parquet files found in the specified directory")
+        total_vector_count = 0
+        for file in parquet_files:
+            # read schema of parquet file using pyarrow and get count of rows
+            import pyarrow.parquet as pq
+
+            table = pq.read_table(file)
+            row_count = table.num_rows
+            total_vector_count += row_count
+            schema_dict = {field.name: field.type for field in table.schema}
+            rprint(table.schema)
+            # print each column name and type
+            # for col in schema_dict["metadata"]["arrow:extension:column_types"]:
+            #     tqdm.write(f"Column: {col['name']} of type {col['type']}")
+            # # are there any vector columns in the schema?
+            # for col in schema_dict["metadata"]["arrow:extension:vector_columns"]:
+            #     tqdm.write(f"Vector column: {col['name']} of type {col['type']}")
         # create VDF_META.json
-        with open(os.path.join(args["dir"], "VDF_META.json"), "w") as f:
-            # index_name is folder name of dir
-            index_name = os.path.basename(args["dir"])
-            # find parquet files in dir recursively
-            import glob
-
-            parquet_files = glob.glob(
-                os.path.join(args["dir"], "**", "*.parquet"), recursive=True
-            )
-            if len(parquet_files) == 0:
-                raise Exception("No parquet files found in the specified directory")
-            total_vector_count = 0
-            for file in parquet_files:
-                # read schema of parquet file using pyarrow and get count of rows
-                import pyarrow.parquet as pq
-
-                table = pq.read_table(file)
-                row_count = table.num_rows
-                total_vector_count += row_count
-            vdf_meta = VDFMeta(
-                version=vdf_io.__version__,
-                file_structure=[],
-                author=os.environ.get("USER"),
-                exported_from="reembed",
-                exported_at=datetime.datetime.now().astimezone().isoformat(),
-                id_column=ID_COLUMN,
-                indexes={
-                    index_name: [
-                        NamespaceMeta(
-                            namespace="",
-                            index_name=index_name,
-                            total_vector_count=total_vector_count,
-                            exported_vector_count=total_vector_count,
-                            dimensions=-1,
-                            model_name=None,
-                            vector_columns=[],
-                            data_path=".",
-                            metric=None,
-                        )
-                    ]
-                },
-            ).model_dump()
-            json.dump(vdf_meta, f, indent=4)
+        vdf_meta = VDFMeta(
+            version=vdf_io.__version__,
+            file_structure=[],
+            author=os.environ.get("USER"),
+            exported_from="reembed",
+            exported_at=datetime.datetime.now().astimezone().isoformat(),
+            id_column=ID_COLUMN,
+            indexes={
+                index_name: [
+                    NamespaceMeta(
+                        namespace="",
+                        index_name=index_name,
+                        total_vector_count=total_vector_count,
+                        exported_vector_count=total_vector_count,
+                        dimensions=-1,
+                        model_name=None,
+                        vector_columns=[],
+                        data_path=".",
+                        metric=None,
+                        schema_dict=schema_dict,
+                    )
+                ]
+            },
+        ).model_dump()
+        json.dump(vdf_meta, f, indent=4)
 
 
 def take_input_from_cli_prompt(args):
@@ -387,8 +415,12 @@ def call_sentence_transformers(args, batch_text):
     # check global model
     global model
     if model is None:
+        # figure out device map
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         model = SentenceTransformer(
-            args["new_model_name"].replace("huggingface/", ""), trust_remote_code=True
+            args["new_model_name"].replace("huggingface/", ""),
+            trust_remote_code=True,
+            device=device,
         )
     embeddings = model.encode(batch_text, precision=args.get("quantize"))
     return EmbeddingResponse(

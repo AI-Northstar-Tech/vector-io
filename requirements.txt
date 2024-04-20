@@ -26,3 +26,6 @@ txtai
 weaviate-client>=4.0.0
 astrapy
 cassandra-driver
+tenacity
+torch
+twine
