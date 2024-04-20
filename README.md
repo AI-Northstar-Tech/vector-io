@@ -120,11 +120,12 @@ class NamespaceMeta(BaseModel):
     total_vector_count: int
     exported_vector_count: int
     dimensions: int
-    model_name: str
+    model_name: str | None = None
     vector_columns: List[str] = ["vector"]
     data_path: str
-    metric: str
-    model_config = ConfigDict(protected_namespaces=())
+    metric: str | None = None
+    index_config: Optional[Dict[Any, Any]] = None
+    schema_dict: Optional[Dict[str, Any]] = None
 
 
 class VDFMeta(BaseModel):
@@ -134,6 +135,7 @@ class VDFMeta(BaseModel):
     exported_from: str
     indexes: Dict[str, List[NamespaceMeta]]
     exported_at: str
+    id_column: Optional[str] = None
 
 ```
 
