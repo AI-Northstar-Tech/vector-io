@@ -1022,9 +1022,9 @@ class ImportVertexAIVectorSearch(ImportVDB):
                             index=self.target_vertexai_index.resource_name,
                             datapoints=insert_datapoints_payload,
                         )
-                        if self.total_imported_count + len(upsert_request.datapoints) >= (
-                            self.args.get("max_num_rows") or INT_MAX
-                        ):
+                        if self.total_imported_count + len(
+                            upsert_request.datapoints
+                        ) >= (self.args.get("max_num_rows") or INT_MAX):
                             upsert_request = aipv1.UpsertDatapointsRequest(
                                 index=self.target_vertexai_index.resource_name,
                                 datapoints=insert_datapoints_payload[
