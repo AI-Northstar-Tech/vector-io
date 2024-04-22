@@ -120,7 +120,9 @@ class ImportAstraDB(ImportVDB):
                     self.update_metadata(metadata, vector_column_names, df)
                     if max_hit:
                         break
-                self.total_imported_count += self.flush_to_db(vectors, metadata, collection)
+                self.total_imported_count += self.flush_to_db(
+                    vectors, metadata, collection
+                )
 
         print("Data imported successfully")
         self.args["imported_count"] = self.total_imported_count
