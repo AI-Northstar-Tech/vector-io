@@ -1,7 +1,12 @@
+from typing import Dict, List
 from dotenv import load_dotenv
+from tqdm import tqdm
+import pyarrow.parquet as pq
 
 import lancedb
 
+from vdf_io.constants import INT_MAX
+from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
 from vdf_io.util import (
     set_arg_from_input,
@@ -63,3 +68,80 @@ class ImportLanceDB(ImportVDB):
     def upsert_data(self):
         max_hit = False
         self.total_imported_count = 0
+        indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
+        index_names: List[str] = list(indexes_content.keys())
+        if len(index_names) == 0:
+            raise ValueError("No indexes found in VDF_META.json")
+        tables = self.db.table_names()
+        # Load Parquet file
+        # print(indexes_content[index_names[0]]):List[NamespaceMeta]
+        for index_name, index_meta in tqdm(
+            indexes_content.items(), desc="Importing indexes"
+        ):
+            for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
+                self.set_dims(namespace_meta, index_name)
+                data_path = namespace_meta["data_path"]
+                final_data_path = self.get_final_data_path(data_path)
+                # Load the data from the parquet files
+                parquet_files = self.get_parquet_files(final_data_path)
+
+                vectors_all = {}
+                for vec_col in namespace_meta.get("vector_columns", []):
+                    vectors_all[vec_col] = {}
+
+                new_index_name = index_name + (
+                    f'_{namespace_meta["namespace"]}'
+                    if namespace_meta["namespace"]
+                    else ""
+                )
+                new_index_name = self.create_new_name(new_index_name, tables)
+                vector_column_names, _ = self.get_vector_column_name(
+                    new_index_name, namespace_meta, multi_vector_supported=True
+                )
+                if new_index_name not in tables:
+                    table = self.db.create_table(
+                        new_index_name, schema=pq.read_schema(parquet_files[0])
+                    )
+                else:
+                    table = self.db.get_table(new_index_name)
+
+                for file in tqdm(parquet_files, desc="Iterating parquet files"):
+                    file_path = self.get_file_path(final_data_path, file)
+                    df = self.read_parquet_progress(
+                        file_path,
+                        max_num_rows=(
+                            (self.args.get("max_num_rows") or INT_MAX)
+                            - self.total_imported_count
+                        ),
+                    )
+                    # if there are additional columns in the parquet file, add them to the table
+                    for col in df.columns:
+                        if col not in table.columns:
+                            table.add_column(col, df[col].dtype)
+                    # split in batches
+                    for batch in divide_into_batches(
+                        df, self.args.get("batch_size", 1000)
+                    ):
+                        if self.total_imported_count + len(batch) >= (
+                            self.args.get("max_num_rows") or INT_MAX
+                        ):
+                            batch = batch[
+                                : (self.args.get("max_num_rows") or INT_MAX)
+                                - self.total_imported_count
+                            ]
+                            max_hit = True
+                        table.upsert(batch)
+                        self.total_imported_count += len(batch)
+                        if max_hit:
+                            break
+                if max_hit:
+                    break
+        print("Data imported successfully")
+
+
+def divide_into_batches(df, batch_size):
+    """
+    Divide the dataframe into batches of size batch_size
+    """
+    for i in range(0, len(df), batch_size):
+        yield df[i : i + batch_size]
