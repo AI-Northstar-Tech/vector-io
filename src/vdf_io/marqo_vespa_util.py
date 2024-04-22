@@ -165,5 +165,5 @@ class VespaStatusError(VespaError):
     def __str__(self) -> str:
         try:
             return f"{self.status_code}: {self.message}"
-        except:
+        except Exception:
             return super().__str__()

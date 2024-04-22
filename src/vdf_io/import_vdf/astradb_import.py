@@ -62,7 +62,7 @@ class ImportAstraDB(ImportVDB):
         )
 
     def upsert_data(self):
-        total_imported_count = 0
+        self.total_imported_count = 0
         max_hit = False
         indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
         index_names: List[str] = list(indexes_content.keys())
@@ -106,20 +106,24 @@ class ImportAstraDB(ImportVDB):
                     )
 
                     df = self.read_parquet_progress(parquet_file_path)
-                    if len(vectors) > self.args.get("max_num_rows", INT_MAX):
+                    if len(vectors) > (self.args.get("max_num_rows") or INT_MAX):
                         max_hit = True
                         break
-                    if len(vectors) + len(df) > self.args.get("max_num_rows", INT_MAX):
-                        df = df.head(self.args.get("max_num_rows", INT_MAX) - len(vectors))
+                    if len(vectors) + len(df) > (
+                        self.args.get("max_num_rows") or INT_MAX
+                    ):
+                        df = df.head(
+                            (self.args.get("max_num_rows") or INT_MAX) - len(vectors)
+                        )
                         max_hit = True
                     self.update_vectors(vectors, vector_column_name, df)
                     self.update_metadata(metadata, vector_column_names, df)
                     if max_hit:
                         break
-                total_imported_count += self.flush_to_db(vectors, metadata, collection)
+                self.total_imported_count += self.flush_to_db(vectors, metadata, collection)
 
         print("Data imported successfully")
-        self.args["imported_count"] = total_imported_count
+        self.args["imported_count"] = self.total_imported_count
 
     def flush_to_db(vectors, metadata, collection):
         BATCH_SIZE = 20

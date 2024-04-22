@@ -78,7 +78,7 @@ class ImportKDBAI(ImportVDB):
         return new_name
 
     def upsert_data(self):
-        total_imported_count = 0
+        self.total_imported_count = 0
         max_hit = False
         indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
         index_names: List[str] = list(indexes_content.keys())
@@ -191,14 +191,14 @@ class ImportKDBAI(ImportVDB):
                     # insert data
                     # Set the batch size
                     df = parquet_table.to_pandas().drop(columns=cols_to_be_dropped)
-                    if total_imported_count + len(df) >= self.args.get(
-                        "max_num_rows", INT_MAX
+                    if self.total_imported_count + len(df) >= (
+                        self.args.get("max_num_rows") or INT_MAX
                     ):
                         max_hit = True
                         # Take a subset of df
                         df = df.iloc[
-                            : self.args.get("max_num_rows", INT_MAX)
-                            - total_imported_count
+                            : (self.args.get("max_num_rows") or INT_MAX)
+                            - self.total_imported_count
                         ]
                     i = 0
                     batch_size = self.args.get("batch_size", 10_000) or 10_000
@@ -219,7 +219,7 @@ class ImportKDBAI(ImportVDB):
                             else:
                                 raise RuntimeError(f"Error inserting chunk: {e}")
                             continue
-                    total_imported_count += len(df)
+                    self.total_imported_count += len(df)
                     if max_hit:
                         break
                 if max_hit:
@@ -232,4 +232,4 @@ class ImportKDBAI(ImportVDB):
 
         # table.insert(df)
         print("Data imported successfully")
-        self.args["imported_count"] = total_imported_count
+        self.args["imported_count"] = self.total_imported_count

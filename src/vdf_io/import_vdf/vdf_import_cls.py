@@ -7,6 +7,7 @@ import numpy as np
 from packaging.version import Version
 import abc
 from tqdm import tqdm
+from halo import Halo
 
 from qdrant_client.http.models import Distance
 
@@ -54,7 +55,8 @@ class ImportVDB(abc.ABC):
             from huggingface_hub import HfFileSystem
 
             fs = HfFileSystem()
-            hf_files = fs.ls(f"datasets/{hf_dataset}", detail=False)
+            with Halo(text="Checking for VDF_META.json", spinner="dots"):
+                hf_files = fs.ls(f"datasets/{hf_dataset}", detail=False)
             if f"datasets/{hf_dataset}/VDF_META.json" in hf_files:
                 print(f"Found VDF_META.json in {hf_dataset} on HuggingFace Hub")
                 self.vdf_meta = json.loads(
@@ -103,6 +105,7 @@ class ImportVDB(abc.ABC):
             print(
                 "Please upgrade the vector-io library to the latest version to ensure compatibility."
             )
+        print("ImportVDB initialized successfully.")
 
     @abc.abstractmethod
     def upsert_data():
@@ -216,21 +219,22 @@ class ImportVDB(abc.ABC):
         )
 
     def update_vectors(self, vectors, vector_column_name, df):
-        vectors.update(
-            {
-                row[self.id_column]: self.extract_vector(row[vector_column_name])
-                for _, row in df.iterrows()
-                if self.id_column in row
-            }
-        )
+        for _, row in tqdm(df.iterrows(), desc="Extracting vectors", total=len(df)):
+            if self.id_column in row:
+                vectors[row[self.id_column]] = self.extract_vector(
+                    row[vector_column_name]
+                )
 
     def read_parquet_progress(self, file_path, **kwargs):
         return read_parquet_progress(file_path, self.id_column, **kwargs)
 
     def create_new_name(self, index_name, indexes):
+        if not self.args.get("create_new", False):
+            return index_name
+        og_name = index_name
         suffix = 2
-        while index_name in indexes and self.args["create_new"] is True:
-            index_name = index_name + f"-{suffix}"
+        while index_name in indexes:
+            index_name = og_name + f"-{suffix}"
             suffix += 1
         return index_name
 

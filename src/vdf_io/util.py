@@ -436,5 +436,17 @@ def read_parquet_progress(file_path, id_column, **kwargs):
                 return_empty = True
     if return_empty:
         return pd.DataFrame(columns=list(cols))
-    df = pd.read_parquet(file_path_to_be_read, **kwargs)
+    with Halo(text=f"Reading parquet file {file_path_to_be_read}", spinner="dots"):
+        if "max_num_rows" in kwargs:
+            import pyarrow.dataset as ds
+
+            df = (
+                ds.dataset(file_path_to_be_read)
+                .scanner()
+                .head(kwargs["max_num_rows"])
+                .to_pandas()
+            )
+        else:
+            df = pd.read_parquet(file_path_to_be_read, **kwargs)
+    tqdm.write(f"{file_path_to_be_read} read successfully. {len(df)=} rows")
     return df

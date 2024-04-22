@@ -848,7 +848,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
 
     def upsert_data(self):
         max_hit = False
-        total_imported_count = 0
+        self.total_imported_count = 0
         MINUTE = 60
         CALLS_PER_PRD = self.args.get("requests_per_minute", 6000)
 
@@ -995,22 +995,22 @@ class ImportVertexAIVectorSearch(ImportVDB):
                                 index=self.target_vertexai_index.resource_name,
                                 datapoints=insert_datapoints_payload,
                             )
-                            if total_imported_count + len(
+                            if self.total_imported_count + len(
                                 upsert_request.datapoints
-                            ) >= self.args.get("max_num_rows", INT_MAX):
+                            ) >= (self.args.get("max_num_rows") or INT_MAX):
                                 upsert_request = aipv1.UpsertDatapointsRequest(
                                     index=self.target_vertexai_index.resource_name,
                                     datapoints=insert_datapoints_payload[
                                         : (
-                                            self.args.get("max_num_rows", INT_MAX)
-                                            - total_imported_count
+                                            (self.args.get("max_num_rows") or INT_MAX)
+                                            - self.total_imported_count
                                         )
                                     ],
                                 )
                                 max_hit = True
                             # self.index_client.upsert_datapoints(request=upsert_request)
                             upsert_in_rate(self, upsert_request=upsert_request)
-                            total_imported_count += len(upsert_request.datapoints)
+                            self.total_imported_count += len(upsert_request.datapoints)
                             insert_datapoints_payload = []
                             if max_hit:
                                 break
@@ -1022,22 +1022,22 @@ class ImportVertexAIVectorSearch(ImportVDB):
                             index=self.target_vertexai_index.resource_name,
                             datapoints=insert_datapoints_payload,
                         )
-                        if total_imported_count + len(
-                            upsert_request.datapoints
-                        ) >= self.args.get("max_num_rows", INT_MAX):
+                        if self.total_imported_count + len(upsert_request.datapoints) >= (
+                            self.args.get("max_num_rows") or INT_MAX
+                        ):
                             upsert_request = aipv1.UpsertDatapointsRequest(
                                 index=self.target_vertexai_index.resource_name,
                                 datapoints=insert_datapoints_payload[
                                     : (
-                                        self.args.get("max_num_rows", INT_MAX)
-                                        - total_imported_count
+                                        (self.args.get("max_num_rows") or INT_MAX)
+                                        - self.total_imported_count
                                     )
                                 ],
                             )
                             max_hit = True
                         # self.index_client.upsert_datapoints(request=upsert_request)
                         upsert_in_rate(self, upsert_request=upsert_request)
-                        total_imported_count += len(upsert_request.datapoints)
+                        self.total_imported_count += len(upsert_request.datapoints)
                     if max_hit:
                         tqdm.write(
                             f"Max rows to be imported {self.args['max_num_rows']} hit. Exiting"
@@ -1047,4 +1047,4 @@ class ImportVertexAIVectorSearch(ImportVDB):
         print(
             f"Updated {self.target_vertexai_index.display_name} with {len(total_ids)} vectors"
         )
-        self.args["imported_count"] = total_imported_count
+        self.args["imported_count"] = self.total_imported_count

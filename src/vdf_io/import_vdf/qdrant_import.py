@@ -5,7 +5,7 @@ from tqdm import tqdm
 from grpc import RpcError
 from typing import Any, Dict, List
 from PIL import Image
-
+from halo import Halo
 
 import concurrent.futures
 
@@ -74,7 +74,13 @@ class ImportQdrant(ImportVDB):
             args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
         )
         qdrant_import = ImportQdrant(args)
-        qdrant_import.upsert_data()
+        try:
+            qdrant_import.upsert_data()
+        # keyboard interrupt
+        except KeyboardInterrupt:
+            tqdm.write(
+                f"Data import interrupted. {qdrant_import.total_imported_count} rows imported."
+            )
         return qdrant_import
 
     @classmethod
@@ -142,7 +148,7 @@ class ImportQdrant(ImportVDB):
 
     def upsert_data(self):
         max_hit = False
-        total_imported_count = 0
+        self.total_imported_count = 0
         # we know that the self.vdf_meta["indexes"] is a list
         index_meta: Dict[str, List[NamespaceMeta]] = {}
         for index_name, index_meta in tqdm(
@@ -263,10 +269,18 @@ class ImportQdrant(ImportVDB):
                 metadata = {}
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
-                    df = self.read_parquet_progress(file_path)
-                    for vec_col in namespace_meta.get("vector_columns", []):
-                        self.update_vectors(vectors_all[vec_col], vec_col, df)
-                    self.update_metadata(metadata, vector_column_names, df)
+                    df = self.read_parquet_progress(
+                        file_path,
+                        max_num_rows=(
+                            (self.args.get("max_num_rows") or INT_MAX)
+                            - self.total_imported_count
+                        ),
+                    )
+                    with Halo(text="Processing vectors", spinner="dots"):
+                        for vec_col in namespace_meta.get("vector_columns", []):
+                            self.update_vectors(vectors_all[vec_col], vec_col, df)
+                    with Halo(text="Processing metadata", spinner="dots"):
+                        self.update_metadata(metadata, vector_column_names, df)
                     self.make_metadata_qdrant_compliant(metadata)
                     # union of all keys in vectors_all
                     keys = set().union(
@@ -284,13 +298,13 @@ class ImportQdrant(ImportVDB):
                         for idx in keys
                     ]
 
-                    if total_imported_count + len(points) >= self.args.get(
-                        "max_num_rows", INT_MAX
+                    if self.total_imported_count + len(points) >= (
+                        self.args.get("max_num_rows") or INT_MAX
                     ):
                         max_hit = True
                         points = points[
-                            : self.args.get("max_num_rows", INT_MAX)
-                            - total_imported_count
+                            : (self.args.get("max_num_rows") or INT_MAX)
+                            - self.total_imported_count
                         ]
                         tqdm.write("Truncating data to limit to max rows")
                     try:
@@ -327,9 +341,9 @@ class ImportQdrant(ImportVDB):
                                         f"Batch upsert failed with error: {e} "  # {batch}
                                     )
                                     # Optionally, you might want to handle failed batches differently
-                        total_imported_count += len(points)
-                        if total_imported_count >= self.args.get(
-                            "max_num_rows", INT_MAX
+                        self.total_imported_count += len(points)
+                        if self.total_imported_count >= (
+                            self.args.get("max_num_rows") or INT_MAX
                         ):
                             max_hit = True
                     except (UnexpectedResponse, RpcError, ValueError) as e:
@@ -357,7 +371,7 @@ class ImportQdrant(ImportVDB):
                 break
             # END index loop
         tqdm.write("Data import completed successfully.")
-        self.args["imported_count"] = total_imported_count
+        self.args["imported_count"] = self.total_imported_count
 
     def make_metadata_qdrant_compliant(self, metadata):
         deleted_images = False

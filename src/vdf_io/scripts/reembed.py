@@ -288,7 +288,7 @@ def handle_new_dataset(args):
                     dimensions = len(table[field.name].to_pandas().iloc[0])
                     # ask which model to use for embedding
                     tqdm.write(
-                        f"Vector column {field.name} has length {length}. Please specify the model to use for embedding."
+                        f"Vector column {field.name} has length {dimensions}. Please specify the model to use for embedding."
                     )
                     model_name = input(
                         "Enter the name of the model to be used for embedding: "

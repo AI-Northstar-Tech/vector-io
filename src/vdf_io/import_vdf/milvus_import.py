@@ -73,7 +73,7 @@ class ImportMilvus(ImportVDB):
 
     def upsert_data(self):
         max_hit = False
-        total_imported_count = 0
+        self.total_imported_count = 0
         # we know that the self.vdf_meta["indexes"] is a list
         for collection_name, index_meta in self.vdf_meta["indexes"].items():
             # load data
@@ -185,12 +185,12 @@ class ImportMilvus(ImportVDB):
                     tqdm.write(
                         f"Inserting {len(data_rows)} rows in batches of {BATCH_SIZE}"
                     )
-                    if total_imported_count + BATCH_SIZE >= self.args.get(
-                        "max_num_rows", INT_MAX
+                    if self.total_imported_count + BATCH_SIZE >= (
+                        self.args.get("max_num_rows") or INT_MAX
                     ):
                         data_rows = data_rows[
-                            : self.args.get("max_num_rows", INT_MAX)
-                            - total_imported_count
+                            : (self.args.get("max_num_rows") or INT_MAX)
+                            - self.total_imported_count
                         ]
                         max_hit = True
                     i = 0
@@ -201,7 +201,7 @@ class ImportMilvus(ImportVDB):
                                 data_rows[i : i + current_batch_size]
                             )
                             num_inserted += mr.upsert_count
-                            total_imported_count += mr.upsert_count
+                            self.total_imported_count += mr.upsert_count
                             i += current_batch_size
                             pbar.update(current_batch_size)
                         except Exception as e:
@@ -217,4 +217,4 @@ class ImportMilvus(ImportVDB):
                 print(f"Index '{index_name}' has {vector_count} vectors after import")
                 print(f"{num_inserted} vectors were imported")
         print("Data import completed successfully.")
-        self.args["imported_count"] = total_imported_count
+        self.args["imported_count"] = self.total_imported_count
