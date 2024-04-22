@@ -110,7 +110,9 @@ class ImportAstraDB(ImportVDB):
                         max_hit = True
                         break
                     if len(vectors) + len(df) > self.args.get("max_num_rows", INT_MAX):
-                        df = df.head(self.args.get("max_num_rows", INT_MAX) - len(vectors))
+                        df = df.head(
+                            self.args.get("max_num_rows", INT_MAX) - len(vectors)
+                        )
                         max_hit = True
                     self.update_vectors(vectors, vector_column_name, df)
                     self.update_metadata(metadata, vector_column_names, df)
