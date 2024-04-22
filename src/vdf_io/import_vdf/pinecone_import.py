@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from pinecone import Pinecone, ServerlessSpec, PodSpec, Vector
 
+from vdf_io.constants import INT_MAX
 from vdf_io.names import DBNames
 from vdf_io.util import (
     set_arg_from_input,
@@ -215,11 +216,13 @@ class ImportPinecone(ImportVDB):
                                 "Invalid arguments for subset export. "
                                 "Please provide either id_list_file or id_range_start and id_range_end"
                             )
-                    if len(vectors) > self.args["max_num_rows"]:
+                    if len(vectors) > self.args.get("max_num_rows", INT_MAX):
                         max_hit = True
                         break
-                    if len(vectors) + len(df) > self.args["max_num_rows"]:
-                        df = df.head(self.args["max_num_rows"] - len(vectors))
+                    if len(vectors) + len(df) > self.args.get("max_num_rows", INT_MAX):
+                        df = df.head(
+                            self.args.get("max_num_rows", INT_MAX) - len(vectors)
+                        )
                         max_hit = True
                     self.update_vectors(vectors, vector_column_name, df)
                     self.update_metadata(metadata, vector_column_names, df)

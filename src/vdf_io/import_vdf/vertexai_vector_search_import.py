@@ -29,7 +29,7 @@ import google.api_core.exceptions as google_exceptions
 from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.util import read_parquet_progress, set_arg_from_input
-from vdf_io.constants import ID_COLUMN
+from vdf_io.constants import ID_COLUMN, INT_MAX
 
 
 # exceptions
@@ -995,15 +995,14 @@ class ImportVertexAIVectorSearch(ImportVDB):
                                 index=self.target_vertexai_index.resource_name,
                                 datapoints=insert_datapoints_payload,
                             )
-                            if (
-                                total_imported_count + len(upsert_request.datapoints)
-                                >= self.args["max_num_rows"]
-                            ):
+                            if total_imported_count + len(
+                                upsert_request.datapoints
+                            ) >= self.args.get("max_num_rows", INT_MAX):
                                 upsert_request = aipv1.UpsertDatapointsRequest(
                                     index=self.target_vertexai_index.resource_name,
                                     datapoints=insert_datapoints_payload[
                                         : (
-                                            self.args["max_num_rows"]
+                                            self.args.get("max_num_rows", INT_MAX)
                                             - total_imported_count
                                         )
                                     ],
@@ -1023,14 +1022,16 @@ class ImportVertexAIVectorSearch(ImportVDB):
                             index=self.target_vertexai_index.resource_name,
                             datapoints=insert_datapoints_payload,
                         )
-                        if (
-                            total_imported_count + len(upsert_request.datapoints)
-                            >= self.args["max_num_rows"]
-                        ):
+                        if total_imported_count + len(
+                            upsert_request.datapoints
+                        ) >= self.args.get("max_num_rows", INT_MAX):
                             upsert_request = aipv1.UpsertDatapointsRequest(
                                 index=self.target_vertexai_index.resource_name,
                                 datapoints=insert_datapoints_payload[
-                                    : (self.args["max_num_rows"] - total_imported_count)
+                                    : (
+                                        self.args.get("max_num_rows", INT_MAX)
+                                        - total_imported_count
+                                    )
                                 ],
                             )
                             max_hit = True

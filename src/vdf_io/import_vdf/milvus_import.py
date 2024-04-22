@@ -11,6 +11,7 @@ from pymilvus import (
     DataType,
 )
 
+from vdf_io.constants import INT_MAX
 from vdf_io.names import DBNames
 from vdf_io.util import (
     set_arg_from_input,
@@ -184,9 +185,12 @@ class ImportMilvus(ImportVDB):
                     tqdm.write(
                         f"Inserting {len(data_rows)} rows in batches of {BATCH_SIZE}"
                     )
-                    if total_imported_count + BATCH_SIZE >= self.args["max_num_rows"]:
+                    if total_imported_count + BATCH_SIZE >= self.args.get(
+                        "max_num_rows", INT_MAX
+                    ):
                         data_rows = data_rows[
-                            : self.args["max_num_rows"] - total_imported_count
+                            : self.args.get("max_num_rows", INT_MAX)
+                            - total_imported_count
                         ]
                         max_hit = True
                     i = 0

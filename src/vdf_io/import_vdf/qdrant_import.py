@@ -13,6 +13,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
 
+from vdf_io.constants import INT_MAX
 from vdf_io.names import DBNames
 from vdf_io.util import (
     expand_shorthand_path,
@@ -218,16 +219,6 @@ class ImportQdrant(ImportVDB):
                             get_nested_config(index_config, [config], None)
                             for config in configs
                         ]
-                        tqdm.write(
-                            f"{hnsw_config=}, \n"
-                            f"{optimizers_config=}, \n"
-                            f"{wal_config=}, \n"
-                            f"{quantization_config=}, \n"
-                            f"{on_disk_payload=}, \n"
-                            f"{sparse_vectors_config=} \n"
-                            f"{on_disk=} \n"
-                            f"{vector_column_names=}"
-                        )
                         distance = (
                             namespace_meta.get("metric", Distance.COSINE)
                             or Distance.COSINE
@@ -293,10 +284,13 @@ class ImportQdrant(ImportVDB):
                         for idx in keys
                     ]
 
-                    if total_imported_count + len(points) >= self.args["max_num_rows"]:
+                    if total_imported_count + len(points) >= self.args.get(
+                        "max_num_rows", INT_MAX
+                    ):
                         max_hit = True
                         points = points[
-                            : self.args["max_num_rows"] - total_imported_count
+                            : self.args.get("max_num_rows", INT_MAX)
+                            - total_imported_count
                         ]
                         tqdm.write("Truncating data to limit to max rows")
                     try:
@@ -334,7 +328,9 @@ class ImportQdrant(ImportVDB):
                                     )
                                     # Optionally, you might want to handle failed batches differently
                         total_imported_count += len(points)
-                        if total_imported_count >= self.args["max_num_rows"]:
+                        if total_imported_count >= self.args.get(
+                            "max_num_rows", INT_MAX
+                        ):
                             max_hit = True
                     except (UnexpectedResponse, RpcError, ValueError) as e:
                         tqdm.write(

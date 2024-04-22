@@ -29,3 +29,4 @@ cassandra-driver
 tenacity
 torch
 twine
+datasets==2.16

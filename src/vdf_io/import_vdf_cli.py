@@ -16,7 +16,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPropagator
 
 import vdf_io
-from vdf_io.constants import ID_COLUMN, INT_MAX
+from vdf_io.constants import ID_COLUMN
 from vdf_io.scripts.check_for_updates import check_for_updates
 from vdf_io.util import set_arg_from_input
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
@@ -42,7 +42,7 @@ def load_subclasses(package_dir):
                     and cls is not ImportVDB
                 ):
                     # Assign functions based on the class
-                    slug_to_import_func[cls.DB_NAME_SLUG] = cls.export_vdb
+                    slug_to_import_func[cls.DB_NAME_SLUG] = cls.import_vdb
                     slug_to_parser_func[cls.DB_NAME_SLUG] = cls.make_parser
     return slug_to_import_func, slug_to_parser_func
 
@@ -124,7 +124,6 @@ def run_import(span):
             "max_num_rows",
             "Maximum number of vectors you'd like to load",
             int,
-            INT_MAX,
         )
 
     args["cwd"] = os.getcwd()
@@ -177,7 +176,6 @@ def make_common_options(parser):
         "--max_num_rows",
         type=int,
         help="Maximum number of rows you'd like to load",
-        default=INT_MAX,
     )
     parser.add_argument(
         "--create_new",

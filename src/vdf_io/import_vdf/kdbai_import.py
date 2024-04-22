@@ -5,6 +5,7 @@ import pyarrow.parquet as pq
 
 import kdbai_client as kdbai
 
+from vdf_io.constants import INT_MAX
 from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
@@ -190,10 +191,15 @@ class ImportKDBAI(ImportVDB):
                     # insert data
                     # Set the batch size
                     df = parquet_table.to_pandas().drop(columns=cols_to_be_dropped)
-                    if total_imported_count + len(df) >= self.args["max_num_rows"]:
+                    if total_imported_count + len(df) >= self.args.get(
+                        "max_num_rows", INT_MAX
+                    ):
                         max_hit = True
                         # Take a subset of df
-                        df = df.iloc[: self.args["max_num_rows"] - total_imported_count]
+                        df = df.iloc[
+                            : self.args.get("max_num_rows", INT_MAX)
+                            - total_imported_count
+                        ]
                     i = 0
                     batch_size = self.args.get("batch_size", 10_000) or 10_000
                     pbar = tqdm(total=df.shape[0], desc="Inserting data")

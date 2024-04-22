@@ -4,6 +4,7 @@ from tqdm import tqdm
 
 from astrapy.db import AstraDB
 
+from vdf_io.constants import INT_MAX
 from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
@@ -105,11 +106,11 @@ class ImportAstraDB(ImportVDB):
                     )
 
                     df = self.read_parquet_progress(parquet_file_path)
-                    if len(vectors) > self.args["max_num_rows"]:
+                    if len(vectors) > self.args.get("max_num_rows", INT_MAX):
                         max_hit = True
                         break
-                    if len(vectors) + len(df) > self.args["max_num_rows"]:
-                        df = df.head(self.args["max_num_rows"] - len(vectors))
+                    if len(vectors) + len(df) > self.args.get("max_num_rows", INT_MAX):
+                        df = df.head(self.args.get("max_num_rows", INT_MAX) - len(vectors))
                         max_hit = True
                     self.update_vectors(vectors, vector_column_name, df)
                     self.update_metadata(metadata, vector_column_names, df)
