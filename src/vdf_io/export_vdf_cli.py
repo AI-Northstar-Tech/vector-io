@@ -7,34 +7,53 @@ import time
 import traceback
 from dotenv import find_dotenv, load_dotenv
 import warnings
+import pkgutil
+import importlib
 
 
-import sentry_sdk  # noqa: E402
-from opentelemetry import trace  # noqa: E402
-from opentelemetry.propagate import set_global_textmap  # noqa: E402
-from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
-from sentry_sdk.integrations.opentelemetry import (  # noqa: E402
-    SentrySpanProcessor,  # noqa: E402
-    SentryPropagator,  # noqa: E402
-)  # noqa: E402
+import sentry_sdk
+from opentelemetry import trace
+from opentelemetry.propagate import set_global_textmap
+from opentelemetry.sdk.trace import TracerProvider
+from sentry_sdk.integrations.opentelemetry import (
+    SentrySpanProcessor,
+    SentryPropagator,
+)
 
-import vdf_io  # noqa: E402
-from vdf_io.export_vdf.milvus_export import ExportMilvus  # noqa: E402
-from vdf_io.export_vdf.pinecone_export import ExportPinecone  # noqa: E402
-from vdf_io.export_vdf.qdrant_export import ExportQdrant  # noqa: E402
-from vdf_io.export_vdf.kdbai_export import ExportKDBAI  # noqa: E402
-from vdf_io.export_vdf.vertexai_vector_search_export import (  # noqa: E402
-    ExportVertexAIVectorSearch,  # noqa: E402
-)  # noqa: E402
-from vdf_io.export_vdf.vespa_export import ExportVespa  # noqa: E402
-from vdf_io.export_vdf.lancedb_export import ExportLanceDB  # noqa: E402
-from vdf_io.export_vdf.txtai_export import ExportTxtai  # noqa: E402
-from vdf_io.export_vdf.chroma_export import ExportChroma  # noqa: E402
-from vdf_io.export_vdf.astradb_export import ExportAstraDB
-from vdf_io.export_vdf.weaviate_export import ExportWeaviate
-from vdf_io.names import DBNames  # noqa: E402
-from vdf_io.scripts.check_for_updates import check_for_updates  # noqa: E402
-from vdf_io.scripts.push_to_hub_vdf import push_to_hub  # noqa: E402
+import vdf_io
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.scripts.check_for_updates import check_for_updates
+from vdf_io.scripts.push_to_hub_vdf import push_to_hub
+
+
+# Path to the directory containing all export modules
+package_dir = "vdf_io.export_vdf"
+
+
+def load_subclasses(package_dir):
+    slug_to_export_func = {}
+    slug_to_parser_func = {}
+    # Dynamically import all modules in the specified package
+    package = importlib.import_module(package_dir)
+    for loader, module_name, is_pkg in pkgutil.walk_packages(package.__path__):
+        if not is_pkg:
+            # Import the module
+            module = importlib.import_module(f"{package_dir}.{module_name}")
+            # Check each class in the module
+            for name, cls in module.__dict__.items():
+                if (
+                    isinstance(cls, type)
+                    and issubclass(cls, ExportVDB)
+                    and cls is not ExportVDB
+                ):
+                    # Assign functions based on the class
+                    slug_to_export_func[cls.DB_NAME_SLUG] = cls.export_vdb
+                    slug_to_parser_func[cls.DB_NAME_SLUG] = cls.make_parser
+    return slug_to_export_func, slug_to_parser_func
+
+
+# Load all subclasses and assign functions
+slug_to_export_func, slug_to_parser_func = load_subclasses(package_dir)
 
 # Suppress specific warnings
 warnings.simplefilter("ignore", ResourceWarning)
@@ -87,33 +106,14 @@ ARGS_ALLOWLIST = [
     "exported_count",
 ]
 
-slug_to_export_func = {
-    DBNames.PINECONE: ExportPinecone.export_vdb,
-    DBNames.QDRANT: ExportQdrant.export_vdb,
-    DBNames.KDBAI: ExportKDBAI.export_vdb,
-    DBNames.MILVUS: ExportMilvus.export_vdb,
-    DBNames.VERTEXAI: ExportVertexAIVectorSearch.export_vdb,
-    DBNames.VESPA: ExportVespa.export_vdb,
-    DBNames.LANCEDB: ExportLanceDB.export_vdb,
-    DBNames.TXTAI: ExportTxtai.export_vdb,
-    DBNames.CHROMA: ExportChroma.export_vdb,
-    DBNames.WEAVIATE: ExportWeaviate.export_vdb,
-    DBNames.ASTRADB: ExportAstraDB.export_vdb,
-}
 
-slug_to_parser_func = {
-    DBNames.PINECONE: ExportPinecone.make_parser,
-    DBNames.QDRANT: ExportQdrant.make_parser,
-    DBNames.KDBAI: ExportKDBAI.make_parser,
-    DBNames.MILVUS: ExportMilvus.make_parser,
-    DBNames.VERTEXAI: ExportVertexAIVectorSearch.make_parser,
-    DBNames.VESPA: ExportVespa.make_parser,
-    DBNames.LANCEDB: ExportLanceDB.make_parser,
-    DBNames.TXTAI: ExportTxtai.make_parser,
-    DBNames.CHROMA: ExportChroma.make_parser,
-    DBNames.WEAVIATE: ExportWeaviate.make_parser,
-    DBNames.ASTRADB: ExportAstraDB.make_parser,
-}
+# slug_to_export_func = {}
+# for subclass in ExportVDB.__subclasses__():
+#     slug_to_export_func[subclass.DB_NAME_SLUG] = subclass.export_vdb
+
+# slug_to_parser_func = {}
+# for subclass in ExportVDB.__subclasses__():
+#     slug_to_parser_func[subclass.DB_NAME_SLUG] = subclass.make_parser
 
 
 def run_export(span):

@@ -180,6 +180,8 @@ class ImportQdrant(ImportVDB):
                                 if not config:
                                     return default
                                 config = config.get(key, {}) or {}
+                            if not config:
+                                return default
                             return config or default
 
                         index_config = namespace_meta.get("index_config", {})
@@ -216,6 +218,16 @@ class ImportQdrant(ImportVDB):
                             get_nested_config(index_config, [config], None)
                             for config in configs
                         ]
+                        tqdm.write(
+                            f"{hnsw_config=}, \n"
+                            f"{optimizers_config=}, \n"
+                            f"{wal_config=}, \n"
+                            f"{quantization_config=}, \n"
+                            f"{on_disk_payload=}, \n"
+                            f"{sparse_vectors_config=} \n"
+                            f"{on_disk=} \n"
+                            f"{vector_column_names=}"
+                        )
                         distance = (
                             namespace_meta.get("metric", Distance.COSINE)
                             or Distance.COSINE

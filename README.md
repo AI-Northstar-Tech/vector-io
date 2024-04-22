@@ -287,7 +287,7 @@ If you wish to improve the efficiency of the import/export scripts, please fork 
 
 ## Telemetry
 
-Running the export_vdf and import_vdf scripts will send anonymous usage data to AI Northstar Tech to help improve the library.
+Running the scripts in the repo will send anonymous usage data to AI Northstar Tech to help improve the library.
 
 You can opt out this by setting the environment variable `DISABLE_TELEMETRY_VECTORIO` to `1`.
 
