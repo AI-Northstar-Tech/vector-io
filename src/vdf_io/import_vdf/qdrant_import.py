@@ -178,6 +178,7 @@ class ImportQdrant(ImportVDB):
                 if new_collection_name not in collections:
                     # create index
                     try:
+
                         def get_nested_config(config, keys, default=None):
                             """Helper function to get nested dictionary values."""
                             if not config:
