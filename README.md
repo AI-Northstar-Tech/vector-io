@@ -29,6 +29,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Milvus                         | ✅     | ✅     |
 | GCP Vertex AI Vector Search    | ✅     | ✅     |
 | KDB.AI                         | ✅     | ✅     |
+| LanceDB                        | ✅     | ✅     |
 
 </details>
 
@@ -40,8 +41,6 @@ See the [Contributing](#contributing) section to add support for your favorite v
   
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| LanceDB                        | ❌     | ✅     |
-| DataStax Astra DB              | ❌     | ✅     |
 
 </details>
 <!-- line break -->
@@ -53,9 +52,8 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| Chroma                         | ❌     | ✅  (pending)   |
+| DataStax Astra DB              | ❌     | ❌     |
 | txtai                          | ❌     | ✅    (pending) |
-| Vespa                          | ❌     | ✅    (pending) |
 </details>
 
 -----
@@ -72,6 +70,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Epsilla                        | ❌     | ❌     |
 | Redis Search                   | ❌     | ❌     |
 | OpenSearch                     | ❌     | ❌     |
+| Vespa                          | ❌     | ❌     |
 | Marqo                          | ❌     | ❌     |
 | Activeloop Deep Lake           | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
