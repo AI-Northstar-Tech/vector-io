@@ -1,6 +1,7 @@
 from typing import Dict, List
 from dotenv import load_dotenv
 from tqdm import tqdm
+import concurrent.futures
 
 from astrapy.db import AstraDB
 from qdrant_client.http.models import Distance
@@ -86,6 +87,11 @@ class ImportAstraDB(ImportVDB):
                     else ""
                 )
                 new_index_name = self.compliant_name(new_index_name)
+                new_index_name = self.create_new_name(
+                    new_index_name,
+                    self.db.get_collections()["status"]["collections"],
+                    delimiter="_",
+                )
                 # create collection
                 collection = self.db.create_collection(
                     new_index_name,
@@ -126,26 +132,55 @@ class ImportAstraDB(ImportVDB):
                 self.total_imported_count += self.flush_to_db(
                     vectors, metadata, collection
                 )
+            tqdm.write(
+                f"Collection {index_name} imported successfully as {new_index_name}"
+            )
+            tqdm.write(f"{self.total_imported_count} points imported in total.")
 
-        print("Data imported successfully")
+        print("Data imported successfully.")
         self.args["imported_count"] = self.total_imported_count
 
     def flush_to_db(self, vectors, metadata, collection):
+        def flush_batch_to_db(collection, vec_keys, vectors, metadata):
+            documents = [
+                {"_id": id, "vector": vector, **metadata}
+                for id, vector, metadata in zip(vec_keys, vectors, metadata)
+            ]
+            collection.upsert_many(documents=documents)
+
         BATCH_SIZE = 20
+        num_parallel_threads = self.args.get("parallel", 5) or 5
         vec_keys = list(vectors.keys())
-        for i in tqdm(range(0, len(vec_keys), BATCH_SIZE), desc="Flushing to DB"):
-            batch_vectors_keys = vec_keys[i : i + BATCH_SIZE]
-            batch_vectors = [vectors[k] for k in batch_vectors_keys]
-            batch_metadata = [metadata[k] for k in batch_vectors_keys]
-            collection.upsert_many(
-                documents=[
-                    {"_id": id, "vector": vector, **metadata}
-                    for id, vector, metadata in zip(
-                        batch_vectors_keys, batch_vectors, batch_metadata
-                    )
-                ],
+        total_points = len(vec_keys)
+        batches = [
+            (
+                vec_keys[i : i + BATCH_SIZE],
+                [vectors[k] for k in vec_keys[i : i + BATCH_SIZE]],
+                [metadata[k] for k in vec_keys[i : i + BATCH_SIZE]],
             )
-        return len(vectors)
+            for i in range(0, total_points, BATCH_SIZE)
+        ]
+
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=num_parallel_threads
+        ) as executor, tqdm(
+            total=total_points,
+            desc=f"Flushing to DB in batches of {BATCH_SIZE} in {num_parallel_threads} threads",
+        ) as pbar:
+            future_to_batch = {
+                executor.submit(flush_batch_to_db, collection, *batch): batch
+                for batch in batches
+            }
+
+            for future in concurrent.futures.as_completed(future_to_batch):
+                batch = future_to_batch[future]
+                try:
+                    future.result()
+                    pbar.update(len(batch[0]))
+                except Exception as e:
+                    tqdm.write(f"Batch upsert failed with error: {e}")
+
+        return total_points
 
     def compliant_name(self, name):
         return re.sub(r"[- ./]", "_", name)
