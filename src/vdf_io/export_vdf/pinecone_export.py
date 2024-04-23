@@ -25,7 +25,7 @@ class ExportPinecone(ExportVDB):
     @classmethod
     def make_parser(cls, subparsers):
         parser_pinecone = subparsers.add_parser(
-            "pinecone", help="Export data from Pinecone"
+            cls.DB_NAME_SLUG, help="Export data from Pinecone"
         )
         parser_pinecone.add_argument(
             "-e", "--environment", type=str, help="Environment of Pinecone instance"

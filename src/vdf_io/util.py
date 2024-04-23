@@ -6,6 +6,7 @@ import json
 import os
 import time
 from uuid import UUID
+import numpy as np
 import pandas as pd
 from io import StringIO
 import sys
@@ -15,7 +16,7 @@ from halo import Halo
 
 from qdrant_client.http.models import Distance
 
-from vdf_io.constants import ID_COLUMN
+from vdf_io.constants import ID_COLUMN, INT_MAX
 from vdf_io.names import DBNames
 
 
@@ -78,18 +79,45 @@ def extract_numerical_hash(string_value):
     return int(hashlib.md5(string_value.encode("utf-8")).hexdigest(), 16)
 
 
-def set_arg_from_input(args, arg_name, prompt, type_name=str, default_value=None):
+def set_arg_from_input(
+    args,
+    arg_name,
+    prompt,
+    type_name=str,
+    default_value=None,
+    choices=None,
+    env_var=None,
+):
     """
     Set the value of an argument from user input if it is not already present
     """
+    if (
+        (default_value is None)
+        and (env_var is not None)
+        and (os.getenv(env_var) is not None)
+    ):
+        default_value = os.getenv(env_var)
     if arg_name not in args or (
         args[arg_name] is None and default_value != "DO_NOT_PROMPT"
     ):
-        inp = input(prompt)
-        if inp == "":
-            args[arg_name] = None if default_value is None else type_name(default_value)
-        else:
-            args[arg_name] = type_name(inp)
+        while True:
+            inp = input(
+                prompt
+                + (" " + str(list(choices)) + ": " if choices is not None else "")
+            )
+            if inp == "":
+                args[arg_name] = (
+                    None if default_value is None else type_name(default_value)
+                )
+                break
+            elif choices is not None and not all(
+                choice in choices for choice in inp.split(",")
+            ):
+                print(f"Invalid input. Please choose from {choices}")
+                continue
+            else:
+                args[arg_name] = type_name(inp)
+                break
     return
 
 
@@ -149,6 +177,32 @@ db_metric_to_standard_metric = {
         "SQUARED_L2_DISTANCE": Distance.EUCLID,
         "COSINE_DISTANCE": Distance.COSINE,
         "L1_DISTANCE": Distance.MANHATTAN,
+    },
+    DBNames.LANCEDB: {
+        "L2": Distance.EUCLID,
+        "Cosine": Distance.COSINE,
+        "Dot": Distance.DOT,
+    },
+    DBNames.CHROMA: {
+        "l2": Distance.EUCLID,
+        "cosine": Distance.COSINE,
+        "ip": Distance.DOT,
+    },
+    DBNames.ASTRADB: {
+        "cosine": Distance.COSINE,
+        "euclidean": Distance.EUCLID,
+        "dot_product": Distance.DOT,
+    },
+    DBNames.WEAVIATE: {
+        "cosine": Distance.COSINE,
+        "l2-squared": Distance.EUCLID,
+        "dot": Distance.DOT,
+        "manhattan": Distance.MANHATTAN,
+    },
+    DBNames.VESPA: {
+        "angular": Distance.COSINE,
+        "euclidean": Distance.EUCLID,
+        "dotproduct": Distance.DOT,
     },
 }
 
@@ -299,8 +353,14 @@ def cleanup_df(df):
                 tqdm.write(
                     f"Warning: Image column '{col}' detected. Image columns are not supported in parquet files. The column has been removed."
                 )
+        # replace NaT with start of epoch
+        if df[col].dtype == "datetime64[ns]":
+            df[col] = df[col].fillna(pd.Timestamp(0))
+
     # for float columns, replace inf with nan
-    df = df.replace([float("inf"), float("-inf")], pd.NA)
+    numeric_cols = df.select_dtypes(include=[np.number])
+    df[numeric_cols.columns] = numeric_cols.map(lambda x: np.nan if np.isinf(x) else x)
+
     return df
 
 
@@ -383,5 +443,18 @@ def read_parquet_progress(file_path, id_column, **kwargs):
                 return_empty = True
     if return_empty:
         return pd.DataFrame(columns=list(cols))
-    df = pd.read_parquet(file_path_to_be_read, **kwargs)
+    with Halo(text=f"Reading parquet file {file_path_to_be_read}", spinner="dots"):
+        if (
+            "max_num_rows" in kwargs
+            and (kwargs.get("max_num_rows", INT_MAX) or INT_MAX) < INT_MAX
+        ):
+            from pyarrow.parquet import ParquetFile
+            import pyarrow as pa
+
+            pf = ParquetFile(file_path_to_be_read)
+            first_ten_rows = next(pf.iter_batches(batch_size=kwargs["max_num_rows"]))
+            df = pa.Table.from_batches([first_ten_rows]).to_pandas()
+        else:
+            df = pd.read_parquet(file_path_to_be_read)
+    tqdm.write(f"{file_path_to_be_read} read successfully. {len(df)=} rows")
     return df

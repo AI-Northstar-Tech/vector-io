@@ -19,7 +19,8 @@ from dotenv import load_dotenv
 import sys
 from IPython.core import ultratb
 import warnings
-from rich import print as rprint
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 import vdf_io
 from vdf_io.constants import ID_COLUMN
@@ -56,7 +57,7 @@ def reembed():
     args = vars(args)
 
     if args.get("env_file_path"):
-        load_dotenv(os.path.join(os.getcwd(), args.get("env_file_path")))
+        load_dotenv(os.path.join(os.getcwd(), args.get("env_file_path")), override=True)
 
     take_input_from_cli_prompt(args)
 
@@ -84,15 +85,6 @@ def reembed_impl(args, reembed_count):
         for _, index_meta in tqdm(
             vdf_meta["indexes"].items(), desc="Iterating over indexes"
         ):
-            new_vector_column = (
-                f"vec_{args['text_column']}_{args['new_model_name'].replace('/', '_')}"
-            )
-            if "dimensions" in args and args["dimensions"] is not None:
-                new_vector_column += f"_dim{args['dimensions']}"
-            else:
-                litellm_embed_response = call_litellm(args, ["dummy"])
-                dims = len(litellm_embed_response.data[0]["embedding"])
-                new_vector_column += f"_dim{dims}"
             overwrite_bool = args["overwrite"]
             for namespace_meta in tqdm(index_meta, desc="Iterating over namespaces"):
                 data_path = namespace_meta["data_path"]
@@ -108,6 +100,23 @@ def reembed_impl(args, reembed_count):
                     file_path = os.path.join(final_data_path, file)
                     if "vector_columns" not in namespace_meta:
                         namespace_meta["vector_columns"] = []
+                    df = read_parquet_progress(file_path, ID_COLUMN)
+                    if args["text_column"] not in df.columns:
+                        ask_for_text_column(args, file_path, df)
+                    new_vector_column = (
+                        f"vec_{args['text_column']}_{args['new_model_name'].replace('/', '_')}"
+                        + (
+                            "_" + args["quantize"]
+                            if (args.get("quantize") != "float32")
+                            else ""
+                        )
+                    )
+                    if "dimensions" in args and args["dimensions"] is not None:
+                        new_vector_column += f"_dim{args['dimensions']}"
+                    else:
+                        litellm_embed_response = call_litellm(args, ["dummy"])
+                        dims = len(litellm_embed_response.data[0]["embedding"])
+                        new_vector_column += f"_dim{dims}"
                     if (
                         new_vector_column in namespace_meta["vector_columns"]
                         and not overwrite_bool
@@ -125,26 +134,18 @@ def reembed_impl(args, reembed_count):
                             exit()
                     tqdm.write(f"Reembedding {file_path}")
                     # read parquet file
-                    df = read_parquet_progress(file_path, ID_COLUMN)
                     # get text column
-                    text_column = args["text_column"]
-                    if text_column not in df.columns:
-                        text_columns = text_column.split("|")
-                        if all([col in df.columns for col in text_columns]):
-                            df[text_column] = df[text_columns].apply(
-                                lambda x: " ".join(x.dropna().astype(str)), axis=1
-                            )
-                        else:
-                            raise Exception(
-                                f"Text column {text_column} not found in {file_path}"
-                            )
                     # get embeddings
                     BATCH_SIZE = args.get("batch_size")
                     all_embeddings = []
+                    pbar = tqdm(total=len(df), desc="Iterating over rows")
                     for i in tqdm(
                         range(0, len(df), BATCH_SIZE), desc="Iterating over batches"
                     ):
-                        batch_text = df[text_column][i : i + BATCH_SIZE].tolist()
+                        batch_text = df[args["text_column"]][
+                            i : i + BATCH_SIZE
+                        ].tolist()
+                        pbar.update(len(batch_text))
 
                         embeddings = call_litellm(args, batch_text)
                         # add embeddings to df
@@ -189,12 +190,59 @@ def reembed_impl(args, reembed_count):
                 }
                 namespace_meta["model_name"] = args["new_model_name"]
                 namespace_meta["dimensions"] = dim
+                namespace_meta["schema_dict_str"] = pq.read_schema(
+                    file_path
+                ).to_string()
         # write vdf_meta to VDF_META.json
         f.seek(0)
         json.dump(vdf_meta, f, indent=4)
         tqdm.write(
             f"Reembedding complete. Computed {reembed_count} vectors. Updated VDF_META.json"
         )
+
+
+def ask_for_text_column(args, file_path, df):
+    text_columns = args["text_column"].split("|")
+    if all([col in df.columns for col in text_columns]):
+        df[args["text_column"]] = df[text_columns].apply(
+            lambda x: " ".join(x.dropna().astype(str)), axis=1
+        )
+    else:
+        # ask user to enter text columns by index1|index2|index3
+        tqdm.write(f"Text column {args['text_column']} not found in {file_path}")
+        tqdm.write("Select the text column(s) from the following list:")
+        # list of string columns
+        text_column_options = {}
+        for i, col in enumerate(df.columns):
+            if df[col].dtype == "object":
+                tqdm.write(f"{i+1}: {col}")
+                text_column_options[i + 1] = col
+        choice_correctly_entered = False
+        while not choice_correctly_entered:
+            text_column_choice = input(
+                "Enter the text column index(es) separated by '|' (e.g. 1|2|3): "
+            )
+            text_columns_choice = [
+                int(col_no) for col_no in text_column_choice.split("|")
+            ]
+            if all([tc in text_column_options for tc in text_columns_choice]):
+                choice_correctly_entered = True
+                text_column_choice_names = [
+                    text_column_options[col_no] for col_no in text_columns_choice
+                ]
+                text_column_name = "|".join(text_column_choice_names)
+                tqdm.write(f"Selected text column(s): {text_column_name}.")
+                args["text_column"] = text_column_name
+                if len(text_column_choice_names) > 1:
+                    tqdm.write("Combining multiple text columns into a single column.")
+                    df[text_column_name] = df[text_column_choice_names].apply(
+                        lambda x: " ".join(x.dropna().astype(str)),
+                        axis=1,
+                    )
+            else:
+                tqdm.write(
+                    "Invalid choice. Please enter the text column index(es) separated by '|': "
+                )
 
 
 def handle_new_dataset(args):
@@ -218,15 +266,48 @@ def handle_new_dataset(args):
             table = pq.read_table(file)
             row_count = table.num_rows
             total_vector_count += row_count
-            schema_dict = {field.name: field.type for field in table.schema}
-            rprint(table.schema)
             # print each column name and type
             # for col in schema_dict["metadata"]["arrow:extension:column_types"]:
             #     tqdm.write(f"Column: {col['name']} of type {col['type']}")
             # # are there any vector columns in the schema?
             # for col in schema_dict["metadata"]["arrow:extension:vector_columns"]:
             #     tqdm.write(f"Vector column: {col['name']} of type {col['type']}")
-        # create VDF_META.json
+            # create VDF_META.json
+            # if there exists a vector column, add it to vector_columns
+            vector_columns = []
+            model_map = {}
+            model_name = ""
+            dimensions = -1
+            for field in table.schema:
+                if pa.types.is_list(field.type):
+                    tqdm.write(
+                        f"Vector column: {field.name} of type {field.type.to_pandas_dtype()}"
+                    )
+                    vector_columns.append(field.name)
+                    # check length of vector column
+                    dimensions = len(table[field.name].to_pandas().iloc[0])
+                    # ask which model to use for embedding
+                    tqdm.write(
+                        f"Vector column {field.name} has length {dimensions}. Please specify the model to use for embedding."
+                    )
+                    model_name = input(
+                        "Enter the name of the model to be used for embedding: "
+                    )
+                    old_text_column = input(
+                        "Enter the name of the column containing text to be embedded: "
+                    )
+                    model_map[field.name] = {
+                        "model_name": model_name,
+                        "text_column": old_text_column,
+                        "dimensions": dimensions,
+                        "vector_column": field.name,
+                    }
+                    # add model_name to VDF_META.json
+                    # add vector column to vector_columns
+                    # add vector column to model_map
+                    # add model_name to model_map
+                    # add dimensions to model_map
+
         vdf_meta = VDFMeta(
             version=vdf_io.__version__,
             file_structure=[],
@@ -241,16 +322,18 @@ def handle_new_dataset(args):
                         index_name=index_name,
                         total_vector_count=total_vector_count,
                         exported_vector_count=total_vector_count,
-                        dimensions=-1,
-                        model_name=None,
-                        vector_columns=[],
+                        dimensions=dimensions,
+                        model_name=model_name,
+                        vector_columns=vector_columns,
                         data_path=".",
                         metric=None,
-                        schema_dict=schema_dict,
+                        model_map=model_map,
+                        schema_dict_str=table.schema.to_string(),
                     )
                 ]
             },
-        ).model_dump()
+        )
+        vdf_meta = vdf_meta.model_dump()
         json.dump(vdf_meta, f, indent=4)
 
 
@@ -334,7 +417,7 @@ def add_arguments_to_parser(parser):
         "--batch_size",
         type=int,
         help="Batch size for reembedding",
-        default=100,
+        default=96,
     )
 
     parser.add_argument(
@@ -350,6 +433,23 @@ def add_arguments_to_parser(parser):
         type=str,
         help="Input type for the model",
         default=None,
+    )
+
+    quantize_options = [
+        "int8",
+        "binary",
+        "float32",
+        "int8",
+        "uint8",
+        "binary",
+        "ubinary",
+    ]
+    parser.add_argument(
+        "--quantize",
+        type=str,
+        choices=quantize_options,
+        help=f"Quantization method ({', '.join(quantize_options)})",
+        default="float32",
     )
 
 
@@ -387,6 +487,12 @@ def call_litellm(args, batch_text):
 model = None
 
 
+def is_apple_silicon():
+    # if `uname -m` returns arm64, then it is an apple silicon device
+    return os.uname().machine == "arm64"
+    # return torch.backends.mps.is_available()
+
+
 def call_sentence_transformers(args, batch_text):
     from sentence_transformers import SentenceTransformer
 
@@ -400,7 +506,7 @@ def call_sentence_transformers(args, batch_text):
             trust_remote_code=True,
             device=device,
         )
-    embeddings = model.encode(batch_text)
+    embeddings = model.encode(batch_text, precision=args.get("quantize"))
     return EmbeddingResponse(
         data=[
             {"index": i, "embedding": emb.tolist()} for i, emb in enumerate(embeddings)

@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from pinecone import Pinecone, ServerlessSpec, PodSpec, Vector
 
+from vdf_io.constants import INT_MAX
 from vdf_io.names import DBNames
 from vdf_io.util import (
     set_arg_from_input,
@@ -80,7 +81,7 @@ class ImportPinecone(ImportVDB):
     @classmethod
     def make_parser(cls, subparsers):
         parser_pinecone = subparsers.add_parser(
-            DBNames.PINECONE, help="Import data to Pinecone"
+            cls.DB_NAME_SLUG, help="Import data to Pinecone"
         )
         parser_pinecone.add_argument(
             "-e", "--environment", type=str, help="Pinecone environment"
@@ -215,11 +216,15 @@ class ImportPinecone(ImportVDB):
                                 "Invalid arguments for subset export. "
                                 "Please provide either id_list_file or id_range_start and id_range_end"
                             )
-                    if len(vectors) > self.args["max_num_rows"]:
+                    if len(vectors) > (self.args.get("max_num_rows") or INT_MAX):
                         max_hit = True
                         break
-                    if len(vectors) + len(df) > self.args["max_num_rows"]:
-                        df = df.head(self.args["max_num_rows"] - len(vectors))
+                    if len(vectors) + len(df) > (
+                        self.args.get("max_num_rows") or INT_MAX
+                    ):
+                        df = df.head(
+                            (self.args.get("max_num_rows") or INT_MAX) - len(vectors)
+                        )
                         max_hit = True
                     self.update_vectors(vectors, vector_column_name, df)
                     self.update_metadata(metadata, vector_column_names, df)
@@ -229,7 +234,7 @@ class ImportPinecone(ImportVDB):
                     f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files"
                 )
                 # Upsert the vectors and metadata to the Pinecone index in batches
-                total_imported_count = 0
+                self.total_imported_count = 0
                 start_idx = 0
                 pbar = tqdm(total=len(vectors), desc="Upserting vectors")
                 while start_idx < len(vectors):
@@ -256,7 +261,7 @@ class ImportPinecone(ImportVDB):
                     ]
                     try:
                         resp = index.upsert(vectors=batch_vectors, namespace=namespace)
-                        total_imported_count += resp["upserted_count"]
+                        self.total_imported_count += resp["upserted_count"]
                         pbar.update(resp["upserted_count"])
                         start_idx += resp["upserted_count"]
                     except Exception as e:
@@ -270,6 +275,6 @@ class ImportPinecone(ImportVDB):
                         tqdm.write(f"Reducing batch size to {current_batch_size}")
                         continue
         tqdm.write(
-            f"Data import completed successfully. Imported {total_imported_count} vectors"
+            f"Data import completed successfully. Imported {self.total_imported_count} vectors"
         )
-        self.args["imported_count"] = total_imported_count
+        self.args["imported_count"] = self.total_imported_count
