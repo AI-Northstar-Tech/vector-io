@@ -231,12 +231,29 @@ class ImportVDB(abc.ABC):
     def create_new_name(self, index_name, indexes):
         if not self.args.get("create_new", False):
             return index_name
+
+        # Original name to use as the base for appending suffixes
         og_name = index_name
-        suffix = 2
-        while index_name in indexes:
-            index_name = og_name + f"-{suffix}"
+
+        # Find all indexes that start with the original name followed by a hyphen
+        suffixes = [
+            name[len(og_name) + 1 :]
+            for name in indexes
+            if name.startswith(og_name + "-")
+        ]
+
+        # Convert suffixes to integers where possible
+        suffixes = [int(suffix) for suffix in suffixes if suffix.isdigit()]
+
+        # Determine the next suffix to use
+        suffix = max(suffixes) + 1 if suffixes else 2
+
+        # Generate new names until a unique one is found
+        while True:
+            new_name = og_name + f"-{suffix}"
+            if new_name not in indexes:
+                return new_name
             suffix += 1
-        return index_name
 
     # destructor
     def cleanup(self):

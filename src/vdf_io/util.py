@@ -6,6 +6,7 @@ import json
 import os
 import time
 from uuid import UUID
+import numpy as np
 import pandas as pd
 from io import StringIO
 import sys
@@ -15,7 +16,7 @@ from halo import Halo
 
 from qdrant_client.http.models import Distance
 
-from vdf_io.constants import ID_COLUMN
+from vdf_io.constants import ID_COLUMN, INT_MAX
 from vdf_io.names import DBNames
 
 
@@ -352,8 +353,14 @@ def cleanup_df(df):
                 tqdm.write(
                     f"Warning: Image column '{col}' detected. Image columns are not supported in parquet files. The column has been removed."
                 )
+        # replace NaT with start of epoch
+        if df[col].dtype == "datetime64[ns]":
+            df[col] = df[col].fillna(pd.Timestamp(0))
+
     # for float columns, replace inf with nan
-    df = df.replace([float("inf"), float("-inf")], pd.NA)
+    numeric_cols = df.select_dtypes(include=[np.number])
+    df[numeric_cols.columns] = numeric_cols.map(lambda x: np.nan if np.isinf(x) else x)
+
     return df
 
 
@@ -437,16 +444,17 @@ def read_parquet_progress(file_path, id_column, **kwargs):
     if return_empty:
         return pd.DataFrame(columns=list(cols))
     with Halo(text=f"Reading parquet file {file_path_to_be_read}", spinner="dots"):
-        if "max_num_rows" in kwargs:
-            import pyarrow.dataset as ds
+        if (
+            "max_num_rows" in kwargs
+            and (kwargs.get("max_num_rows", INT_MAX) or INT_MAX) < INT_MAX
+        ):
+            from pyarrow.parquet import ParquetFile
+            import pyarrow as pa
 
-            df = (
-                ds.dataset(file_path_to_be_read)
-                .scanner()
-                .head(kwargs["max_num_rows"])
-                .to_pandas()
-            )
+            pf = ParquetFile(file_path_to_be_read)
+            first_ten_rows = next(pf.iter_batches(batch_size=kwargs["max_num_rows"]))
+            df = pa.Table.from_batches([first_ten_rows]).to_pandas()
         else:
-            df = pd.read_parquet(file_path_to_be_read, **kwargs)
+            df = pd.read_parquet(file_path_to_be_read)
     tqdm.write(f"{file_path_to_be_read} read successfully. {len(df)=} rows")
     return df
