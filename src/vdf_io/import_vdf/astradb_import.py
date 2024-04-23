@@ -3,11 +3,13 @@ from dotenv import load_dotenv
 from tqdm import tqdm
 
 from astrapy.db import AstraDB
+from qdrant_client.http.models import Distance
 
 from vdf_io.constants import INT_MAX
 from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
+import re
 from vdf_io.util import (
     set_arg_from_input,
     set_arg_from_password,
@@ -78,18 +80,19 @@ class ImportAstraDB(ImportVDB):
                 self.set_dims(namespace_meta, index_name)
                 data_path = namespace_meta["data_path"]
                 final_data_path = self.get_final_data_path(data_path)
-                index_name = index_name + (
+                new_index_name = index_name + (
                     f'_{namespace_meta["namespace"]}'
                     if namespace_meta["namespace"]
                     else ""
                 )
-                new_index_name = index_name
+                new_index_name = self.compliant_name(new_index_name)
                 # create collection
                 collection = self.db.create_collection(
                     new_index_name,
                     dimension=namespace_meta["dimensions"],
                     metric=standardize_metric_reverse(
-                        namespace_meta["distance_metric"], self.DB_NAME_SLUG
+                        namespace_meta.get("distance_metric", Distance.COSINE),
+                        self.DB_NAME_SLUG,
                     ),
                 )
                 parquet_files = self.get_parquet_files(final_data_path)
@@ -127,15 +130,22 @@ class ImportAstraDB(ImportVDB):
         print("Data imported successfully")
         self.args["imported_count"] = self.total_imported_count
 
-    def flush_to_db(vectors, metadata, collection):
+    def flush_to_db(self, vectors, metadata, collection):
         BATCH_SIZE = 20
-        for i in range(0, len(vectors), BATCH_SIZE):
-            batch_vectors = vectors[i : i + BATCH_SIZE]
-            batch_metadata = metadata[i : i + BATCH_SIZE]
+        vec_keys = list(vectors.keys())
+        for i in tqdm(range(0, len(vec_keys), BATCH_SIZE), desc="Flushing to DB"):
+            batch_vectors_keys = vec_keys[i : i + BATCH_SIZE]
+            batch_vectors = [vectors[k] for k in batch_vectors_keys]
+            batch_metadata = [metadata[k] for k in batch_vectors_keys]
             collection.upsert_many(
                 documents=[
                     {"_id": id, "vector": vector, **metadata}
-                    for id, vector, metadata in zip(batch_vectors, batch_metadata)
+                    for id, vector, metadata in zip(
+                        batch_vectors_keys, batch_vectors, batch_metadata
+                    )
                 ],
             )
         return len(vectors)
+
+    def compliant_name(self, name):
+        return re.sub(r"[- ./]", "_", name)
