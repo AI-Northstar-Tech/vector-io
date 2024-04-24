@@ -8,7 +8,12 @@ from pymilvus import connections, utility, Collection
 
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
-from vdf_io.util import get_author_name, set_arg_from_input, set_arg_from_password, standardize_metric
+from vdf_io.util import (
+    get_author_name,
+    set_arg_from_input,
+    set_arg_from_password,
+    standardize_metric,
+)
 from vdf_io.names import DBNames
 
 
