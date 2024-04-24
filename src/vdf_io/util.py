@@ -458,3 +458,7 @@ def read_parquet_progress(file_path, id_column, **kwargs):
             df = pd.read_parquet(file_path_to_be_read)
     tqdm.write(f"{file_path_to_be_read} read successfully. {len(df)=} rows")
     return df
+
+
+def get_author_name():
+    return (os.environ.get("USER", os.environ.get("USERNAME"))) or "unknown"
