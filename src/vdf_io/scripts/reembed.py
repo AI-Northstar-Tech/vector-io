@@ -27,6 +27,7 @@ from vdf_io.constants import ID_COLUMN
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
 
 from vdf_io.util import (
+    get_author_name,
     get_final_data_path,
     get_parquet_files,
     read_parquet_progress,
@@ -311,7 +312,7 @@ def handle_new_dataset(args):
         vdf_meta = VDFMeta(
             version=vdf_io.__version__,
             file_structure=[],
-            author=get_author_name()
+            author=get_author_name(),
             exported_from="reembed",
             exported_at=datetime.datetime.now().astimezone().isoformat(),
             id_column=ID_COLUMN,

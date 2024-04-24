@@ -461,4 +461,4 @@ def read_parquet_progress(file_path, id_column, **kwargs):
 
 
 def get_author_name():
-    return os.environ.get("USER", os.environ.get("USERNAME", "unknown")) or "unknown"
+    return (os.environ.get("USER", os.environ.get("USERNAME"))) or "unknown"
