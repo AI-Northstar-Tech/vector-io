@@ -143,7 +143,7 @@ class ImportAstraDB(ImportVDB):
     def flush_to_db(self, vectors, metadata, collection):
         def flush_batch_to_db(collection, vec_keys, vectors, metadata):
             documents = [
-                {"_id": id, "vector": vector, **metadata}
+                {"_id": id, "$vector": vector, **metadata}
                 for id, vector, metadata in zip(vec_keys, vectors, metadata)
             ]
             collection.upsert_many(documents=documents)

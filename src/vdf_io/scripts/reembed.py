@@ -311,7 +311,7 @@ def handle_new_dataset(args):
         vdf_meta = VDFMeta(
             version=vdf_io.__version__,
             file_structure=[],
-            author=os.environ.get("USER"),
+            author=get_author_name()
             exported_from="reembed",
             exported_at=datetime.datetime.now().astimezone().isoformat(),
             id_column=ID_COLUMN,

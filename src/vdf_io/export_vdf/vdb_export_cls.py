@@ -6,7 +6,7 @@ import os
 import abc
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
 
-from vdf_io.util import extract_data_hash, standardize_metric
+from vdf_io.util import extract_data_hash, get_author_name, standardize_metric
 from vdf_io.constants import ID_COLUMN
 
 
@@ -86,7 +86,7 @@ class ExportVDB(abc.ABC):
         return VDFMeta(
             version=self.args["library_version"],
             file_structure=self.file_structure,
-            author=os.environ.get("USER"),
+            author=get_author_name(),
             exported_from=self.DB_NAME_SLUG,
             indexes=index_metas,
             exported_at=datetime.datetime.now().astimezone().isoformat(),
