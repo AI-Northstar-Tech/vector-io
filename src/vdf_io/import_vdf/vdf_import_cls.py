@@ -228,7 +228,7 @@ class ImportVDB(abc.ABC):
     def read_parquet_progress(self, file_path, **kwargs):
         return read_parquet_progress(file_path, self.id_column, **kwargs)
 
-    def create_new_name(self, index_name, indexes):
+    def create_new_name(self, index_name, indexes, delimiter="-"):
         if not self.args.get("create_new", False):
             return index_name
 
@@ -239,7 +239,7 @@ class ImportVDB(abc.ABC):
         suffixes = [
             name[len(og_name) + 1 :]
             for name in indexes
-            if name.startswith(og_name + "-")
+            if name.startswith(og_name + delimiter)
         ]
 
         # Convert suffixes to integers where possible
@@ -250,7 +250,7 @@ class ImportVDB(abc.ABC):
 
         # Generate new names until a unique one is found
         while True:
-            new_name = og_name + f"-{suffix}"
+            new_name = og_name + f"{delimiter}{suffix}"
             if new_name not in indexes:
                 return new_name
             suffix += 1
