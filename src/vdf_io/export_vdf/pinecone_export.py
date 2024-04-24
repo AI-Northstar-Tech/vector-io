@@ -10,7 +10,12 @@ from vdf_io.constants import ID_COLUMN
 
 from vdf_io.names import DBNames
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
-from vdf_io.util import get_author_name, set_arg_from_input, set_arg_from_password, standardize_metric
+from vdf_io.util import (
+    get_author_name,
+    set_arg_from_input,
+    set_arg_from_password,
+    standardize_metric,
+)
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 PINECONE_MAX_K = 10_000
