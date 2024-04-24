@@ -7,6 +7,8 @@ import os
 import time
 import litellm
 from litellm import EmbeddingResponse
+import numpy as np
+import sentence_transformers
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -21,6 +23,8 @@ from IPython.core import ultratb
 import warnings
 import pyarrow as pa
 import pyarrow.parquet as pq
+from mlx_embedding_models.embedding import EmbeddingModel
+from sentence_transformers import SentenceTransformer
 
 import vdf_io
 from vdf_io.constants import ID_COLUMN
@@ -174,9 +178,10 @@ def reembed_impl(args, reembed_count):
                     tqdm.write(
                         f"Warning: {new_vector_column} already exists in vector_columns. Overwriting."
                     )
-                if "model_map" not in namespace_meta:
+                if not namespace_meta.get("model_map"):
                     namespace_meta["model_map"] = {}
-                    for vector_column in namespace_meta["vector_columns"]:
+                for vector_column in namespace_meta["vector_columns"]:
+                    if vector_column not in namespace_meta["model_map"]:
                         namespace_meta["model_map"][vector_column] = {
                             "model_name": namespace_meta.get("model_name"),
                             "text_column": args["text_column"],
@@ -215,7 +220,10 @@ def ask_for_text_column(args, file_path, df):
         # list of string columns
         text_column_options = {}
         for i, col in enumerate(df.columns):
-            if df[col].dtype == "object":
+            # check if column is of type string
+            # pick first non-null value
+            non_null_value = df[col].dropna().iloc[0]
+            if isinstance(non_null_value, str):
                 tqdm.write(f"{i+1}: {col}")
                 text_column_options[i + 1] = col
         choice_correctly_entered = False
@@ -435,6 +443,13 @@ def add_arguments_to_parser(parser):
         help="Input type for the model",
         default=None,
     )
+    parser.add_argument(
+        "--disable_mlx",
+        type=bool,
+        help="Disable MLX for embedding",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+    )
 
     quantize_options = [
         "int8",
@@ -470,13 +485,39 @@ def call_litellm(args, batch_text):
         return call_sentence_transformers(args, batch_text)
     try:
         embeddings = litellm.embedding(
-            model=args["new_model_name"],
-            input=batch_text,
-            dimensions=args.get("dimensions"),
-            input_type=args.get("input_type"),
+            **{
+                "model": args["new_model_name"],
+                "input": batch_text,
+                "dimensions": args.get("dimensions"),
+                **(
+                    {"input_type": args["input_type"]}
+                    if args.get("input_type") is not None
+                    else {}
+                ),
+            }
         )
+        if args.get("quantize") != "float32":
+            # convert to ndarray
+            embeddings = np.array([np.array(x["embedding"]) for x in embeddings.data])
+            embeddings = sentence_transformers.quantize_embeddings(
+                embeddings, precision=args.get("quantize")
+            )
+            # convert to EmbeddingResponse
+            embeddings = EmbeddingResponse(
+                data=[
+                    {"index": i, "embedding": emb.tolist()}
+                    for i, emb in enumerate(embeddings)
+                ]
+            )
     except Exception as e:
-        if e.message.startswith("Huggingface"):
+        # catch BadRequestError: LLM Provider NOT provided. Pass in the LLM provider you are trying to call. You passed model=TaylorAI/bge-micro-v2
+        # check type of exception
+        if e.message.startswith("Huggingface") or (
+            type(e).__name__ == "BadRequestError" and "LLM Provider" in e.message
+        ):
+            tqdm.write(
+                f"Using Sentence Transformers for embedding for model {args['new_model_name']} {e}"
+            )
             use_sentence_transformers = True
             embeddings = call_sentence_transformers(args, batch_text)
         else:
@@ -487,6 +528,8 @@ def call_litellm(args, batch_text):
 
 model = None
 
+using_mlx = False
+
 
 def is_apple_silicon():
     # if `uname -m` returns arm64, then it is an apple silicon device
@@ -495,24 +538,38 @@ def is_apple_silicon():
 
 
 def call_sentence_transformers(args, batch_text):
-    from sentence_transformers import SentenceTransformer
-
-    # check global model
     global model
     if model is None:
         # figure out device map
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        model = SentenceTransformer(
-            args["new_model_name"].replace("huggingface/", ""),
-            trust_remote_code=True,
-            device=device,
-        )
-    embeddings = model.encode(batch_text, precision=args.get("quantize"))
+        if device == "cpu" and is_apple_silicon() and not args.get("disable_mlx"):
+            global using_mlx
+            using_mlx = True
+            tqdm.write("Using MLX for embedding")
+            model = EmbeddingModel.from_registry(strip_hf_prefix(args))
+        else:
+            model = SentenceTransformer(
+                strip_hf_prefix(args),
+                trust_remote_code=True,
+                device=device,
+            )
+    if using_mlx:
+        embeddings = model.encode(batch_text)
+    else:
+        embeddings = model.encode(batch_text, precision=args.get("quantize"))
     return EmbeddingResponse(
         data=[
             {"index": i, "embedding": emb.tolist()} for i, emb in enumerate(embeddings)
         ]
     )
+
+
+def strip_hf_prefix(args):
+    # count /s
+    if args["new_model_name"].count("/") == 2:
+        # replace first occurrence of "huggingface/" to ""
+        return args["new_model_name"].replace("huggingface/", "", 1)
+    return args["new_model_name"].replace("huggingface/", "")
 
 
 if __name__ == "__main__":
