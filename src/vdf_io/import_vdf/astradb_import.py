@@ -1,7 +1,6 @@
 import argparse
 from typing import Dict, List
 from dotenv import load_dotenv
-import numpy as np
 from tqdm import tqdm
 import concurrent.futures
 
