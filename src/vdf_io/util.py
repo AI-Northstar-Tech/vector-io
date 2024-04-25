@@ -462,3 +462,29 @@ def read_parquet_progress(file_path, id_column, **kwargs):
 
 def get_author_name():
     return (os.environ.get("USER", os.environ.get("USERNAME"))) or "unknown"
+
+
+def clean_value(v):
+    if hasattr(v, "__iter__") and not isinstance(v, str):
+        if any(pd.isna(x) for x in v):
+            return [None if pd.isna(x) else x for x in v]
+    if isinstance(v, float) and np.isnan(v):
+        return None
+    if isinstance(v, np.datetime64) and np.isnat(v):
+        return None
+    if not hasattr(v, "__iter__") and pd.isna(v):
+        return None
+    return v
+
+
+def clean_documents(documents):
+    for doc in documents:
+        to_be_replaced = []
+        for k, v in doc.items():
+            doc[k] = clean_value(v)
+            # if k doesn't conform to CQL standards, replace it
+            # like spaces
+            if " " in k:
+                to_be_replaced.append(k)
+        for k in to_be_replaced:
+            doc[k.replace(" ", "_")] = doc.pop(k)

@@ -1,6 +1,7 @@
 import argparse
 from typing import Dict, List
 from dotenv import load_dotenv
+import numpy as np
 from tqdm import tqdm
 import concurrent.futures
 
@@ -15,6 +16,7 @@ from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
 import re
 from vdf_io.util import (
+    clean_documents,
     set_arg_from_input,
     set_arg_from_password,
     standardize_metric_reverse,
@@ -202,7 +204,7 @@ class ImportAstraDB(ImportVDB):
         print("Data imported successfully.")
         self.args["imported_count"] = self.total_imported_count
 
-    def flush_to_db(self, vectors, metadata, collection, via_cql):
+    def flush_to_db(self, vectors, metadata, collection, via_cql, parallel=True):
         if via_cql:
             keys = list(set(vectors.keys()).union(set(metadata.keys())))
             for id in keys:
@@ -212,27 +214,37 @@ class ImportAstraDB(ImportVDB):
                 )
             return len(vectors)
 
+        keys = list(set(vectors.keys()).union(set(metadata.keys())))
+        if not parallel:
+            return flush_to_db_sync(
+                collection,
+                keys,
+                [vectors.get(k) for k in keys],
+                [metadata.get(k, {}) for k in keys],
+            )
+
         def flush_batch_to_db(collection, keys, vectors, metadata):
             documents = [
                 {"_id": id, "$vector": vector, **metadata}
                 for id, vector, metadata in zip(keys, vectors, metadata)
             ]
             # replace nan with None
-            for doc in documents:
-                for k, v in doc.items():
-                    if isinstance(v, float) and v != v:
-                        doc[k] = None
-            collection.upsert_many(documents=documents)
+            clean_documents(documents)
+            try:
+                response = collection.upsert_many(documents=documents)
+                return response
+            except Exception as e:
+                tqdm.write(f"Error upserting batch: {e}")
+                return
 
         BATCH_SIZE = 20
         num_parallel_threads = self.args.get("parallel", 5) or 5
-        keys = list(set(vectors.keys()).union(set(metadata.keys())))
         total_points = len(keys)
         batches = [
             (
                 keys[i : i + BATCH_SIZE],
-                [vectors[k] for k in keys[i : i + BATCH_SIZE]],
-                [metadata[k] for k in keys[i : i + BATCH_SIZE]],
+                [vectors.get(k) for k in keys[i : i + BATCH_SIZE]],
+                [metadata.get(k, {}) for k in keys[i : i + BATCH_SIZE]],
             )
             for i in range(0, total_points, BATCH_SIZE)
         ]
@@ -260,3 +272,30 @@ class ImportAstraDB(ImportVDB):
 
     def compliant_name(self, name):
         return re.sub(r"[- ./]", "_", name)
+
+
+def flush_to_db_sync(collection, keys, vectors, metadata):
+    # in batches of 20 keys using upsert_many
+    BATCH_SIZE = 20
+    batches = list(range(0, len(keys), BATCH_SIZE))
+    for batch in tqdm(batches, desc="Flushing to DB in batches of 20"):
+        key_batch = keys[batch : batch + BATCH_SIZE]
+        vector_batch = [vectors[k] for k in key_batch]
+        metadata_batch = [metadata[k] for k in key_batch]
+        upsert_batch(collection, metadata, key_batch, vector_batch, metadata_batch)
+
+
+def upsert_batch(collection, metadata, key_batch, vector_batch, metadata_batch):
+    documents = [
+        {"_id": id, "$vector": vector, **metadata}
+        for id, vector in zip(key_batch, vector_batch, metadata_batch)
+    ]
+    # replace nan with None
+    clean_documents(documents)
+
+    response = collection.upsert_many(documents=documents)
+    # check if any of the elements are errors
+    if any([isinstance(r, Exception) for r in response]):
+        for i, r in enumerate(response):
+            if isinstance(r, Exception):
+                tqdm.write(f"Error upserting: {r} for {documents[i]}")
