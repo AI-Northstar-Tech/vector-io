@@ -138,6 +138,7 @@ class ImportAstraDB(ImportVDB):
                     collection_list,
                     delimiter="_",
                 )
+                tqdm.write(f"Index name that will be used: {new_index_name}")
                 # create collection
                 if not via_cql:
                     collection = self.db.create_collection(
@@ -160,7 +161,7 @@ class ImportAstraDB(ImportVDB):
 
                     self.session.execute(
                         f"CREATE TABLE IF NOT EXISTS {self.args['keyspace']}.{new_index_name}"
-                        f" (id text PRIMARY KEY, $vector vector<float,{namespace_meta["dimensions"]}>)"
+                        f" (id text PRIMARY KEY, \"$vector\" vector<float,{namespace_meta['dimensions']}>)"
                     )
                 parquet_files = self.get_parquet_files(final_data_path)
                 vectors = {}
@@ -212,16 +213,15 @@ class ImportAstraDB(ImportVDB):
             return len(vectors)
 
         def flush_batch_to_db(collection, keys, vectors, metadata):
-            tups = []
-            for key in keys:
-                # get the vector and metadata
-                vector = vectors.get(key)
-                metadata = metadata.get(key, {})
-                tups.append((key, vector, metadata))
             documents = [
                 {"_id": id, "$vector": vector, **metadata}
-                for id, vector, metadata in tups
+                for id, vector, metadata in zip(keys, vectors, metadata)
             ]
+            # replace nan with None
+            for doc in documents:
+                for k, v in doc.items():
+                    if isinstance(v, float) and v != v:
+                        doc[k] = None
             collection.upsert_many(documents=documents)
 
         BATCH_SIZE = 20
