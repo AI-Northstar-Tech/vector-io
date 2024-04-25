@@ -1,7 +1,6 @@
 import json
 import os
 import chromadb
-import pandas as pd
 from tqdm import tqdm
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input
