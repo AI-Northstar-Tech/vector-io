@@ -106,6 +106,10 @@ class ExportKDBAI(ExportVDB):
         save_path = f"{vectors_directory}/{table_name}.parquet"
         table_res.to_parquet(save_path, index=False)
 
+        # TODO: use save_vectors_to_parquet
+        # vectors = table_res["vector"].apply(pd.Series)
+        # metadata = table_res.drop(columns=["vector"]).to_dict(orient="records")
+        # self.save_vectors_to_parquet(vectors, metadata, vectors_directory)
         embedding_name = None
         embedding_dims = None
         embedding_dist = None

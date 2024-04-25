@@ -4,8 +4,10 @@ from typing import List
 import pandas as pd
 import os
 import abc
-from vdf_io.meta_types import NamespaceMeta, VDFMeta
+import pyarrow.parquet as pq
+import pyarrow as pa
 
+from vdf_io.meta_types import NamespaceMeta, VDFMeta
 from vdf_io.util import extract_data_hash, get_author_name, standardize_metric
 from vdf_io.constants import ID_COLUMN
 
@@ -75,6 +77,12 @@ class ExportVDB(abc.ABC):
 
         parquet_file = os.path.join(vectors_directory, f"{self.file_ctr}.parquet")
         df.to_parquet(parquet_file)
+        if not hasattr(self, "parquet_schema"):
+            self.parquet_schema = pq.read_schema(parquet_file)
+        else:
+            self.parquet_schema = pa.unify_schemas(
+                [self.parquet_schema, pq.read_schema(parquet_file)]
+            )
         self.file_structure.append(parquet_file)
         self.file_ctr += 1
 
@@ -103,6 +111,8 @@ class ExportVDB(abc.ABC):
         vector_columns=None,
         distance=None,
     ):
+        vec_cols = ["vector"] if vector_columns is None else vector_columns
+        model_name = self.args.get("model_name", "NOT_PROVIDED")
         namespace_meta = NamespaceMeta(
             index_name=index_name,
             namespace="",
@@ -113,9 +123,23 @@ class ExportVDB(abc.ABC):
                 self.DB_NAME_SLUG,
             ),
             dimensions=dim,
-            model_name=self.args["model_name"],
-            vector_columns=["vector"] if vector_columns is None else vector_columns,
+            model_name=model_name,
+            vector_columns=vec_cols,
+            model_map={
+                vec_col: {
+                    "model_name": model_name,
+                    "text_column": "NOT_PROVIDED",
+                    "dimensions": dim,
+                    "vector_column": vec_col,
+                }
+                for vec_col in vec_cols
+            },
             data_path="/".join(vectors_directory.split("/")[1:]),
+            schema_dict_str=(
+                self.parquet_schema.to_string()
+                if hasattr(self, "parquet_schema")
+                else None
+            ),
             index_config=index_config,
         )
 

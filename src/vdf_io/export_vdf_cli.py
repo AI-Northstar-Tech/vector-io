@@ -177,7 +177,7 @@ def make_common_options(parser):
         "--model_name",
         type=str,
         help="Name of model used",
-        default="text-embedding-ada-002",
+        default="NOT_PROVIDED",
     )
     parser.add_argument(
         "--max_file_size",

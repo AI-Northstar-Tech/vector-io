@@ -166,6 +166,7 @@ def reembed_impl(args, reembed_count):
                     df[new_vector_column] = all_embeddings
                     if ID_COLUMN not in df.columns:
                         df[ID_COLUMN] = df.index
+                    # TODO: use save_vectors_to_parquet
                     df.to_parquet(file_path)
                     tqdm.write(
                         f"Computed {len(all_embeddings)} vectors for {len(df)} rows in column:{new_vector_column} of {file_path}"

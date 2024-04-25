@@ -92,6 +92,7 @@ class ExportLanceDB(ExportVDB):
                 if remainder_df is not None:
                     df = pd.concat([remainder_df, df])
                 while len(df) >= BATCH_SIZE:
+                    # TODO: use save_vectors_to_parquet
                     df[:BATCH_SIZE].to_parquet(
                         os.path.join(vectors_directory, f"{j}.parquet")
                     )
@@ -101,6 +102,7 @@ class ExportLanceDB(ExportVDB):
                 offset += BATCH_SIZE
                 remainder_df = df
             if remainder_df is not None and len(remainder_df) > 0:
+                # TODO: use save_vectors_to_parquet
                 remainder_df.to_parquet(os.path.join(vectors_directory, f"{j}.parquet"))
                 total += len(remainder_df)
             dim = -1

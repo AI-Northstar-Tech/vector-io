@@ -116,6 +116,7 @@ class ImportKDBAI(ImportVDB):
                         pandas_table[vector_column_name] = pandas_table[
                             vector_column_name
                         ].apply(lambda x: self.extract_vector(x))
+                        # TODO: use save_vectors_to_parquet
                         pandas_table.to_parquet(parquet_file_path)
 
                     parquet_table = pq.read_table(parquet_file_path)

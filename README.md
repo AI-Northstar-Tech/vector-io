@@ -75,7 +75,6 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Activeloop Deep Lake           | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
 | ApertureDB                     | ❌     | ❌     |
-| Chroma                         | ❌     | ❌     |
 | ClickHouse                     | ❌     | ❌     |
 | CrateDB                        | ❌     | ❌     |
 | Elasticsearch                  | ❌     | ❌     |
