@@ -20,7 +20,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 ## Supported Vector Databases
 
 <details open>
-  <summary>Supported</summary>
+  <summary>Fully Supported</summary>
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
@@ -29,6 +29,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Milvus                         | ✅     | ✅     |
 | GCP Vertex AI Vector Search    | ✅     | ✅     |
 | KDB.AI                         | ✅     | ✅     |
+| LanceDB                        | ✅     | ✅     |
 
 </details>
 
@@ -36,11 +37,10 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 <details open>
 
-  <summary>Coming Soon</summary>
+  <summary>Partial</summary>
   
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| MongoDB Atlas                  | 🔜     | 🔜     |
 
 </details>
 <!-- line break -->
@@ -52,14 +52,8 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| Azure AI Search                | ⏳     | ⏳     |
-| Rockset                        | ⏳     | ⏳     |
-| Vespa                          | ⏳     | ⏳     |
-| Weaviate                       | ⏳     | ⏳     |
-| Epsilla                        | ⏳     | ⏳     |
-| txtai                          | ⏳     | ⏳     |
-| Redis Search                   | ⏳     | ⏳     |
-| OpenSearch                     | ⏳     | ⏳     |
+| DataStax Astra DB              | ❌     | ❌     |
+| txtai                          | ❌     | ✅    (pending) |
 </details>
 
 -----
@@ -69,7 +63,14 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| DataStax Astra DB              | ❌     | ❌     |
+| Azure AI Search                | ❌     | ❌     |
+| Rockset                        | ❌     | ❌     |
+| MongoDB Atlas                  | ❌     | ❌     |
+| Weaviate                       | ❌     | ❌     |
+| Epsilla                        | ❌     | ❌     |
+| Redis Search                   | ❌     | ❌     |
+| OpenSearch                     | ❌     | ❌     |
+| Vespa                          | ❌     | ❌     |
 | Marqo                          | ❌     | ❌     |
 | Activeloop Deep Lake           | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
@@ -78,7 +79,6 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | ClickHouse                     | ❌     | ❌     |
 | CrateDB                        | ❌     | ❌     |
 | Elasticsearch                  | ❌     | ❌     |
-| LanceDB                        | ❌     | ❌     |
 | Meilisearch                    | ❌     | ❌     |
 | MyScale                        | ❌     | ❌     |
 | Neo4j                          | ❌     | ❌     |
@@ -287,7 +287,7 @@ If you wish to improve the efficiency of the import/export scripts, please fork 
 
 ## Telemetry
 
-Running the export_vdf and import_vdf scripts will send anonymous usage data to AI Northstar Tech to help improve the library.
+Running the scripts in the repo will send anonymous usage data to AI Northstar Tech to help improve the library.
 
 You can opt out this by setting the environment variable `DISABLE_TELEMETRY_VECTORIO` to `1`.
 

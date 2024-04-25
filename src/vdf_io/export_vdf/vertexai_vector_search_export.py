@@ -22,7 +22,7 @@ class ExportVertexAIVectorSearch(ExportVDB):
     @classmethod
     def make_parser(cls, subparsers):
         parser_vertexai_vectorsearch = subparsers.add_parser(
-            "vertexai_vectorsearch", help="Export data from Vertex AI Vector Search"
+            cls.DB_NAME_SLUG, help="Export data from Vertex AI Vector Search"
         )
         parser_vertexai_vectorsearch.add_argument(
             "-p", "--project-id", type=str, help="Google Cloud Project ID"

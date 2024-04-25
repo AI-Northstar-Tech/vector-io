@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
+import importlib
 import os
+import pkgutil
 import time
 import warnings
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 import traceback
 
 import sentry_sdk
@@ -14,20 +16,42 @@ from opentelemetry.sdk.trace import TracerProvider
 from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPropagator
 
 import vdf_io
-from vdf_io.constants import ID_COLUMN, INT_MAX
-from vdf_io.names import DBNames
+from vdf_io.constants import ID_COLUMN
 from vdf_io.scripts.check_for_updates import check_for_updates
 from vdf_io.util import set_arg_from_input
-from vdf_io.import_vdf.pinecone_import import ImportPinecone
-from vdf_io.import_vdf.qdrant_import import ImportQdrant
-from vdf_io.import_vdf.kdbai_import import ImportKDBAI
-from vdf_io.import_vdf.milvus_import import ImportMilvus
-from vdf_io.import_vdf.vertexai_vector_search_import import ImportVertexAIVectorSearch
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
+
+# Path to the directory containing all export modules
+package_dir = "vdf_io.import_vdf"
+
+
+def load_subclasses(package_dir):
+    slug_to_import_func = {}
+    slug_to_parser_func = {}
+    # Dynamically import all modules in the specified package
+    package = importlib.import_module(package_dir)
+    for loader, module_name, is_pkg in pkgutil.walk_packages(package.__path__):
+        if not is_pkg:
+            # Import the module
+            module = importlib.import_module(f"{package_dir}.{module_name}")
+            # Check each class in the module
+            for name, cls in module.__dict__.items():
+                if (
+                    isinstance(cls, type)
+                    and issubclass(cls, ImportVDB)
+                    and cls is not ImportVDB
+                ):
+                    # Assign functions based on the class
+                    slug_to_import_func[cls.DB_NAME_SLUG] = cls.import_vdb
+                    slug_to_parser_func[cls.DB_NAME_SLUG] = cls.make_parser
+    return slug_to_import_func, slug_to_parser_func
+
+
+slug_to_import_func, slug_to_parser_func = load_subclasses(package_dir)
 
 warnings.filterwarnings("ignore", module="numpy")
 
-load_dotenv()
+load_dotenv(find_dotenv(), override=True)
 
 if os.environ.get("DISABLE_TELEMETRY_VECTORIO", False) != "1":
     sentry_sdk.init(
@@ -66,23 +90,6 @@ def main():
     return
 
 
-slug_to_import_func = {
-    DBNames.PINECONE: ImportPinecone.import_vdb,
-    DBNames.QDRANT: ImportQdrant.import_vdb,
-    DBNames.KDBAI: ImportKDBAI.import_vdb,
-    DBNames.MILVUS: ImportMilvus.import_vdb,
-    DBNames.VERTEXAI: ImportVertexAIVectorSearch.import_vdb,
-}
-
-slug_to_parser_func = {
-    DBNames.PINECONE: ImportPinecone.make_parser,
-    DBNames.QDRANT: ImportQdrant.make_parser,
-    DBNames.KDBAI: ImportKDBAI.make_parser,
-    DBNames.MILVUS: ImportMilvus.make_parser,
-    DBNames.VERTEXAI: ImportVertexAIVectorSearch.make_parser,
-}
-
-
 def add_subparsers_for_dbs(subparsers, slugs):
     for slug in slugs:
         parser_func = slug_to_parser_func[slug]
@@ -117,7 +124,6 @@ def run_import(span):
             "max_num_rows",
             "Maximum number of vectors you'd like to load",
             int,
-            INT_MAX,
         )
 
     args["cwd"] = os.getcwd()
@@ -170,7 +176,6 @@ def make_common_options(parser):
         "--max_num_rows",
         type=int,
         help="Maximum number of rows you'd like to load",
-        default=INT_MAX,
     )
     parser.add_argument(
         "--create_new",

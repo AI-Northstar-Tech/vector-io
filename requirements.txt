@@ -18,7 +18,16 @@ backoff
 kdbai-client
 sentry-sdk[opentelemetry]
 halo
-sentence-transformers>=2.0.0
+sentence-transformers>=2.6.1
+pyvespa
+lancedb
+chromadb
+txtai
+weaviate-client>=4.0.0
+astrapy
+cassandra-driver
 tenacity
 torch
 twine
+datasets~=2.16,>=2.19.0
+mlx_embedding_models

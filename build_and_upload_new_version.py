@@ -34,6 +34,8 @@ def build():
     # move all files in dist/* to data/dist/* first. do not move the dist folder itself
     subprocess.run(["mkdir", "-p", "data/dist"], check=True)
     subprocess.run("mv dist/* data/dist/", shell=True, check=False)
+    # delete build folder
+    subprocess.run(["rm", "-rf", "build"], check=True)
     # Build the package
     subprocess.run(
         ["python", "setup.py", "sdist", "bdist_wheel", "--verbose"], check=True

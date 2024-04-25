@@ -10,7 +10,12 @@ import kdbai_client as kdbai
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.names import DBNames
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
-from vdf_io.util import set_arg_from_input, set_arg_from_password, standardize_metric
+from vdf_io.util import (
+    get_author_name,
+    set_arg_from_input,
+    set_arg_from_password,
+    standardize_metric,
+)
 
 
 load_dotenv()
@@ -21,7 +26,9 @@ class ExportKDBAI(ExportVDB):
 
     @classmethod
     def make_parser(cls, subparsers):
-        parser_kdbai = subparsers.add_parser("kdbai", help="Export data from KDB.AI")
+        parser_kdbai = subparsers.add_parser(
+            cls.DB_NAME_SLUG, help="Export data from KDB.AI"
+        )
         parser_kdbai.add_argument(
             "-u", "--url", type=str, help="KDB.AI cloud endpoint to connect"
         )
@@ -77,7 +84,7 @@ class ExportKDBAI(ExportVDB):
         internal_metadata = VDFMeta(
             version=self.args["library_version"],
             file_structure=self.file_structure,
-            author=os.environ.get("USER"),
+            author=get_author_name(),
             exported_from=self.DB_NAME_SLUG,
             indexes=index_metas,
             exported_at=datetime.datetime.now().astimezone().isoformat(),

@@ -9,11 +9,13 @@ class NamespaceMeta(BaseModel):
     exported_vector_count: int
     dimensions: int
     model_name: str | None = None
+    model_map: Dict[str, Any] | None = None
     vector_columns: List[str] = ["vector"]
     data_path: str
     metric: str | None = None
     index_config: Optional[Dict[Any, Any]] = None
-    schema_dict: Optional[Dict[str, Any]] = None
+    # schema_dict is a byte string
+    schema_dict_str: str | None = None
     model_config = ConfigDict(protected_namespaces=())
 
 
