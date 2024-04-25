@@ -105,16 +105,18 @@ class ExportChroma(ExportVDB):
                     offset=i,
                 )
                 # put batch["ids"], batch["metadatas"], batch["documents"], batch["embeddings"] into parquet
-                df = pd.DataFrame(
-                    {
-                        "id": batch["ids"],
-                        "metadata": batch["metadatas"],
-                        "document": batch["documents"],
-                        "embedding": batch["embeddings"],
-                    }
+
+                vectors = {}
+                metadata = {}
+                for row in batch:
+                    vectors[row["id"]] = row["embedding"]
+                    metadata[row["id"]] = row["metadata"]
+
+                # save_vectors_to_parquet
+                total += self.save_vectors_to_parquet(
+                    vectors, metadata, vectors_directory
                 )
-                df.to_parquet(f"{vectors_directory}/{j}.parquet")
-                total += len(df)
+
             namespace_metas = [
                 self.get_namespace_meta(
                     collection,
