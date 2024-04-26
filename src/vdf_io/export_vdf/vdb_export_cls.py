@@ -90,6 +90,11 @@ class ExportVDB(abc.ABC):
         metadata = {}
         return len(df)
 
+    def create_vec_dir(self, index_name):
+        vectors_directory = os.path.join(self.vdf_directory, index_name)
+        os.makedirs(vectors_directory, exist_ok=True)
+        return vectors_directory
+
     def get_basic_vdf_meta(self, index_metas):
         return VDFMeta(
             version=self.args["library_version"],

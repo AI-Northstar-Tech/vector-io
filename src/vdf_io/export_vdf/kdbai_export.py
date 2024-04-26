@@ -91,15 +91,14 @@ class ExportKDBAI(ExportVDB):
         )
 
         internal_metadata_path = os.path.join(self.vdf_directory, "VDF_META.json")
-        meta_json_text = json.dumps(internal_metadata.dict(), indent=4)
+        meta_json_text = json.dumps(internal_metadata.model_dump(), indent=4)
         print(meta_json_text)
         with open(internal_metadata_path, "w") as json_file:
             json_file.write(meta_json_text)
 
     def export_table(self, table_name):
         model = self.model
-        vectors_directory = os.path.join(self.vdf_directory, table_name)
-        os.makedirs(vectors_directory, exist_ok=True)
+        vectors_directory = self.create_vec_dir(table_name)
 
         table = self.session.table(table_name)
         table_res = table.query()

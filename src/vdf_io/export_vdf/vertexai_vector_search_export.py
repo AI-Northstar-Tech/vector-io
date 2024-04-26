@@ -216,8 +216,7 @@ class ExportVertexAIVectorSearch(ExportVDB):
         index = MatchingEngineIndex(index_name=index_name)
         index_endpoint = MatchingEngineIndexEndpoint(index_endpoint_name)
 
-        vectors_directory = os.path.join(self.vdf_directory, index.display_name)
-        os.makedirs(vectors_directory, exist_ok=True)
+        vectors_directory = self.create_vec_dir(index.display_name)
 
         # get index metadata
         index_meta = index.to_dict()

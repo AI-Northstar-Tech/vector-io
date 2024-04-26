@@ -52,14 +52,16 @@ class ExportLanceDB(ExportVDB):
             "Enter the LanceDB API key: ",
             "LANCEDB_API_KEY",
         )
+        lancedb_export = ExportLanceDB(args)
+        lancedb_export.all_collections = lancedb_export.get_all_index_names()
         set_arg_from_input(
             args,
             "tables",
             "Enter the name of tables to export (comma-separated, all will be exported by default): ",
             str,
-            None,
+            choices=lancedb_export.all_collections,
+            default_value=None,
         )
-        lancedb_export = ExportLanceDB(args)
         lancedb_export.get_data()
         return lancedb_export
 
@@ -68,6 +70,9 @@ class ExportLanceDB(ExportVDB):
         self.db = lancedb.connect(
             self.args["endpoint"], api_key=self.args.get("lancedb_api_key") or None
         )
+
+    def get_all_index_names(self):
+        return self.db.table_names()
 
     def get_index_names(self):
         if self.args.get("tables", None) is not None:
@@ -81,8 +86,7 @@ class ExportLanceDB(ExportVDB):
         index_metas: Dict[str, List[NamespaceMeta]] = {}
         for index_name in index_names:
             namespace_metas = []
-            vectors_directory = os.path.join(self.vdf_directory, index_name)
-            os.makedirs(vectors_directory, exist_ok=True)
+            vectors_directory = self.create_vec_dir(index_name)
             table = self.db.open_table(index_name)
             offset = 0
             remainder_df = None

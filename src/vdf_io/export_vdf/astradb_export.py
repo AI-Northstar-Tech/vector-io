@@ -9,6 +9,7 @@ from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.query import SimpleStatement
 
+from vdf_io.constants import DISK_SPACE_LIMIT
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
 from vdf_io.util import (
@@ -16,9 +17,6 @@ from vdf_io.util import (
     set_arg_from_password,
 )
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
-
-
-DISK_SPACE_LIMIT = 1e8  # 100 MB
 
 
 class ExportAstraDB(ExportVDB):
@@ -177,8 +175,7 @@ class ExportAstraDB(ExportVDB):
             tqdm.write(f"Total rows in {index_name}: {count[0]}")
             tqdm.write(f"Exporting collection: {index_name}")
             namespace_metas = []
-            vectors_directory = os.path.join(self.vdf_directory, index_name)
-            os.makedirs(vectors_directory, exist_ok=True)
+            vectors_directory = self.create_vec_dir(index_name)
             pbar = tqdm(desc="Exporting data", unit="documents", total=count[0])
             no_queries_run = True
             exported_count = 0
@@ -207,8 +204,6 @@ class ExportAstraDB(ExportVDB):
                         exported_count += self.save_vectors_to_parquet(
                             vectors, metadatas, vectors_directory
                         )
-                        vectors = {}
-                        metadatas = {}
             vectors_added = self.save_vectors_to_parquet(
                 vectors, metadatas, vectors_directory
             )
@@ -264,8 +259,7 @@ class ExportAstraDB(ExportVDB):
         for index_name in index_names:
             tqdm.write(f"Exporting collection: {index_name}")
             namespace_metas = []
-            vectors_directory = os.path.join(self.vdf_directory, index_name)
-            os.makedirs(vectors_directory, exist_ok=True)
+            vectors_directory = self.create_vec_dir(index_name)
             collection = self.db.collection(index_name)
             next_page_state = None
             tot_docs = 0

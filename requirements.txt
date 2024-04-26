@@ -31,3 +31,5 @@ torch
 twine
 datasets~=2.16,>=2.19.0
 mlx_embedding_models
+azure-search-documents
+azure-identity

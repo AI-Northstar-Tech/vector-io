@@ -106,17 +106,16 @@ class ExportMilvus(ExportVDB):
             exported_at=datetime.datetime.now().astimezone().isoformat(),
         )
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
-            json.dump(internal_metadata.dict(), json_file, indent=4)
+            json.dump(internal_metadata.model_dump(), json_file, indent=4)
         # print internal metadata properly
-        print(json.dumps(internal_metadata.dict(), indent=4))
+        print(json.dumps(internal_metadata.model_dump(), indent=4))
         return True
 
     def get_all_collection_names(self) -> List[str]:
         return utility.list_collections()
 
     def get_data_for_collection(self, collection_name: str) -> List[NamespaceMeta]:
-        vectors_directory = os.path.join(self.vdf_directory, collection_name)
-        os.makedirs(vectors_directory, exist_ok=True)
+        vectors_directory = self.create_vec_dir(collection_name)
 
         try:
             collection = Collection(collection_name)
