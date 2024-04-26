@@ -1,8 +1,6 @@
 from typing import Dict, List
 from dotenv import load_dotenv
-import pandas as pd
 from tqdm import tqdm
-import pyarrow.parquet as pq
 
 import chromadb
 
@@ -14,7 +12,6 @@ from vdf_io.util import (
     divide_into_batches,
     expand_shorthand_path,
     set_arg_from_input,
-    set_arg_from_password,
 )
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
