@@ -34,3 +34,5 @@ src/vdf_io/notebooks/data/
 **.jpg
 src/vdf_io/notebooks/parquet_inspect.ipynb
 src/vdf_io/notebooks/~/*
+src/vdf_io/notebooks/chroma/*
+'/Users/dhruvanand/Code/vector-io/src/vdf_io/notebooks/chroma'/chroma.sqlite3

@@ -105,6 +105,11 @@ def set_arg_from_input(
                 prompt
                 + (" " + str(list(choices)) + ": " if choices is not None else "")
             )
+            if len(inp) >= 2:
+                if inp[0] == '"' and inp[-1] == '"':
+                    inp = inp[1:-1]
+                elif inp[0] == "'" and inp[-1] == "'":
+                    inp = inp[1:-1]
             if inp == "":
                 args[arg_name] = (
                     None if default_value is None else type_name(default_value)
