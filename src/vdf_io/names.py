@@ -10,3 +10,4 @@ class DBNames:
     CHROMA = "chroma"
     WEAVIATE = "weaviate"
     ASTRADB = "astradb"
+    AZUREAI = "azureai"
