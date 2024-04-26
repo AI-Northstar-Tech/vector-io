@@ -136,7 +136,7 @@ class ExportChroma(ExportVDB):
                 desc=f"Exporting {collection_name} collection",
             ):
                 batch = col.get(
-                    include=["metadatas", "documents", "embeddings", "uris", "data"],
+                    include=["metadatas", "documents", "embeddings"],
                     limit=batch_size,
                     offset=j,
                 )
