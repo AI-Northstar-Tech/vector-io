@@ -131,8 +131,7 @@ class ExportQdrant(ExportVDB):
             return self.try_scroll((fetch_size * 2) // 3, collection_name, next_offset)
 
     def get_data_for_collection(self, collection_name) -> List[NamespaceMeta]:
-        vectors_directory = os.path.join(self.vdf_directory, collection_name)
-        os.makedirs(vectors_directory, exist_ok=True)
+        vectors_directory = self.create_vec_dir(collection_name)
 
         total = self.client.get_collection(collection_name).vectors_count
 

@@ -105,6 +105,11 @@ def set_arg_from_input(
                 prompt
                 + (" " + str(list(choices)) + ": " if choices is not None else "")
             )
+            if len(inp) >= 2:
+                if inp[0] == '"' and inp[-1] == '"':
+                    inp = inp[1:-1]
+                elif inp[0] == "'" and inp[-1] == "'":
+                    inp = inp[1:-1]
             if inp == "":
                 args[arg_name] = (
                     None if default_value is None else type_name(default_value)
@@ -488,3 +493,11 @@ def clean_documents(documents):
                 to_be_replaced.append(k)
         for k in to_be_replaced:
             doc[k.replace(" ", "_")] = doc.pop(k)
+
+
+def divide_into_batches(df, batch_size):
+    """
+    Divide the dataframe into batches of size batch_size
+    """
+    for i in range(0, len(df), batch_size):
+        yield df[i : i + batch_size]
