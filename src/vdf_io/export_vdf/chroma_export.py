@@ -1,7 +1,10 @@
 import json
 import os
+import sys
 import chromadb
 from tqdm import tqdm
+
+from vdf_io.constants import DISK_SPACE_LIMIT
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
@@ -50,12 +53,27 @@ class ExportChroma(ExportVDB):
                 "Enter the path to persistent storage for Chroma: ",
                 str,
             )
-        set_arg_from_input(
-            args,
-            "collections",
-            "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
-            str,
-        )
+        if (args.get("host_port") is None or args.get("host_port") == "") and (
+            args.get("persistent_path") is None or args.get("persistent_path") == ""
+        ):
+            set_arg_from_input(
+                args,
+                "api_key",
+                "Enter the API key for Chroma: ",
+                str,
+            )
+            set_arg_from_input(
+                args,
+                "tenant",
+                "Enter the tenant for Chroma: ",
+                str,
+            )
+            set_arg_from_input(
+                args,
+                "database",
+                "Enter the database for Chroma: ",
+                str,
+            )
         set_arg_from_input(
             args,
             "batch_size",
@@ -64,6 +82,14 @@ class ExportChroma(ExportVDB):
             10_000,
         )
         chroma_export = ExportChroma(args)
+        chroma_export.all_collections = chroma_export.get_all_index_names()
+        set_arg_from_input(
+            args,
+            "collections",
+            "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
+            str,
+            choices=chroma_export.all_collections,
+        )
         chroma_export.get_data()
         return chroma_export
 
@@ -71,66 +97,91 @@ class ExportChroma(ExportVDB):
         super().__init__(args)
         if self.args.get("host_port") is not None:
             host_port = self.args.get("host_port")
-            self.client = chromadb.Client(
-                host=host_port.split(":")[0], port=host_port.split(":")[1]
+            self.client = chromadb.HttpClient(
+                host=host_port.split(":")[0], port=int(host_port.split(":")[1])
             )
         elif self.args.get("persistent_path") is not None:
             self.client = chromadb.PersistentClient(
                 path=self.args.get("persistent_path")
             )
+        else:
+            self.client = chromadb.CloudClient(
+                tenant=self.args.get("tenant"),
+                database=self.args.get("database"),
+                api_key=self.args.get("api_key"),
+            )
+
+    def get_all_index_names(self):
+        return [coll.name for coll in self.client.list_collections()]
 
     def get_index_names(self):
         if self.args.get("collections", None) is not None:
             return self.args["collections"].split(",")
-        return self.client.list_collections()
+        return self.get_all_index_names()
 
     def get_data(self):
         batch_size = self.args.get("batch_size")
         index_metas = {}
-        for i, collection in tqdm(
+        for i, collection_name in tqdm(
             enumerate(self.get_index_names()), desc="Exporting collections"
         ):
-            col = self.client.get_collection(collection)
-            vectors_directory = f"{self.vdf_directory}/{collection}"
+            dims = -1
+            col = self.client.get_collection(collection_name)
+            vectors_directory = self.create_vec_dir(collection_name)
             existing_count = col.count()
             total = 0
             for j in tqdm(
                 range(0, existing_count, batch_size),
-                desc=f"Exporting {collection} collection",
+                desc=f"Exporting {collection_name} collection",
             ):
-                batch = collection.get(
+                batch = col.get(
                     include=["metadatas", "documents", "embeddings"],
                     limit=batch_size,
-                    offset=i,
+                    offset=j,
                 )
-                # put batch["ids"], batch["metadatas"], batch["documents"], batch["embeddings"] into parquet
-
                 vectors = {}
                 metadata = {}
-                for row in batch:
-                    vectors[row["id"]] = row["embedding"]
-                    metadata[row["id"]] = row["metadata"]
-
-                # save_vectors_to_parquet
-                total += self.save_vectors_to_parquet(
-                    vectors, metadata, vectors_directory
-                )
-
+                chroma_ids = batch["ids"]
+                embeddings = batch["embeddings"]
+                chroma_metadatas = batch["metadatas"]
+                uris = batch["uris"]
+                data = batch["data"]
+                documents = batch["documents"]
+                dims = len(embeddings[0])
+                for idx, chroma_id in enumerate(chroma_ids):
+                    vectors[chroma_id] = embeddings[idx]
+                    metadata[chroma_id] = chroma_metadatas[idx]
+                    metadata[chroma_id]["document"] = documents[idx]
+                    if uris is not None and len(uris) > idx:
+                        metadata[chroma_id]["uri"] = uris[idx]
+                    if data is not None and len(data) > idx:
+                        metadata[chroma_id]["data"] = data[idx]
+                if sys.getsizeof(vectors) + sys.getsizeof(metadata) > DISK_SPACE_LIMIT:
+                    # save_vectors_to_parquet
+                    total += self.save_vectors_to_parquet(
+                        vectors, metadata, vectors_directory
+                    )
+            total += self.save_vectors_to_parquet(vectors, metadata, vectors_directory)
             namespace_metas = [
                 self.get_namespace_meta(
-                    collection,
+                    collection_name,
                     vectors_directory,
                     total=existing_count,
                     num_vectors_exported=total,
-                    dim=col["dimension"],
-                    vector_columns=["embedding"],
-                    distance=col.metadata.get("hnsw:space", "cosine"),
+                    dim=dims,
+                    vector_columns=["vector"],
+                    distance=(
+                        col.metadata.get("hnsw:space", "cosine")
+                        if (hasattr(col, "metadata") and col.metadata is not None)
+                        else "cosine"
+                    ),
                 )
             ]
-            index_metas[collection] = namespace_metas
+            index_metas[collection_name] = namespace_metas
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
         internal_metadata = self.get_basic_vdf_meta(index_metas)
         meta_text = json.dumps(internal_metadata.model_dump(), indent=4)
         tqdm.write(meta_text)
         with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
             json_file.write(meta_text)
+        return True
