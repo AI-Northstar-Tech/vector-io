@@ -1,12 +1,13 @@
 import json
 import os
 import sys
-import chromadb
 from tqdm import tqdm
 
-from vdf_io.constants import DISK_SPACE_LIMIT
+import chromadb
+
+from vdf_io.constants import DEFAULT_BATCH_SIZE, DISK_SPACE_LIMIT
 from vdf_io.names import DBNames
-from vdf_io.util import set_arg_from_input
+from vdf_io.util import expand_shorthand_path, set_arg_from_input
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 
@@ -34,7 +35,7 @@ class ExportChroma(ExportVDB):
             "--batch_size",
             type=int,
             help="Batch size for exporting data",
-            default=10_000,
+            default=DEFAULT_BATCH_SIZE,
         )
 
     @classmethod
@@ -77,9 +78,9 @@ class ExportChroma(ExportVDB):
         set_arg_from_input(
             args,
             "batch_size",
-            "Enter the batch size for exporting data (default: 10,000):",
+            f"Enter the batch size for exporting data (default: {DEFAULT_BATCH_SIZE}):",
             int,
-            10_000,
+            DEFAULT_BATCH_SIZE,
         )
         chroma_export = ExportChroma(args)
         chroma_export.all_collections = chroma_export.get_all_index_names()
@@ -102,7 +103,7 @@ class ExportChroma(ExportVDB):
             )
         elif self.args.get("persistent_path") is not None:
             self.client = chromadb.PersistentClient(
-                path=self.args.get("persistent_path")
+                path=expand_shorthand_path(self.args.get("persistent_path"))
             )
         else:
             self.client = chromadb.CloudClient(
@@ -120,7 +121,7 @@ class ExportChroma(ExportVDB):
         return self.get_all_index_names()
 
     def get_data(self):
-        batch_size = self.args.get("batch_size")
+        batch_size = self.args.get("batch_size") or DEFAULT_BATCH_SIZE
         index_metas = {}
         for i, collection_name in tqdm(
             enumerate(self.get_index_names()), desc="Exporting collections"
@@ -135,7 +136,7 @@ class ExportChroma(ExportVDB):
                 desc=f"Exporting {collection_name} collection",
             ):
                 batch = col.get(
-                    include=["metadatas", "documents", "embeddings"],
+                    include=["metadatas", "documents", "embeddings", "uris", "data"],
                     limit=batch_size,
                     offset=j,
                 )

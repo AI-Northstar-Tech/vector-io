@@ -6,11 +6,12 @@ import pyarrow.parquet as pq
 
 import lancedb
 
-from vdf_io.constants import INT_MAX
+from vdf_io.constants import DEFAULT_BATCH_SIZE, INT_MAX
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
 from vdf_io.util import (
     cleanup_df,
+    divide_into_batches,
     set_arg_from_input,
     set_arg_from_password,
 )
@@ -87,10 +88,6 @@ class ImportLanceDB(ImportVDB):
                 # Load the data from the parquet files
                 parquet_files = self.get_parquet_files(final_data_path)
 
-                vectors_all = {}
-                for vec_col in namespace_meta.get("vector_columns", []):
-                    vectors_all[vec_col] = {}
-
                 new_index_name = index_name + (
                     f'_{namespace_meta["namespace"]}'
                     if namespace_meta["namespace"]
@@ -124,7 +121,7 @@ class ImportLanceDB(ImportVDB):
                                 }
                             )
                     # split in batches
-                    BATCH_SIZE = self.args.get("batch_size") or 1000
+                    BATCH_SIZE = self.args.get("batch_size") or DEFAULT_BATCH_SIZE
                     for batch in tqdm(
                         divide_into_batches(df, BATCH_SIZE),
                         desc="Importing batches",
@@ -139,8 +136,7 @@ class ImportLanceDB(ImportVDB):
                             ]
                             max_hit = True
                         # convert df into list of dicts
-                        batch_dict = batch.to_dict(orient="records")
-                        table.add(batch_dict)
+                        table.add(batch)
                         self.total_imported_count += len(batch)
                         if max_hit:
                             break
@@ -149,14 +145,6 @@ class ImportLanceDB(ImportVDB):
                 if max_hit:
                     break
         print("Data imported successfully")
-
-
-def divide_into_batches(df, batch_size):
-    """
-    Divide the dataframe into batches of size batch_size
-    """
-    for i in range(0, len(df), batch_size):
-        yield df[i : i + batch_size]
 
 
 def get_default_value(data_type):

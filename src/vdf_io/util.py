@@ -493,3 +493,11 @@ def clean_documents(documents):
                 to_be_replaced.append(k)
         for k in to_be_replaced:
             doc[k.replace(" ", "_")] = doc.pop(k)
+
+
+def divide_into_batches(df, batch_size):
+    """
+    Divide the dataframe into batches of size batch_size
+    """
+    for i in range(0, len(df), batch_size):
+        yield df[i : i + batch_size]
