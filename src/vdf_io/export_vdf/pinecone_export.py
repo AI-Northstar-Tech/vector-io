@@ -232,9 +232,12 @@ class ExportPinecone(ExportVDB):
             with open(self.args["id_list_file"]) as f:
                 return [line.strip() for line in f.readlines()]
 
-        # Use list_points to get all IDs directly
-        all_ids = list(self.index.list_points(namespace=namespace))
-        tqdm.write(f"Collected {len(all_ids)} IDs using list_points.")
+        # Use list_points with implicit pagination to get all IDs
+        all_ids = []
+        for ids in self.index.list(namespace=namespace):
+            all_ids.extend(ids)
+        
+        tqdm.write(f"Collected {len(all_ids)} IDs using list_points with implicit pagination.")
         return all_ids
 
     def unmark_vectors_as_exported(self, all_ids, namespace, hash_value):
