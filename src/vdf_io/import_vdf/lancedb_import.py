@@ -5,6 +5,7 @@ from tqdm import tqdm
 import pyarrow.parquet as pq
 
 import lancedb
+from lancedb import create_index
 
 from vdf_io.constants import DEFAULT_BATCH_SIZE, INT_MAX
 from vdf_io.meta_types import NamespaceMeta
@@ -23,6 +24,7 @@ load_dotenv()
 
 class ImportLanceDB(ImportVDB):
     DB_NAME_SLUG = DBNames.LANCEDB
+    ID_COLUMN = "id"
 
     @classmethod
     def import_vdb(cls, args):
@@ -102,6 +104,21 @@ class ImportLanceDB(ImportVDB):
                 else:
                     table = self.db.open_table(new_index_name)
                     tqdm.write(f"Opened table {new_index_name}")
+
+                # Get the ID column from the parquet file schema
+                parquet_schema = pq.read_schema(parquet_files[0])
+                id_column = None
+                for field in parquet_schema:
+                    if field.name == self.ID_COLUMN:
+                        id_column = field.name
+                        break
+
+                if id_column:
+                    # Create index on the table  
+                    create_index(table, id_column)
+                    tqdm.write(f"Created index on {id_column} for table {new_index_name}")
+                else:
+                    tqdm.write(f"Warning: No ID column {self.ID_COLUMN} found in schema. Skipping index creation for table {new_index_name}")
 
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
