@@ -237,7 +237,8 @@ def standardize_metric_reverse(metric, db):
             if value == metric:
                 return key
     else:
-        raise Exception(f"Invalid metric '{metric}' for database '{db}'")
+        tqdm.write(f"Invalid metric '{metric}' for database '{db}'. Using cosine")
+        return standardize_metric_reverse(Distance.COSINE, db)
 
 
 def get_final_data_path(cwd, dir, data_path, args):

@@ -125,13 +125,14 @@ class ImportPinecone(ImportVDB):
             if compliant_index_name not in indexes:
                 # create index
                 try:
+                    metric = standardize_metric_reverse(
+                        index_meta[0].get("metric"), self.DB_NAME_SLUG
+                    )
                     if self.args["serverless"] is True:
                         self.pc.create_index(
                             name=compliant_index_name,
                             dimension=index_meta[0]["dimensions"],
-                            metric=standardize_metric_reverse(
-                                index_meta[0]["metric"], "pinecone"
-                            ),
+                            metric=metric,
                             spec=ServerlessSpec(
                                 cloud=self.args["cloud"],
                                 region=self.args["region"],
@@ -141,9 +142,7 @@ class ImportPinecone(ImportVDB):
                         self.pc.create_index(
                             name=compliant_index_name,
                             dimension=index_meta[0]["dimensions"],
-                            metric=standardize_metric_reverse(
-                                index_meta[0]["metric"], "pinecone"
-                            ),
+                            metric=metric,
                             spec=PodSpec(
                                 environment=self.args["environment"],
                                 pod_type=(

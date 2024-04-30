@@ -30,7 +30,10 @@ class ExportKDBAI(ExportVDB):
             cls.DB_NAME_SLUG, help="Export data from KDB.AI"
         )
         parser_kdbai.add_argument(
-            "-u", "--url", type=str, help="KDB.AI cloud endpoint to connect"
+            "-u",
+            "--url",
+            type=str,
+            help="KDB.AI cloud endpoint to connect",
         )
         parser_kdbai.add_argument(
             "-t", "--tables", type=str, help="KDB.AI tables to export (comma-separated)"
@@ -46,6 +49,7 @@ class ExportKDBAI(ExportVDB):
             "url",
             "Enter the KDB.AI endpoint instance: ",
             str,
+            env_var="KDBAI_ENDPOINT",
         )
         set_arg_from_password(
             args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"

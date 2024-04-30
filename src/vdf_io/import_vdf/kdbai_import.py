@@ -31,9 +31,13 @@ class ImportKDBAI(ImportVDB):
             "url",
             "Enter the endpoint for KDB.AI Cloud instance: ",
             str,
+            env_var="KDBAI_ENDPOINT",
         )
         set_arg_from_password(
-            args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
+            args,
+            "kdbai_api_key",
+            "Enter your KDB.AI API key: ",
+            env_var_name="KDBAI_API_KEY",
         )
         set_arg_from_input(
             args,
@@ -151,7 +155,8 @@ class ImportKDBAI(ImportVDB):
                                 "vectorIndex": {
                                     "dims": namespace_meta["dimensions"],
                                     "metric": standardize_metric_reverse(
-                                        namespace_meta["metric"], self.DB_NAME_SLUG
+                                        namespace_meta.get("metric"),
+                                        self.DB_NAME_SLUG,
                                     ),
                                     "type": self.index.lower(),
                                 },
@@ -172,6 +177,8 @@ class ImportKDBAI(ImportVDB):
                     for column in schema["columns"]:
                         if "pytype" in column and column["pytype"] == "string":
                             column["pytype"] = "str"
+                        if "pytype" in column and column["pytype"] == "double":
+                            column["pytype"] = "float64"
 
                     # First ensure the table does not already exist
                     try:
@@ -202,6 +209,11 @@ class ImportKDBAI(ImportVDB):
                             - self.total_imported_count
                         ]
                     i = 0
+                    # convert pytype double to float64
+                    for col in df.columns:
+                        if df[col].dtype == "double":
+                            df[col] = df[col].astype("float64")
+                            tqdm.write(f"Converting column {col} to float64")
                     batch_size = self.args.get("batch_size", 10_000) or 10_000
                     pbar = tqdm(total=df.shape[0], desc="Inserting data")
                     while i < df.shape[0]:
