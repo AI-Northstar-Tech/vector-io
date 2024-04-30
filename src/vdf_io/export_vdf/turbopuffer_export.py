@@ -2,9 +2,10 @@ import argparse
 import turbopuffer as tpuf
 from vdf_io.names import DBNames
 from vdf_io.util import clean_documents
+from vdf_io.export_vdf.export_vdb import ExportVDB
 
 
-class ExportTurbopuffer:
+class ExportTurbopuffer(ExportVDB):
     def make_parser(self, parser=None):
         if parser is None:
             parser = argparse.ArgumentParser()
@@ -19,7 +20,7 @@ class ExportTurbopuffer:
         )
         return parser
 
-    def export_vdb(self, args):
+    def get_data(self, args):
         namespace = args.get("turbopuffer_namespace")
         if namespace is None:
             namespace = input("Enter the Turbopuffer namespace to connect to: ")
