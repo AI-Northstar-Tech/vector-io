@@ -209,6 +209,11 @@ db_metric_to_standard_metric = {
         "euclidean": Distance.EUCLID,
         "dotproduct": Distance.DOT,
     },
+    DBNames.TURBOPUFFER: {
+        "cosine_distance": Distance.COSINE,
+        "euclidean_distance": Distance.EUCLID,
+        "dot_product": Distance.DOT,
+    },
 }
 
 
@@ -501,3 +506,30 @@ def divide_into_batches(df, batch_size):
     """
     for i in range(0, len(df), batch_size):
         yield df[i : i + batch_size]
+
+
+def create_turbopuffer_index_class(index_name, schema):
+    """
+    Create a Python class for a Turbopuffer index based on its schema.
+    """
+    class_name = f"{index_name.capitalize()}Index"
+    class_attrs = {}
+
+    for field_name, field_type in schema.items():
+        if field_type == "string":
+            attr_type = str
+        elif field_type == "integer":
+            attr_type = int
+        elif field_type == "float":
+            attr_type = float
+        elif field_type == "bool":
+            attr_type = bool
+        elif field_type.startswith("array"):
+            attr_type = list
+        else:
+            raise ValueError(f"Unsupported field type: {field_type}")
+
+        class_attrs[field_name] = attr_type
+
+    index_class = type(class_name, (object,), class_attrs)
+    return index_class
