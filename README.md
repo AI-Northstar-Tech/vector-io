@@ -30,6 +30,8 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | GCP Vertex AI Vector Search    | ✅     | ✅     |
 | KDB.AI                         | ✅     | ✅     |
 | LanceDB                        | ✅     | ✅     |
+| DataStax Astra DB              | ✅     | ✅     |
+| Chroma                         | ✅     | ✅     |
 
 </details>
 
@@ -52,8 +54,15 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| DataStax Astra DB              | ❌     | ❌     |
-| txtai                          | ❌     | ✅    (pending) |
+| Azure AI Search                | ❌     | ❌     |
+| Weaviate                       | ❌     | ❌     |
+| MongoDB Atlas                  | ❌     | ❌     |
+| OpenSearch                     | ❌     | ❌     |
+| Apache Cassandra               | ❌     | ❌     |
+| txtai                          | ❌     | ❌     |
+| Turbopuffer                    | ❌     | ❌     |
+| pgvector                       | ❌     | ❌     |
+| SQLite-VSS                     | ❌     | ❌     |
 </details>
 
 -----
@@ -63,30 +72,23 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
-| Azure AI Search                | ❌     | ❌     |
-| Rockset                        | ❌     | ❌     |
-| MongoDB Atlas                  | ❌     | ❌     |
-| Weaviate                       | ❌     | ❌     |
-| Epsilla                        | ❌     | ❌     |
-| Redis Search                   | ❌     | ❌     |
-| OpenSearch                     | ❌     | ❌     |
 | Vespa                          | ❌     | ❌     |
 | Marqo                          | ❌     | ❌     |
-| Activeloop Deep Lake           | ❌     | ❌     |
-| Apache Cassandra               | ❌     | ❌     |
-| ApertureDB                     | ❌     | ❌     |
-| ClickHouse                     | ❌     | ❌     |
-| CrateDB                        | ❌     | ❌     |
 | Elasticsearch                  | ❌     | ❌     |
+| Redis Search                   | ❌     | ❌     |
+| ClickHouse                     | ❌     | ❌     |
+| USearch                        | ❌     | ❌     |
+| Rockset                        | ❌     | ❌     |
+| Epsilla                        | ❌     | ❌     |
+| Activeloop Deep Lake           | ❌     | ❌     |
+| ApertureDB                     | ❌     | ❌     |
+| CrateDB                        | ❌     | ❌     |
 | Meilisearch                    | ❌     | ❌     |
 | MyScale                        | ❌     | ❌     |
 | Neo4j                          | ❌     | ❌     |
 | Nuclia DB                      | ❌     | ❌     |
 | OramaSearch                    | ❌     | ❌     |
-| pgvector                       | ❌     | ❌     |
-| Turbopuffer                    | ❌     | ❌     |
 | Typesense                      | ❌     | ❌     |
-| USearch                        | ❌     | ❌     |
 | Anari AI                       | ❌     | ❌     |
 | Vald                           | ❌     | ❌     |
 | Apache Solr                    | ❌     | ❌     |

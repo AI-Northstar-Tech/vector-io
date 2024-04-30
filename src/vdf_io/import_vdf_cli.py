@@ -21,6 +21,8 @@ from vdf_io.scripts.check_for_updates import check_for_updates
 from vdf_io.util import set_arg_from_input
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
+
+load_dotenv(find_dotenv(), override=True)
 # Path to the directory containing all export modules
 package_dir = "vdf_io.import_vdf"
 
@@ -51,7 +53,6 @@ slug_to_import_func, slug_to_parser_func = load_subclasses(package_dir)
 
 warnings.filterwarnings("ignore", module="numpy")
 
-load_dotenv(find_dotenv(), override=True)
 
 if os.environ.get("DISABLE_TELEMETRY_VECTORIO", False) != "1":
     sentry_sdk.init(

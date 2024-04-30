@@ -136,7 +136,7 @@ class ImportMilvus(ImportVDB):
                     try:
                         index_params = {
                             "metric_type": standardize_metric_reverse(
-                                namespace_meta["metric"], self.DB_NAME_SLUG
+                                namespace_meta.get("metric"), self.DB_NAME_SLUG
                             ),
                             "index_type": "AUTOINDEX",
                         }

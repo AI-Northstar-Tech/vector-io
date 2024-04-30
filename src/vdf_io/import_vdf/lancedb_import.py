@@ -98,8 +98,10 @@ class ImportLanceDB(ImportVDB):
                     table = self.db.create_table(
                         new_index_name, schema=pq.read_schema(parquet_files[0])
                     )
+                    tqdm.write(f"Created table {new_index_name}")
                 else:
                     table = self.db.open_table(new_index_name)
+                    tqdm.write(f"Opened table {new_index_name}")
 
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
@@ -115,6 +117,7 @@ class ImportLanceDB(ImportVDB):
                     for col in df.columns:
                         if col not in [field.name for field in table.schema]:
                             col_type = df[col].dtype
+                            tqdm.write(f"Adding column {col} of type {col_type} to {new_index_name}")
                             table.add_columns(
                                 {
                                     col: get_default_value(col_type),

@@ -132,6 +132,7 @@ class ImportAstraDB(ImportVDB):
                 new_index_name = self.compliant_name(new_index_name)
                 if via_cql:
                     collection_list = self.get_all_index_names_cql()
+                    tqdm.write(f"Existing collections: {collection_list}")
                 else:
                     collection_list = self.db.get_collections()["status"]["collections"]
                 new_index_name = self.create_new_name(
@@ -146,7 +147,7 @@ class ImportAstraDB(ImportVDB):
                         new_index_name,
                         dimension=namespace_meta["dimensions"],
                         metric=standardize_metric_reverse(
-                            namespace_meta.get("distance_metric", Distance.COSINE),
+                            namespace_meta.get("distance_metric"),
                             self.DB_NAME_SLUG,
                         ),
                     )
