@@ -2,7 +2,6 @@ import argparse
 import datetime
 import os
 import json
-import numpy as np
 from tqdm import tqdm
 
 from pinecone import Pinecone, Vector
@@ -232,13 +231,11 @@ class ExportPinecone(ExportVDB):
         if self.args["id_list_file"]:
             with open(self.args["id_list_file"]) as f:
                 return [line.strip() for line in f.readlines()]
-        
+
         # Use list_points to get all IDs directly
         all_ids = list(self.index.list_points(namespace=namespace))
         tqdm.write(f"Collected {len(all_ids)} IDs using list_points.")
         return all_ids
-
-
 
     def unmark_vectors_as_exported(self, all_ids, namespace, hash_value):
         if (
