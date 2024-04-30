@@ -114,11 +114,15 @@ class ImportLanceDB(ImportVDB):
                         break
 
                 if id_column:
-                    # Create index on the table  
+                    # Create index on the table
                     create_index(table, id_column)
-                    tqdm.write(f"Created index on {id_column} for table {new_index_name}")
+                    tqdm.write(
+                        f"Created index on {id_column} for table {new_index_name}"
+                    )
                 else:
-                    tqdm.write(f"Warning: No ID column {self.ID_COLUMN} found in schema. Skipping index creation for table {new_index_name}")
+                    tqdm.write(
+                        f"Warning: No ID column {self.ID_COLUMN} found in schema. Skipping index creation for table {new_index_name}"
+                    )
 
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
@@ -134,7 +138,9 @@ class ImportLanceDB(ImportVDB):
                     for col in df.columns:
                         if col not in [field.name for field in table.schema]:
                             col_type = df[col].dtype
-                            tqdm.write(f"Adding column {col} of type {col_type} to {new_index_name}")
+                            tqdm.write(
+                                f"Adding column {col} of type {col_type} to {new_index_name}"
+                            )
                             table.add_columns(
                                 {
                                     col: get_default_value(col_type),
