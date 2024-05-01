@@ -250,9 +250,11 @@ class ExportPinecone(ExportVDB):
         ids = set(result[ID_COLUMN] for result in results["matches"])
         return ids
 
-    def get_all_ids_from_index(self, namespace="", num_dimensions=None, hash_value=None):
+    def get_all_ids_from_index(
+        self, namespace="", num_dimensions=None, hash_value=None
+    ):
         import numpy as np
-        
+
         if (
             self.args["id_range_start"] is not None
             and self.args["id_range_end"] is not None
@@ -319,7 +321,9 @@ class ExportPinecone(ExportVDB):
                         range_max = max(all_ids) + 10 * fetch_size
                         range_obj = range(range_min, range_max)
                         tqdm.write(
-                            "Checking ids in range {} to {}".format(range_min, range_max)
+                            "Checking ids in range {} to {}".format(
+                                range_min, range_max
+                            )
                         )
                         ids_to_fetch = [
                             x
