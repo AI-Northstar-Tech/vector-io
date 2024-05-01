@@ -32,7 +32,20 @@ class ExportPinecone(ExportVDB):
             cls.DB_NAME_SLUG, help="Export data from Pinecone"
         )
         parser_pinecone.add_argument(
+            "--serverless",
+            type=bool,
+            help="Whether the Pinecone instance is serverless",
+            default=False,
+            action=argparse.BooleanOptionalAction,
+        )
+        parser_pinecone.add_argument(
             "-e", "--environment", type=str, help="Environment of Pinecone instance"
+        )
+        parser_pinecone.add_argument(
+            "-c", "--cloud", type=str, help="Cloud of Pinecone Serverless instance"
+        )
+        parser_pinecone.add_argument(
+            "--region", type=str, help="Region of Pinecone Serverless instance"
         )
         parser_pinecone.add_argument(
             "-i", "--index", type=str, help="Name of index to export"
@@ -44,7 +57,7 @@ class ExportPinecone(ExportVDB):
             "--id_range_end", type=int, help="End of id range", default=None
         )
         parser_pinecone.add_argument(
-            "-f", "--id_list_file", type=str, help="Path to id list file", default=None
+            "--id_list_file", type=str, help="Path to id list file", default=None
         )
         parser_pinecone.add_argument(
             "--modify_to_search",
@@ -72,9 +85,25 @@ class ExportPinecone(ExportVDB):
         """
         Export data from Pinecone
         """
-        set_arg_from_input(
-            args, "environment", "Enter the environment of Pinecone instance: "
-        )
+        if args["serverless"] is False:
+            set_arg_from_input(
+                args, "environment", "Enter the environment of Pinecone instance: "
+            )
+        else:
+            set_arg_from_input(
+                args,
+                "cloud",
+                "Enter the cloud of Pinecone Serverless instance (default: 'aws'): ",
+                str,
+                "aws",
+            )
+            set_arg_from_input(
+                args,
+                "region",
+                "Enter the region of Pinecone Serverless instance (default: 'us-west-2'): ",
+                str,
+                "us-west-2",
+            )
         set_arg_from_input(
             args,
             "index",
@@ -130,6 +159,9 @@ class ExportPinecone(ExportVDB):
         super().__init__(args)
         self.pc = Pinecone(api_key=args["pinecone_api_key"])
         self.collected_ids_by_modifying = False
+
+    def get_index_names(self):
+        return self.get_all_index_names()
 
     def get_all_index_names(self):
         return self.pc.list_indexes().names()
@@ -236,8 +268,10 @@ class ExportPinecone(ExportVDB):
         all_ids = []
         for ids in self.index.list(namespace=namespace):
             all_ids.extend(ids)
-        
-        tqdm.write(f"Collected {len(all_ids)} IDs using list_points with implicit pagination.")
+
+        tqdm.write(
+            f"Collected {len(all_ids)} IDs using list_points with implicit pagination."
+        )
         return all_ids
 
     def unmark_vectors_as_exported(self, all_ids, namespace, hash_value):
@@ -285,10 +319,13 @@ class ExportPinecone(ExportVDB):
                 if index_name not in self.get_all_index_names():
                     tqdm.write(f"Index {index_name} does not exist, skipping...")
         index_metas = {}
-        for index_name in tqdm(index_names, desc="Fetching indexes"):
+        pbar = tqdm(total=len(index_names), desc="Exporting indexes")
+        for index_name in index_names:
+            pbar.update(1)
+            pbar.set_description(f"Exporting {index_name}")
             index_meta = self.get_data_for_index(index_name)
             index_metas[index_name] = index_meta
-
+        pbar.close()
         # Create and save internal metadata JSON
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
         internal_metadata = VDFMeta(
@@ -325,13 +362,7 @@ class ExportPinecone(ExportVDB):
             )
             os.makedirs(vectors_directory, exist_ok=True)
 
-            all_ids = list(
-                self.get_all_ids_from_index(
-                    num_dimensions=index_info["dimension"],
-                    namespace=namespace,
-                    hash_value=self.hash_value,
-                )
-            )
+            all_ids = list(self.get_all_ids_from_index(namespace=namespace))
             # unmark the vectors as exported
             self.unmark_vectors_as_exported(all_ids, namespace, self.hash_value)
             # vectors is a dict of string to dict with keys id, values, metadata
