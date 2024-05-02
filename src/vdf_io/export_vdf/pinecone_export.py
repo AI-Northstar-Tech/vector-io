@@ -293,137 +293,135 @@ class ExportPinecone(ExportVDB):
                 tqdm.write(
                     f"Error fetching IDs using list_points. Falling back to random search method: {e}"
                 )
-        else:
-            # Use the existing code logic to fetch IDs using random search and range fetching
-            num_vectors = self.index.describe_index_stats()["namespaces"][namespace][
-                "vector_count"
-            ]
-            # do small random search and check if ids are int
-            random_results = self.index.query(
-                vector=np.random.rand(num_dimensions).tolist(),
-                include_values=False,
-                top_k=100,
-                namespace=namespace,
-            )
-            random_results_ids_strs = [x[ID_COLUMN] for x in random_results["matches"]]
-            all_ids = set()
-            if not all(x.isdigit() for x in random_results_ids_strs):
-                tqdm.write(
-                    "The ids are not integers. Since a list of ids has not been provided"
-                    " using --id_list_file, we will use random search to collect ids."
-                    " This may take a while."
-                )
-            else:
-                random_results_ids = [
-                    int(x) for x in random_results_ids_strs if x.isdigit()
-                ]
-                # keep querying out past the range of ids to get all ids
-                all_ids.update(random_results_ids)
-                ids_checked = set(all_ids)
-                with tqdm(
-                    total=num_vectors, desc="Collecting IDs using fetch on integer ids"
-                ) as pbar:
-                    fetch_size = MAX_FETCH_SIZE
-                    while len(all_ids) < num_vectors:
-                        range_min = min(all_ids) - fetch_size
-                        range_max = max(all_ids) + 10 * fetch_size
-                        range_obj = range(range_min, range_max)
-                        tqdm.write(
-                            "Checking ids in range {} to {}".format(
-                                range_min, range_max
-                            )
-                        )
-                        ids_to_fetch = [
-                            x
-                            for x in list(range_obj)
-                            if x not in all_ids.union(ids_checked)
-                        ]
-                        # in increments of fetch size
-                        i = 0
-                        try_count = 0
-                        while (
-                            i < len(ids_to_fetch)
-                            and len(all_ids) < num_vectors
-                            and try_count < MAX_TRIES_OVERALL
-                            and len(ids_to_fetch) > 0
-                        ):
-                            ids_to_fetch_strs = [
-                                str(x) for x in ids_to_fetch[i : i + fetch_size]
-                            ]
-                            newly_fetched = self.index.fetch(
-                                ids_to_fetch_strs, namespace=namespace
-                            )
-                            pbar.update(len(newly_fetched["vectors"]))
-                            all_ids.update(
-                                [int(x) for x in newly_fetched["vectors"].keys()]
-                            )
-                            i += fetch_size
-                            try_count += 1
-                            ids_checked.update([int(x) for x in ids_to_fetch_strs])
-                        if try_count >= MAX_TRIES_OVERALL:
-                            tqdm.write(
-                                f"CAUTION!!: Could not collect all ids after {MAX_TRIES_OVERALL} tries.\n"
-                                "Due to the way Pinecone's API is built, there is no way to find all the ids of points that are stored in an index.\n"
-                                "Reference: https://community.pinecone.io/t/how-to-retrieve-list-of-ids-in-an-index/380/20\n"
-                                "This library uses a random search method to collect ids, but it is not guaranteed to collect all ids.\n"
-                                "Please provide range of ids instead. Exporting the ids collected so far."
-                            )
-                        else:
-                            tqdm.write(
-                                f"Collected {len(all_ids)} ids out of {num_vectors} vectors in {try_count} fetches."
-                            )
-                        return [str(x) for x in all_ids]
-            # random search method
-            max_tries = max((num_vectors // PINECONE_MAX_K) * 3, MAX_TRIES_OVERALL)
-            try_count = 0
-            # -1s in each dimension are the min values
-            vector_range_min = np.array([-1] * num_dimensions)
-            vector_range_max = np.array([1] * num_dimensions)
-            with tqdm(
-                total=num_vectors, desc="Collecting IDs using random vector search"
-            ) as pbar:
-                while len(all_ids) < num_vectors:
-                    # fetch 10 random vectors from all_ids
-                    if len(all_ids) > 10:
-                        vector_range_min, vector_range_max = self.update_range(
-                            all_ids, vector_range_min, vector_range_max, namespace
-                        )
-                    input_vector = (
-                        np.random.rand(num_dimensions)
-                        * (vector_range_max - vector_range_min)
-                        + vector_range_min
-                    )
-                    ids = self.get_ids_from_vector_query(
-                        input_vector.tolist(), namespace, all_ids, hash_value
-                    )
-                    prev_size = len(all_ids)
-                    all_ids.update(ids)
-                    if len(ids) == 0:
-                        tqdm.write("No new ids found, exiting...")
-                        break
-                    new_ids = all_ids - set(ids)
-                    if len(new_ids) > 0:
-                        # fetch 1 random vector from new_ids
-                        self.update_range_from_new_ids(
-                            vector_range_min, vector_range_max, new_ids, namespace
-                        )
-                    curr_size = len(all_ids)
-                    if curr_size > prev_size:
-                        tqdm.write(
-                            f"updating ids set with {curr_size - prev_size} new ids..."
-                        )
-                    try_count += 1
-                    if try_count > max_tries and len(all_ids) < num_vectors:
-                        tqdm.write(
-                            f"Could not collect all ids after {max_tries} random searches."
-                            " Please provide range of ids instead. Exporting the ids collected so far."
-                        )
-                        break
-                    pbar.update(curr_size - prev_size)
+
+        # Use the existing code logic to fetch IDs using random search and range fetching
+        num_vectors = self.index.describe_index_stats()["namespaces"][namespace][
+            "vector_count"
+        ]
+        # do small random search and check if ids are int
+        random_results = self.index.query(
+            vector=np.random.rand(num_dimensions).tolist(),
+            include_values=False,
+            top_k=100,
+            namespace=namespace,
+        )
+        random_results_ids_strs = [x[ID_COLUMN] for x in random_results["matches"]]
+        all_ids = set()
+        if not all(x.isdigit() for x in random_results_ids_strs):
             tqdm.write(
-                f"Collected {len(all_ids)} ids out of {num_vectors} vectors in {try_count} tries."
+                "The ids are not integers. Since a list of ids has not been provided"
+                " using --id_list_file, we will use random search to collect ids."
+                " This may take a while."
             )
-            return all_ids
+        else:
+            random_results_ids = [
+                int(x) for x in random_results_ids_strs if x.isdigit()
+            ]
+            # keep querying out past the range of ids to get all ids
+            all_ids.update(random_results_ids)
+            ids_checked = set(all_ids)
+            with tqdm(
+                total=num_vectors, desc="Collecting IDs using fetch on integer ids"
+            ) as pbar:
+                fetch_size = MAX_FETCH_SIZE
+                while len(all_ids) < num_vectors:
+                    range_min = min(all_ids) - fetch_size
+                    range_max = max(all_ids) + 10 * fetch_size
+                    range_obj = range(range_min, range_max)
+                    tqdm.write(
+                        "Checking ids in range {} to {}".format(range_min, range_max)
+                    )
+                    ids_to_fetch = [
+                        x
+                        for x in list(range_obj)
+                        if x not in all_ids.union(ids_checked)
+                    ]
+                    # in increments of fetch size
+                    i = 0
+                    try_count = 0
+                    while (
+                        i < len(ids_to_fetch)
+                        and len(all_ids) < num_vectors
+                        and try_count < MAX_TRIES_OVERALL
+                        and len(ids_to_fetch) > 0
+                    ):
+                        ids_to_fetch_strs = [
+                            str(x) for x in ids_to_fetch[i : i + fetch_size]
+                        ]
+                        newly_fetched = self.index.fetch(
+                            ids_to_fetch_strs, namespace=namespace
+                        )
+                        pbar.update(len(newly_fetched["vectors"]))
+                        all_ids.update(
+                            [int(x) for x in newly_fetched["vectors"].keys()]
+                        )
+                        i += fetch_size
+                        try_count += 1
+                        ids_checked.update([int(x) for x in ids_to_fetch_strs])
+                    if try_count >= MAX_TRIES_OVERALL:
+                        tqdm.write(
+                            f"CAUTION!!: Could not collect all ids after {MAX_TRIES_OVERALL} tries.\n"
+                            "Due to the way Pinecone's API is built, there is no way to find all the ids of points that are stored in an index.\n"
+                            "Reference: https://community.pinecone.io/t/how-to-retrieve-list-of-ids-in-an-index/380/20\n"
+                            "This library uses a random search method to collect ids, but it is not guaranteed to collect all ids.\n"
+                            "Please provide range of ids instead. Exporting the ids collected so far."
+                        )
+                    else:
+                        tqdm.write(
+                            f"Collected {len(all_ids)} ids out of {num_vectors} vectors in {try_count} fetches."
+                        )
+                    return [str(x) for x in all_ids]
+        # random search method
+        max_tries = max((num_vectors // PINECONE_MAX_K) * 3, MAX_TRIES_OVERALL)
+        try_count = 0
+        # -1s in each dimension are the min values
+        vector_range_min = np.array([-1] * num_dimensions)
+        vector_range_max = np.array([1] * num_dimensions)
+        with tqdm(
+            total=num_vectors, desc="Collecting IDs using random vector search"
+        ) as pbar:
+            while len(all_ids) < num_vectors:
+                # fetch 10 random vectors from all_ids
+                if len(all_ids) > 10:
+                    vector_range_min, vector_range_max = self.update_range(
+                        all_ids, vector_range_min, vector_range_max, namespace
+                    )
+                input_vector = (
+                    np.random.rand(num_dimensions)
+                    * (vector_range_max - vector_range_min)
+                    + vector_range_min
+                )
+                ids = self.get_ids_from_vector_query(
+                    input_vector.tolist(), namespace, all_ids, hash_value
+                )
+                prev_size = len(all_ids)
+                all_ids.update(ids)
+                if len(ids) == 0:
+                    tqdm.write("No new ids found, exiting...")
+                    break
+                new_ids = all_ids - set(ids)
+                if len(new_ids) > 0:
+                    # fetch 1 random vector from new_ids
+                    self.update_range_from_new_ids(
+                        vector_range_min, vector_range_max, new_ids, namespace
+                    )
+                curr_size = len(all_ids)
+                if curr_size > prev_size:
+                    tqdm.write(
+                        f"updating ids set with {curr_size - prev_size} new ids..."
+                    )
+                try_count += 1
+                if try_count > max_tries and len(all_ids) < num_vectors:
+                    tqdm.write(
+                        f"Could not collect all ids after {max_tries} random searches."
+                        " Please provide range of ids instead. Exporting the ids collected so far."
+                    )
+                    break
+                pbar.update(curr_size - prev_size)
+        tqdm.write(
+            f"Collected {len(all_ids)} ids out of {num_vectors} vectors in {try_count} tries."
+        )
+        return all_ids
 
     def unmark_vectors_as_exported(self, all_ids, namespace, hash_value):
         if (
