@@ -1,6 +1,5 @@
 import argparse
 import turbopuffer as tpuf
-from vdf_io.names import DBNames
 from vdf_io.util import clean_documents
 from vdf_io.export_vdf.export_vdb import ExportVDB
 
