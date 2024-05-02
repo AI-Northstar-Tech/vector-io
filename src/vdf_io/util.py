@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import time
+from typing import Dict
 from uuid import UUID
 import numpy as np
 import pandas as pd
@@ -155,7 +156,7 @@ def expand_shorthand_path(shorthand_path):
     return str(full_path)
 
 
-db_metric_to_standard_metric = {
+db_metric_to_standard_metric: Dict[str, Dict[str, Distance]] = {
     DBNames.PINECONE: {
         "cosine": Distance.COSINE,
         "euclidean": Distance.EUCLID,
@@ -227,7 +228,8 @@ def standardize_metric(metric, db):
     ):
         return db_metric_to_standard_metric[db][metric]
     else:
-        raise Exception(f"Invalid metric '{metric}' for database '{db}'")
+        tqdm.write(f"Invalid metric '{metric}' for database '{db}'")
+        return Distance.COSINE
 
 
 def standardize_metric_reverse(metric, db):

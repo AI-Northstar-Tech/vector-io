@@ -160,14 +160,6 @@ class ImportChroma(ImportVDB):
                         desc="Importing batches",
                         total=len(df) // BATCH_SIZE,
                     ):
-                        if self.total_imported_count + len(batch) >= (
-                            self.args.get("max_num_rows") or INT_MAX
-                        ):
-                            batch = batch[
-                                : (self.args.get("max_num_rows") or INT_MAX)
-                                - self.total_imported_count
-                            ]
-                            max_hit = True
                         model_map = namespace_meta.get("model_map", {})
 
                         # filter out rows with empty or None vector column

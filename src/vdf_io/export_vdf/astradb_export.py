@@ -256,6 +256,7 @@ class ExportAstraDB(ExportVDB):
     def get_data(self):
         index_names = self.get_index_names()
         index_metas: Dict[str, List[NamespaceMeta]] = {}
+        self.total_imported_count = 0
         for index_name in index_names:
             tqdm.write(f"Exporting collection: {index_name}")
             namespace_metas = []
@@ -320,6 +321,7 @@ class ExportAstraDB(ExportVDB):
                     distance=self.args.get("distance_metric"),
                 )
             ]
+            self.total_imported_count += exported_count
             index_metas[index_name] = namespace_metas
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
         internal_metadata = self.get_basic_vdf_meta(index_metas)

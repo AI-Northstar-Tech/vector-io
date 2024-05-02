@@ -1,60 +1,127 @@
 import argparse
+from typing import Dict, List
+from tqdm import tqdm
+from rich import print as rprint
+
 import turbopuffer as tpuf
+
+from vdf_io.constants import DEFAULT_BATCH_SIZE, INT_MAX
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
+from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
-from vdf_io.util import standardize_metric
+from vdf_io.util import (
+    cleanup_df,
+    divide_into_batches,
+    set_arg_from_password,
+)
 
 
-class ImportTurbopuffer:
-    def make_parser(self, parser=None):
-        if parser is None:
-            parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "--turbopuffer-namespace",
-            help="The Turbopuffer namespace to connect to",
+class ImportTurbopuffer(ImportVDB):
+    DB_NAME_SLUG = DBNames.TURBOPUFFER
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_tpuf = subparsers.add_parser(
+            cls.DB_NAME_SLUG, help="Export data from Turbopuffer"
         )
-        return parser
+        parser_tpuf.add_argument(
+            "--namespaces",
+            help="The Turbopuffer namespaces to export (comma-separated). If not provided, all namespaces will be exported.",
+        )
+        parser_tpuf.add_argument(
+            "--api_key",
+            help="The API key for the Turbopuffer instance.",
+        )
 
-    def import_vdb(self, args, input_data):
-        namespace = args.get("turbopuffer_namespace")
-        if namespace is None:
-            namespace = input("Enter the Turbopuffer namespace to connect to: ")
+    @classmethod
+    def import_vdb(cls, args):
+        set_arg_from_password(
+            args,
+            "api_key",
+            "Enter the API key for Turbopuffer (default: from TURBOPUFFER_API_KEY env var): ",
+            env_var_name="TURBOPUFFER_API_KEY",
+        )
+        turbopuffer_import = cls(args)
+        turbopuffer_import.upsert_data()
+        return turbopuffer_import
 
-        ns = tpuf.Namespace(namespace)
+    def __init__(self, args):
+        # call super class constructor
+        super().__init__(args)
+        tpuf.api_key = args.get("api_key")
 
-        distance_metric = args.get("distance_metric")
-        if distance_metric is None:
-            distance_metric = input(
-                "Enter the distance metric to use (cosine_distance, euclidean_distance, dot_product): "
-            )
-        distance_metric = standardize_metric(distance_metric, DBNames.TURBOPUFFER)
+    def get_all_index_names(self):
+        nses = tpuf.namespaces()
+        return [ns.name for ns in nses]
 
-        batch_size = 1000
-        batch = []
+    def upsert_data(self):
+        self.total_imported_count = 0
+        indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
+        index_names: List[str] = list(indexes_content.keys())
+        if len(index_names) == 0:
+            raise ValueError("No indexes found in VDF_META.json")
+        collections = self.get_all_index_names()
+        # Load Parquet file
+        # print(indexes_content[index_names[0]]):List[NamespaceMeta]
+        for index_name, index_meta in tqdm(
+            indexes_content.items(), desc="Importing indexes"
+        ):
+            for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
+                self.set_dims(namespace_meta, index_name)
+                data_path = namespace_meta["data_path"]
+                final_data_path = self.get_final_data_path(data_path)
+                # Load the data from the parquet files
+                parquet_files = self.get_parquet_files(final_data_path)
 
-        for doc in input_data:
-            if len(batch) >= batch_size:
-                ns.upsert(
-                    ids=[d["id"] for d in batch],
-                    vectors=[d["vector"] for d in batch],
-                    attributes={
-                        k: [d.get(k) for d in batch]
-                        for k in batch[0].keys()
-                        if k not in ["id", "vector"]
-                    },
-                    distance_metric=distance_metric,
+                new_index_name = index_name + (
+                    f'_{namespace_meta["namespace"]}'
+                    if namespace_meta["namespace"]
+                    else ""
                 )
-                batch = []
+                new_index_name = self.create_new_name(new_index_name, collections)
+                ns = tpuf.Namespace(new_index_name)
+                (
+                    vector_column_names,
+                    vector_column_name,
+                ) = self.get_vector_column_name(index_name, namespace_meta)
+                tqdm.write(f"Vector column name: {vector_column_name}")
+                if len(vector_column_names) > 1:
+                    tqdm.write("Turbopuffer does not support multiple vector columns")
+                    tqdm.write(f"Skipping the rest : {vector_column_names[1:]}")
+                for file in tqdm(parquet_files, desc="Iterating parquet files"):
+                    file_path = self.get_file_path(final_data_path, file)
+                    df = self.read_parquet_progress(
+                        file_path,
+                        max_num_rows=(
+                            (self.args.get("max_num_rows") or INT_MAX)
+                            - self.total_imported_count
+                        ),
+                    )
+                    df = cleanup_df(df)
+                    BATCH_SIZE = min(
+                        self.args.get("batch_size") or DEFAULT_BATCH_SIZE, 10_000
+                    )
 
-            batch.append(doc)
-
-        if batch:
-            ns.upsert(
-                ids=[d["id"] for d in batch],
-                vectors=[d["vector"] for d in batch],
-                attributes={
-                    k: [d.get(k) for d in batch]
-                    for k in batch[0].keys()
-                    if k not in ["id", "vector"]
-                },
-                distance_metric=distance_metric,
-            )
+                    for batch in tqdm(
+                        divide_into_batches(df, BATCH_SIZE),
+                        desc="Importing batches",
+                        total=len(df) // BATCH_SIZE,
+                    ):
+                        metadata = batch.drop(
+                            columns=[self.id_column] + vector_column_names
+                        ).to_dict(orient="records")
+                        # rprint(metadata)
+                        ns.upsert(
+                            upserts=[
+                                {
+                                    "id": row[self.id_column],
+                                    "vector": row[vector_column_name],
+                                    "attributes": metadata[idx],
+                                }
+                                for idx, row in batch.iterrows()
+                            ],
+                        )
+                        self.total_imported_count += len(batch)
+                tqdm.write(
+                    f"Finished importing {self.total_imported_count} vectors into {new_index_name}"
+                )
