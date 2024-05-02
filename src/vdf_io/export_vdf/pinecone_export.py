@@ -3,10 +3,11 @@ import datetime
 import os
 import json
 from tqdm import tqdm
+from halo import Halo
 
-from pinecone import Pinecone, Vector  
+from pinecone import Pinecone, Vector
+
 from vdf_io.constants import ID_COLUMN
-
 from vdf_io.names import DBNames
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
 from vdf_io.util import (
@@ -21,6 +22,7 @@ PINECONE_MAX_K = 10_000
 MAX_TRIES_OVERALL = 150
 MAX_FETCH_SIZE = 1_000
 THREAD_POOL_SIZE = 30
+use_list_points_default = True
 
 
 class ExportPinecone(ExportVDB):
@@ -67,10 +69,10 @@ class ExportPinecone(ExportVDB):
             action=argparse.BooleanOptionalAction,
         )
         parser_pinecone.add_argument(
-            "--use-list-points",
+            "--use_list_points",
             type=bool,
             help="Use list_points API to fetch IDs (default: False)",
-            default=False,
+            default=use_list_points_default,
             action=argparse.BooleanOptionalAction,
         )
         parser_pinecone.add_argument(
@@ -250,9 +252,11 @@ class ExportPinecone(ExportVDB):
         ids = set(result[ID_COLUMN] for result in results["matches"])
         return ids
 
-    def get_all_ids_from_index(self, namespace="", num_dimensions=None, hash_value=None):
+    def get_all_ids_from_index(
+        self, namespace="", num_dimensions=None, hash_value=None
+    ):
         import numpy as np
-        
+
         if (
             self.args["id_range_start"] is not None
             and self.args["id_range_end"] is not None
@@ -273,16 +277,22 @@ class ExportPinecone(ExportVDB):
             with open(self.args["id_list_file"]) as f:
                 return [line.strip() for line in f.readlines()]
 
-        if self.args.get("use_list_points", False):
-            # Use list_points with implicit pagination to get all IDs
-            all_ids = []
-            for ids in self.index.list(namespace=namespace):
-                all_ids.extend(ids)
+        if self.args.get("use_list_points", use_list_points_default):
+            try:
+                # Use list_points with implicit pagination to get all IDs
+                all_ids = []
+                with Halo(text="Collecting IDs using list_points", spinner="dots"):
+                    for ids in self.index.list(namespace=namespace):
+                        all_ids.extend(ids)
 
-            tqdm.write(
-                f"Collected {len(all_ids)} IDs using list_points with implicit pagination."
-            )
-            return all_ids
+                tqdm.write(
+                    f"Collected {len(all_ids)} IDs using list_points with implicit pagination."
+                )
+                return all_ids
+            except Exception as e:
+                tqdm.write(
+                    f"Error fetching IDs using list_points. Falling back to random search method: {e}"
+                )
         else:
             # Use the existing code logic to fetch IDs using random search and range fetching
             num_vectors = self.index.describe_index_stats()["namespaces"][namespace][
@@ -319,7 +329,9 @@ class ExportPinecone(ExportVDB):
                         range_max = max(all_ids) + 10 * fetch_size
                         range_obj = range(range_min, range_max)
                         tqdm.write(
-                            "Checking ids in range {} to {}".format(range_min, range_max)
+                            "Checking ids in range {} to {}".format(
+                                range_min, range_max
+                            )
                         )
                         ids_to_fetch = [
                             x
@@ -460,9 +472,10 @@ class ExportPinecone(ExportVDB):
         index_metas = {}
         pbar = tqdm(total=len(index_names), desc="Exporting indexes")
         for index_name in index_names:
-            pbar.update(1)
             pbar.set_description(f"Exporting {index_name}")
+            tqdm.write(f"Exporting index '{index_name}'")
             index_meta = self.get_data_for_index(index_name)
+            pbar.update(1)
             index_metas[index_name] = index_meta
         pbar.close()
         # Create and save internal metadata JSON
@@ -501,7 +514,13 @@ class ExportPinecone(ExportVDB):
             )
             os.makedirs(vectors_directory, exist_ok=True)
 
-            all_ids = list(self.get_all_ids_from_index(namespace=namespace))
+            all_ids = list(
+                self.get_all_ids_from_index(
+                    namespace=namespace,
+                    num_dimensions=index_info["dimension"],
+                    hash_value=self.hash_value,
+                )
+            )
             # unmark the vectors as exported
             self.unmark_vectors_as_exported(all_ids, namespace, self.hash_value)
             # vectors is a dict of string to dict with keys id, values, metadata
