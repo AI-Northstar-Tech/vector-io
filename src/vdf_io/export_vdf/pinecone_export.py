@@ -578,6 +578,11 @@ class ExportPinecone(ExportVDB):
                 metric=standardize_metric(
                     self.pc.describe_index(index_name).metric, self.DB_NAME_SLUG
                 ),
+                schema_dict_str=(
+                    self.parquet_schema.to_string()
+                    if hasattr(self, "parquet_schema")
+                    else None
+                ),
             )
             index_meta.append(namespace_meta)
             self.args["exported_count"] += total_size
