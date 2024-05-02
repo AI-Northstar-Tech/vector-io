@@ -1,6 +1,6 @@
 numpy
 pandas
-pinecone-client>=3.0.0
+pinecone-client~=4.0.0
 pyarrow
 qdrant_client
 tqdm

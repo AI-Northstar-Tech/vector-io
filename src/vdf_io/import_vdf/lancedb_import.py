@@ -117,7 +117,9 @@ class ImportLanceDB(ImportVDB):
                     for col in df.columns:
                         if col not in [field.name for field in table.schema]:
                             col_type = df[col].dtype
-                            tqdm.write(f"Adding column {col} of type {col_type} to {new_index_name}")
+                            tqdm.write(
+                                f"Adding column {col} of type {col_type} to {new_index_name}"
+                            )
                             table.add_columns(
                                 {
                                     col: get_default_value(col_type),
