@@ -22,6 +22,11 @@ See the [Contributing](#contributing) section to add support for your favorite v
 <details open>
   <summary>Fully Supported</summary>
 
+<p align=center>
+<!-- include photo -->
+<img src="assets/vector-io-ecosystem-may3-2024.jpg" width="800"/>
+</p>
+
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
 | Pinecone                       | ✅     | ✅     |
@@ -32,6 +37,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | LanceDB                        | ✅     | ✅     |
 | DataStax Astra DB              | ✅     | ✅     |
 | Chroma                         | ✅     | ✅     |
+| Turbopuffer                    | ✅     | ✅     |
 
 </details>
 
@@ -60,7 +66,6 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | OpenSearch                     | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
 | txtai                          | ❌     | ❌     |
-| Turbopuffer                    | ❌     | ❌     |
 | pgvector                       | ❌     | ❌     |
 | SQLite-VSS                     | ❌     | ❌     |
 </details>
