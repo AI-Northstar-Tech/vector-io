@@ -10,6 +10,7 @@ from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
 from vdf_io.util import (
+    clean_value,
     cleanup_df,
     divide_into_batches,
     set_arg_from_password,
@@ -102,25 +103,63 @@ class ImportTurbopuffer(ImportVDB):
                         self.args.get("batch_size") or DEFAULT_BATCH_SIZE, 10_000
                     )
 
+                    # keeping track of updated keys
+                    updated_keys = set()
                     for batch in tqdm(
                         divide_into_batches(df, BATCH_SIZE),
                         desc="Importing batches",
                         total=len(df) // BATCH_SIZE,
                     ):
+                        # filter out rows with empty or None vector column
+                        prev_count = len(batch)
+                        batch = batch.dropna(subset=[vector_column_name])
+                        non_empty_count = len(batch)
+                        if prev_count != non_empty_count:
+                            tqdm.write(
+                                f"Skipped {prev_count - non_empty_count} rows with empty vector column"
+                            )
+                        # Attributes are key/value mappings. Keys are strings, and values can be strings, unsigned integers, or arrays of either.
                         metadata = batch.drop(
                             columns=[self.id_column] + vector_column_names
                         ).to_dict(orient="records")
+                        for i in range(len(metadata)):
+                            for key, val in metadata[i].items():
+                                if isinstance(val, list):
+                                    # check for str or unsigned int
+                                    if not all(
+                                        isinstance(x, str) for x in val
+                                    ) and not (
+                                        all(isinstance(x, int) for x in val)
+                                        and all(x >= 0 for x in val)
+                                    ):
+                                        # convert all elements to string
+                                        metadata[i][key] = [str(x) for x in val]
+                                        updated_keys.add(key)
+                                # value can be converted to string
+                                else:
+                                    metadata[i][key] = str(val)
+                                    updated_keys.add(key)
+                            for key, val in metadata[i].items():
+                                metadata[i][key] = clean_value(val)
+
                         # rprint(metadata)
-                        ns.upsert(
-                            upserts=[
-                                {
-                                    "id": row[self.id_column],
-                                    "vector": row[vector_column_name],
-                                    "attributes": metadata[idx],
-                                }
-                                for idx, row in batch.iterrows()
-                            ],
+                        tqdm.write(
+                            f"Updated values of keys: {updated_keys} to string type"
                         )
+                        try:
+                            ns.upsert(
+                                data=[
+                                    {
+                                        "id": row[self.id_column],
+                                        "vector": row[vector_column_name],
+                                        "attributes": metadata[idx],
+                                    }
+                                    for idx, row in batch.iterrows()
+                                ],
+                            )
+                        except Exception as e:
+                            tqdm.write(f"Error: {e} {batch}")
+                            continue
                         self.total_imported_count += len(batch)
                 tqdm.write(
                     f"Finished importing {self.total_imported_count} vectors into {new_index_name}"
