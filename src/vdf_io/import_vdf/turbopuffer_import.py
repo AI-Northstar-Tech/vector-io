@@ -1,7 +1,5 @@
-import argparse
 from typing import Dict, List
 from tqdm import tqdm
-from rich import print as rprint
 
 import turbopuffer as tpuf
 
