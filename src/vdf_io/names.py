@@ -11,3 +11,4 @@ class DBNames:
     WEAVIATE = "weaviate"
     ASTRADB = "astradb"
     AZUREAI = "azureai"
+    TURBOPUFFER = "turbopuffer"
