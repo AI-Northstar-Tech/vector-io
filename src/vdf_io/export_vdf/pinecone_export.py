@@ -2,6 +2,7 @@ import argparse
 import datetime
 import os
 import json
+import numpy as np
 from tqdm import tqdm
 from halo import Halo
 
@@ -206,7 +207,7 @@ class ExportPinecone(ExportVDB):
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size)"
                     )
                     mark_batch_size = mark_batch_size * 3 // 4
-                    if mark_batch_size < MAX_FETCH_SIZE / 100:
+                    if mark_batch_size < 1:
                         raise Exception("Could not fetch vectors")
                     continue
                 batch_vectors = data["vectors"]
@@ -235,7 +236,7 @@ class ExportPinecone(ExportVDB):
                         f"Error upserting vectors: {e}. Trying with a smaller batch size (--batch_size)"
                     )
                     mark_batch_size = mark_batch_size * 3 // 4
-                    if mark_batch_size < MAX_FETCH_SIZE / 100:
+                    if mark_batch_size < 1:
                         raise Exception("Could not upsert vectors")
                     continue
                 i += resp["upserted_count"]
@@ -533,8 +534,12 @@ class ExportPinecone(ExportVDB):
             while i < len(all_ids):
                 batch_ids = all_ids[i : i + fetch_size]
                 try:
+                    # convert to strs
+                    batch_ids = [str(x) for x in batch_ids]
                     data = self.index.fetch(batch_ids, namespace=namespace)
                 except Exception as e:
+                    if fetch_size < 1:
+                        raise Exception("Could not fetch vectors")
                     tqdm.write(
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size): {fetch_size}"
                     )
@@ -587,3 +592,42 @@ class ExportPinecone(ExportVDB):
             index_meta.append(namespace_meta)
             self.args["exported_count"] += total_size
         return index_meta
+
+    def update_range_from_new_ids(
+        self, vector_range_min, vector_range_max, new_ids, namespace
+    ):
+        # use update_range to update the range of the vectors
+        self.update_range(
+            new_ids, vector_range_min, vector_range_max, namespace, size=1
+        )
+
+    def update_range(
+        self, all_ids, vector_range_min, vector_range_max, namespace, size=10
+    ):
+        random_ids = np.random.choice(list(all_ids), size=size).tolist()
+
+        random_vectors = [
+            x["values"]
+            for x in self.index.fetch(random_ids, namespace=namespace)[
+                "vectors"
+            ].values()
+        ]
+        # extend the range of the vectors
+        random_vectors_np = np.array(random_vectors)
+
+        # Initialize vector_range_min and vector_range_max if they are not set
+        if vector_range_min is None:
+            vector_range_min = np.min(random_vectors_np, axis=0)
+        else:
+            vector_range_min = np.minimum(
+                vector_range_min, np.min(random_vectors_np, axis=0)
+            )
+
+        if vector_range_max is None:
+            vector_range_max = np.max(random_vectors_np, axis=0)
+        else:
+            vector_range_max = np.maximum(
+                vector_range_max, np.max(random_vectors_np, axis=0)
+            )
+
+        return vector_range_min, vector_range_max
