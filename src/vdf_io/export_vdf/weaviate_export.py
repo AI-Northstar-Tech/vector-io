@@ -28,18 +28,24 @@ class ExportWeaviate(ExportVDB):
 
         parser_weaviate.add_argument("--url", type=str, help="URL of Weaviate instance")
         parser_weaviate.add_argument("--api_key", type=str, help="Weaviate API key")
-        parser_weaviate.add_argument("--openai_api_key", type=str, help="Openai API key")
         parser_weaviate.add_argument(
-            "--batch_size", type=int, help="batch size for fetching",
-            default=DEFAULT_BATCH_SIZE
+            "--openai_api_key", type=str, help="Openai API key"
         )
         parser_weaviate.add_argument(
-            "--offset", type=int, help="offset for fetching",
-            default=None
+            "--batch_size",
+            type=int,
+            help="batch size for fetching",
+            default=DEFAULT_BATCH_SIZE,
         )
         parser_weaviate.add_argument(
-            "--connection-type", type=str, choices=["local", "cloud"], default="cloud",
-            help="Type of connection to Weaviate (local or cloud)"
+            "--offset", type=int, help="offset for fetching", default=None
+        )
+        parser_weaviate.add_argument(
+            "--connection-type",
+            type=str,
+            choices=["local", "cloud"],
+            default="cloud",
+            help="Type of connection to Weaviate (local or cloud)",
         )
         parser_weaviate.add_argument(
             "--classes", type=str, help="Classes to export (comma-separated)"
@@ -57,7 +63,7 @@ class ExportWeaviate(ExportVDB):
             args,
             "connection_type",
             "Enter 'local' or 'cloud' for connection types: ",
-            choices=['local', 'cloud'],
+            choices=["local", "cloud"],
         )
         set_arg_from_password(
             args,
@@ -88,7 +94,7 @@ class ExportWeaviate(ExportVDB):
             self.client = weaviate.connect_to_wcs(
                 cluster_url=self.args["url"],
                 auth_credentials=weaviate.auth.AuthApiKey(self.args["api_key"]),
-                headers={'X-OpenAI-Api-key': self.args["openai_api_key"]}
+                headers={"X-OpenAI-Api-key": self.args["openai_api_key"]}
                 if self.args["openai_api_key"]
                 else None,
                 skip_init_checks=True,
@@ -134,7 +140,7 @@ class ExportWeaviate(ExportVDB):
                 limit=batch_size,
                 offset=offset,
                 include_vector=True,
-                return_metadata=MetadataQuery.full()
+                return_metadata=MetadataQuery.full(),
             )
             res = collection.aggregate.over_all(total_count=True)
             total_vector_count = res.total_count

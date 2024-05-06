@@ -26,12 +26,17 @@ class ImportWeaviate(ImportVDB):
             "--index_name", type=str, help="Name of the index in Weaviate"
         )
         parser_weaviate.add_argument(
-            "--connection-type", type=str, choices=["local", "cloud"], default="cloud",
-            help="Type of connection to Weaviate (local or cloud)"
+            "--connection-type",
+            type=str,
+            choices=["local", "cloud"],
+            default="cloud",
+            help="Type of connection to Weaviate (local or cloud)",
         )
         parser_weaviate.add_argument(
-            "--batch_size", type=int, help="batch size for fetching",
-            default=DEFAULT_BATCH_SIZE
+            "--batch_size",
+            type=int,
+            help="batch size for fetching",
+            default=DEFAULT_BATCH_SIZE,
         )
 
     @classmethod
@@ -52,7 +57,7 @@ class ImportWeaviate(ImportVDB):
             args,
             "connection_type",
             "Enter 'local' or 'cloud' for connection types: ",
-            choices=['local', 'cloud'],
+            choices=["local", "cloud"],
         )
         set_arg_from_password(
             args,
@@ -72,7 +77,7 @@ class ImportWeaviate(ImportVDB):
             self.client = weaviate.connect_to_wcs(
                 cluster_url=self.args["url"],
                 auth_credentials=weaviate.auth.AuthApiKey(self.args["api_key"]),
-                headers={'X-OpenAI-Api-key': self.args["openai_api_key"]}
+                headers={"X-OpenAI-Api-key": self.args["openai_api_key"]}
                 if self.args["openai_api_key"]
                 else None,
                 skip_init_checks=True,
@@ -83,13 +88,17 @@ class ImportWeaviate(ImportVDB):
         total_imported_count = 0
 
         # Iterate over the indexes and import the data
-        for index_name, index_meta in tqdm(self.vdf_meta["indexes"].items(), desc="Importing indexes"):
+        for index_name, index_meta in tqdm(
+            self.vdf_meta["indexes"].items(), desc="Importing indexes"
+        ):
             tqdm.write(f"Importing data for index '{index_name}'")
             for namespace_meta in index_meta:
                 self.set_dims(namespace_meta, index_name)
 
             # Create or get the index
-            index_name = self.create_new_name(index_name, self.client.collections.list_all().keys())
+            index_name = self.create_new_name(
+                index_name, self.client.collections.list_all().keys()
+            )
 
             # Load data from the Parquet files
             data_path = namespace_meta["data_path"]
@@ -107,11 +116,9 @@ class ImportWeaviate(ImportVDB):
                 df = self.read_parquet_progress(file_path)
 
                 if len(vectors) > (self.args.get("max_num_rows") or INT_MAX):
-                        max_hit = True
-                        break
-                if len(vectors) + len(df) > (
-                    self.args.get("max_num_rows") or INT_MAX
-                ):
+                    max_hit = True
+                    break
+                if len(vectors) + len(df) > (self.args.get("max_num_rows") or INT_MAX):
                     df = df.head(
                         (self.args.get("max_num_rows") or INT_MAX) - len(vectors)
                     )
@@ -121,7 +128,9 @@ class ImportWeaviate(ImportVDB):
                 if max_hit:
                     break
 
-            tqdm.write(f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files")
+            tqdm.write(
+                f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files"
+            )
 
             # Upsert the vectors and metadata to the Weaviate index in batches
             BATCH_SIZE = self.args.get("batch_size")
@@ -130,11 +139,12 @@ class ImportWeaviate(ImportVDB):
                 for _, vector in vectors.items():
                     batch.add_object(
                         vector=vector,
-                        collection=index_name
-                        #TODO: Find way to add Metadata
+                        collection=index_name,
+                        # TODO: Find way to add Metadata
                     )
                     total_imported_count += 1
 
-
-        tqdm.write(f"Data import completed successfully. Imported {total_imported_count} vectors")
+        tqdm.write(
+            f"Data import completed successfully. Imported {total_imported_count} vectors"
+        )
         self.args["imported_count"] = total_imported_count
