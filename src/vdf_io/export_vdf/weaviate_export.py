@@ -1,13 +1,14 @@
 import os
-
-from tqdm import tqdm
 import weaviate
 import json
 
+from tqdm import tqdm
+from weaviate.classes.query import MetadataQuery
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input, set_arg_from_password
+from vdf_io.constants import DEFAULT_BATCH_SIZE
 from typing import Dict, List
 
 # Set these environment variables
@@ -28,9 +29,13 @@ class ExportWeaviate(ExportVDB):
         parser_weaviate.add_argument("--url", type=str, help="URL of Weaviate instance")
         parser_weaviate.add_argument("--api_key", type=str, help="Weaviate API key")
         parser_weaviate.add_argument("--openai_api_key", type=str, help="Openai API key")
-        parser_weaviate.add_arguments(
+        parser_weaviate.add_argument(
             "--batch_size", type=int, help="batch size for fetching",
-            default=1000
+            default=DEFAULT_BATCH_SIZE
+        )
+        parser_weaviate.add_argument(
+            "--offset", type=int, help="offset for fetching",
+            default=None
         )
         parser_weaviate.add_argument(
             "--connection-type", type=str, choices=["local", "cloud"], default="cloud",
@@ -100,39 +105,50 @@ class ExportWeaviate(ExportVDB):
                 )
             return [c for c in self.all_classes if c in input_classes]
 
+    def metadata_to_dict(self, metadata):
+        meta_data = {}
+        meta_data["creation_time"] = metadata.creation_time
+        meta_data["distance"] = metadata.distance
+        meta_data["certainty"] = metadata.certainty
+        meta_data["explain_score"] = metadata.explain_score
+        meta_data["is_consistent"] = metadata.is_consistent
+        meta_data["last_update_time"] = metadata.last_update_time
+        meta_data["rerank_score"] = metadata.rerank_score
+        meta_data["score"] = metadata.score
+
+        return meta_data
+
     def get_data(self):
         # Get the index names to export
         index_names = self.get_index_names()
         index_metas: Dict[str, List[NamespaceMeta]] = {}
 
+        # Export data in batches
+        batch_size = self.args["batch_size"]
+        offset = self.args["offset"]
+
         # Iterate over index names and fetch data
         for index_name in index_names:
             collection = self.client.collections.get(index_name)
-            response = collection.aggregate.over_all(total_count=True)
-            total_vector_count = response.total_count
+            response = collection.query.fetch_objects(
+                limit=batch_size,
+                offset=offset,
+                include_vector=True,
+                return_metadata=MetadataQuery.full()
+            )
+            res = collection.aggregate.over_all(total_count=True)
+            total_vector_count = res.total_count
 
             # Create vectors directory for this index
             vectors_directory = self.create_vec_dir(index_name)
 
-            # Export data in batches
-            batch_size = self.args["batch_size"]
-            num_batches = (total_vector_count + batch_size - 1) // batch_size
-            num_vectors_exported = 0
-
-            for batch_idx in tqdm(range(num_batches), desc=f"Exporting {index_name}"):
-                offset = batch_idx * batch_size
-                objects = collection.objects.limit(batch_size).offset(offset).get()
-
-                # Extract vectors and metadata
-                vectors = {obj.id: obj.vector for obj in objects}
-                metadata = {}
-                # Need a better way
-                for obj in objects:
-                    metadata[obj.id] = {attr: getattr(obj, attr) for attr in dir(obj) if not attr.startswith("__")}
-
+            for obj in response.objects:
+                vectors = obj.vector
+                metadata = obj.metadata
+                metadata = self.metadata_to_dict(metadata=metadata)
 
                 # Save vectors and metadata to Parquet file
-                num_vectors_exported += self.save_vectors_to_parquet(
+                num_vectors_exported = self.save_vectors_to_parquet(
                     vectors, metadata, vectors_directory
                 )
 
@@ -143,7 +159,7 @@ class ExportWeaviate(ExportVDB):
                     vectors_directory,
                     total=total_vector_count,
                     num_vectors_exported=num_vectors_exported,
-                    dim=300, # Not sure of the dimensions
+                    dim=-1,
                     distance="Cosine",
                 )
             ]
@@ -154,7 +170,8 @@ class ExportWeaviate(ExportVDB):
         internal_metadata = self.get_basic_vdf_meta(index_metas)
         meta_text = json.dumps(internal_metadata.model_dump(), indent=4)
         tqdm.write(meta_text)
-
+        with open(os.path.join(self.vdf_directory, "VDF_META.json"), "w") as json_file:
+            json_file.write(meta_text)
         print("Data export complete.")
 
         return True

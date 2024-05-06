@@ -1,10 +1,10 @@
 import os
 import weaviate
-import json
 from tqdm import tqdm
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input, set_arg_from_password
+from vdf_io.constants import INT_MAX, DEFAULT_BATCH_SIZE
 
 # Set these environment variables
 URL = os.getenv("YOUR_WCS_URL")
@@ -25,6 +25,14 @@ class ImportWeaviate(ImportVDB):
         parser_weaviate.add_argument(
             "--index_name", type=str, help="Name of the index in Weaviate"
         )
+        parser_weaviate.add_argument(
+            "--connection-type", type=str, choices=["local", "cloud"], default="cloud",
+            help="Type of connection to Weaviate (local or cloud)"
+        )
+        parser_weaviate.add_argument(
+            "--batch_size", type=int, help="batch size for fetching",
+            default=DEFAULT_BATCH_SIZE
+        )
 
     @classmethod
     def import_vdb(cls, args):
@@ -34,17 +42,23 @@ class ImportWeaviate(ImportVDB):
             "Enter the URL of Weaviate instance: ",
             str,
         )
-        set_arg_from_password(
-            args,
-            "api_key",
-            "Enter the Weaviate API key: ",
-            "WEAVIATE_API_KEY",
-        )
         set_arg_from_input(
             args,
             "index_name",
             "Enter the name of the index in Weaviate: ",
             str,
+        )
+        set_arg_from_input(
+            args,
+            "connection_type",
+            "Enter 'local' or 'cloud' for connection types: ",
+            choices=['local', 'cloud'],
+        )
+        set_arg_from_password(
+            args,
+            "api_key",
+            "Enter the Weaviate API key: ",
+            "WEAVIATE_API_KEY",
         )
         weaviate_import = ImportWeaviate(args)
         weaviate_import.upsert_data()
@@ -76,7 +90,6 @@ class ImportWeaviate(ImportVDB):
 
             # Create or get the index
             index_name = self.create_new_name(index_name, self.client.collections.list_all().keys())
-            index = self.client.collections.get(index_name)
 
             # Load data from the Parquet files
             data_path = namespace_meta["data_path"]
@@ -85,55 +98,43 @@ class ImportWeaviate(ImportVDB):
 
             vectors = {}
             metadata = {}
+            vector_column_names, vector_column_name = self.get_vector_column_name(
+                index_name, namespace_meta
+            )
 
-        #     for file in tqdm(parquet_files, desc="Loading data from parquet files"):
-        #         file_path = os.path.join(final_data_path, file)
-        #         df = self.read_parquet_progress(file_path)
+            for file in tqdm(parquet_files, desc="Loading data from parquet files"):
+                file_path = os.path.join(final_data_path, file)
+                df = self.read_parquet_progress(file_path)
 
-        #         if len(vectors) > (self.args.get("max_num_rows") or INT_MAX):
-        #             max_hit = True
-        #             break
+                if len(vectors) > (self.args.get("max_num_rows") or INT_MAX):
+                        max_hit = True
+                        break
+                if len(vectors) + len(df) > (
+                    self.args.get("max_num_rows") or INT_MAX
+                ):
+                    df = df.head(
+                        (self.args.get("max_num_rows") or INT_MAX) - len(vectors)
+                    )
+                    max_hit = True
+                self.update_vectors(vectors, vector_column_name, df)
+                self.update_metadata(metadata, vector_column_names, df)
+                if max_hit:
+                    break
 
-        #         self.update_vectors(vectors, vector_column_name, df)
-        #         self.update_metadata(metadata, vector_column_names, df)
-        #         if max_hit:
-        #             break
+            tqdm.write(f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files")
 
-        #     tqdm.write(f"Loaded {len(vectors)} vectors from {len(parquet_files)} parquet files")
+            # Upsert the vectors and metadata to the Weaviate index in batches
+            BATCH_SIZE = self.args.get("batch_size")
 
-        #     # Upsert the vectors and metadata to the Weaviate index in batches
-        #     BATCH_SIZE = self.args.get("batch_size", 1000) or 1000
-        #     current_batch_size = BATCH_SIZE
-        #     start_idx = 0
+            with self.client.batch.fixed_size(batch_size=BATCH_SIZE) as batch:
+                for _, vector in vectors.items():
+                    batch.add_object(
+                        vector=vector,
+                        collection=index_name
+                        #TODO: Find way to add Metadata
+                    )
+                    total_imported_count += 1
 
-        #     while start_idx < len(vectors):
-        #         end_idx = min(start_idx + current_batch_size, len(vectors))
 
-        #         batch_vectors = [
-        #             (
-        #                 str(id),
-        #                 vector,
-        #                 {
-        #                     k: v
-        #                     for k, v in metadata.get(id, {}).items()
-        #                     if v is not None
-        #                 } if len(metadata.get(id, {}).keys()) > 0 else None
-        #             )
-        #             for id, vector in list(vectors.items())[start_idx:end_idx]
-        #         ]
-
-        #         try:
-        #             resp = index.batch.create(batch_vectors)
-        #             total_imported_count += len(batch_vectors)
-        #             start_idx += len(batch_vectors)
-        #         except Exception as e:
-        #             tqdm.write(f"Error upserting vectors for index '{index_name}', {e}")
-        #             if current_batch_size < BATCH_SIZE / 100:
-        #                 tqdm.write("Batch size is not the issue. Aborting import")
-        #                 raise e
-        #             current_batch_size = int(2 * current_batch_size / 3)
-        #             tqdm.write(f"Reducing batch size to {current_batch_size}")
-        #             continue
-
-        # tqdm.write(f"Data import completed successfully. Imported {total_imported_count} vectors")
-        # self.args["imported_count"] = total_imported_count
+        tqdm.write(f"Data import completed successfully. Imported {total_imported_count} vectors")
+        self.args["imported_count"] = total_imported_count
