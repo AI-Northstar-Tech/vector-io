@@ -201,11 +201,7 @@ class ImportQdrant(ImportVDB):
                                 {},
                             ).get("size")
                         )
-                        on_disk = get_nested_config(
-                            namespace_meta,
-                            ["index_config", "params", "vectors", "on_disk"],
-                            None,
-                        )
+
                         configs = [
                             "hnsw_config",
                             "optimizers_config",
@@ -233,7 +229,6 @@ class ImportQdrant(ImportVDB):
                             vector_column_name: VectorParams(
                                 size=dims,
                                 distance=distance,
-                                on_disk=on_disk,
                             )
                             for vector_column_name in vector_column_names
                         }
