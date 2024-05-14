@@ -1,4 +1,7 @@
 # Vector IO
+<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 <p>
   <a href="https://pypi.org/project/vdf-io/"><img alt="PyPI - Version" src="https://img.shields.io/pypi/v/vdf-io"></a>
@@ -304,6 +307,20 @@ If you have any questions, please open an issue on the repo or message Dhruv Ana
 ## Contributors
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="http://ainorthstartech.com"><img src="https://avatars.githubusercontent.com/u/105786647?v=4?s=100" width="100px;" alt="Dhruv Anand"/><br /><sub><b>Dhruv Anand</b></sub></a><br /><a href="https://github.com/AI-Northstar-Tech/vector-io/commits?author=dhruv-anand-aintech" title="Code">💻</a> <a href="https://github.com/AI-Northstar-Tech/vector-io/issues?q=author%3Adhruv-anand-aintech" title="Bug reports">🐛</a> <a href="https://github.com/AI-Northstar-Tech/vector-io/commits?author=dhruv-anand-aintech" title="Documentation">📖</a></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
 
