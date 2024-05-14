@@ -1,0 +1,28 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "dhruv-anand-aintech",
+      "name": "Dhruv Anand",
+      "avatar_url": "https://avatars.githubusercontent.com/u/105786647?v=4",
+      "profile": "http://ainorthstartech.com",
+      "contributions": [
+        "code",
+        "bug",
+        "doc"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "projectName": "vector-io",
+  "projectOwner": "AI-Northstar-Tech"
+}
