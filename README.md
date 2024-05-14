@@ -1,6 +1,6 @@
 # Vector IO
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 <p>
@@ -313,6 +313,7 @@ If you have any questions, please open an issue on the repo or message Dhruv Ana
   <tbody>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="http://ainorthstartech.com"><img src="https://avatars.githubusercontent.com/u/105786647?v=4?s=100" width="100px;" alt="Dhruv Anand"/><br /><sub><b>Dhruv Anand</b></sub></a><br /><a href="https://github.com/AI-Northstar-Tech/vector-io/commits?author=dhruv-anand-aintech" title="Code">💻</a> <a href="https://github.com/AI-Northstar-Tech/vector-io/issues?q=author%3Adhruv-anand-aintech" title="Bug reports">🐛</a> <a href="https://github.com/AI-Northstar-Tech/vector-io/commits?author=dhruv-anand-aintech" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Horcruxno13"><img src="https://avatars.githubusercontent.com/u/72295379?v=4?s=100" width="100px;" alt="Jayesh Rathi"/><br /><sub><b>Jayesh Rathi</b></sub></a><br /><a href="https://github.com/AI-Northstar-Tech/vector-io/commits?author=Horcruxno13" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
