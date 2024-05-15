@@ -7,10 +7,10 @@ from tqdm import tqdm
 
 import psycopg2
 
-from vdf_io.import_vdf.pgvector_util import make_pgv_parser, set_pgv_args_from_prompt
+from vdf_io.pgvector_util import make_pgv_parser, set_pgv_args_from_prompt
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
-from vdf_io.util import set_arg_from_input, set_arg_from_password
+from vdf_io.util import set_arg_from_input
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 
