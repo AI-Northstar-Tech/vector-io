@@ -3,7 +3,6 @@ import weaviate
 from tqdm import tqdm
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.names import DBNames
-from vdf_io.util import set_arg_from_input, set_arg_from_password
 from vdf_io.constants import INT_MAX, DEFAULT_BATCH_SIZE
 from vdf_io.weaviate_util import prompt_for_creds
 
