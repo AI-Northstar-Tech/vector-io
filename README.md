@@ -60,13 +60,12 @@ See the [Contributing](#contributing) section to add support for your favorite v
 
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
+| pgvector                       | ❌     | ❌     |
 | Azure AI Search                | ❌     | ❌     |
 | Weaviate                       | ❌     | ❌     |
 | MongoDB Atlas                  | ❌     | ❌     |
-| OpenSearch                     | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
 | txtai                          | ❌     | ❌     |
-| pgvector                       | ❌     | ❌     |
 | SQLite-VSS                     | ❌     | ❌     |
 </details>
 
@@ -78,8 +77,12 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
 | Vespa                          | ❌     | ❌     |
+| AWS Neptune                    | ❌     | ❌     |
+| Neo4j                          | ❌     | ❌     |
 | Marqo                          | ❌     | ❌     |
+| OpenSearch                     | ❌     | ❌     |
 | Elasticsearch                  | ❌     | ❌     |
+| Apache Solr                    | ❌     | ❌     |
 | Redis Search                   | ❌     | ❌     |
 | ClickHouse                     | ❌     | ❌     |
 | USearch                        | ❌     | ❌     |
@@ -90,13 +93,11 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | CrateDB                        | ❌     | ❌     |
 | Meilisearch                    | ❌     | ❌     |
 | MyScale                        | ❌     | ❌     |
-| Neo4j                          | ❌     | ❌     |
 | Nuclia DB                      | ❌     | ❌     |
 | OramaSearch                    | ❌     | ❌     |
 | Typesense                      | ❌     | ❌     |
 | Anari AI                       | ❌     | ❌     |
 | Vald                           | ❌     | ❌     |
-| Apache Solr                    | ❌     | ❌     |
 </details>
 
 ## Installation

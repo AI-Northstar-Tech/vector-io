@@ -1,0 +1,189 @@
+from typing import Dict, List
+from dotenv import load_dotenv
+import pandas as pd
+from tqdm import tqdm
+import pyarrow.parquet as pq
+
+from pgvector.psycopg import register_vector
+import psycopg2
+
+from vdf_io.constants import DEFAULT_BATCH_SIZE, INT_MAX
+from vdf_io.import_vdf.pgvector_util import make_pgv_parser, set_pgv_args_from_prompt
+from vdf_io.meta_types import NamespaceMeta
+from vdf_io.names import DBNames
+from vdf_io.util import (
+    cleanup_df,
+    divide_into_batches,
+    set_arg_from_input,
+    set_arg_from_password,
+)
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
+
+
+load_dotenv()
+
+
+class ImportPGVector(ImportVDB):
+    DB_NAME_SLUG = DBNames.PGVECTOR
+
+    @classmethod
+    def import_vdb(cls, args):
+        """
+        Import data to PGVector
+        """
+        set_pgv_args_from_prompt(args)
+        pgvector_import = ImportPGVector(args)
+        pgvector_import.get_all_table_names()
+        pgvector_import.get_all_schemas()
+        set_arg_from_input(
+            args,
+            "schema",
+            "Enter the name of the schema of the Postgres instance (default: public): ",
+            str,
+            choices=pgvector_import.all_schemas,
+        )
+        set_arg_from_input(
+            args,
+            "tables",
+            "Enter the name of tables to import (comma-separated, all will be imported by default): ",
+            str,
+            choices=pgvector_import.all_tables,
+        )
+        pgvector_import.upsert_data()
+        return pgvector_import
+
+    @classmethod
+    def make_parser(cls, subparsers):
+        parser_pgvector = make_pgv_parser(cls.DB_NAME_SLUG, subparsers)
+        parser_pgvector.add_argument(
+            "--tables", type=str, help="Postgres tables to export (comma-separated)"
+        )
+
+    def __init__(self, args):
+        # call super class constructor
+        super().__init__(args)
+        # use connection_string
+        if args.get("connection_string"):
+            self.conn = psycopg2.connect(args["connection_string"])
+        else:
+            self.conn = psycopg2.connect(
+                user=args["user"],
+                password=args["password"],
+                host=args["host"] if args.get("host", "") != "" else "localhost",
+                port=args["port"] if args.get("port", "") != "" else "5432",
+                dbname=args["dbname"] if args.get("dbname", "") != "" else "postgres",
+            )
+
+    def get_all_schemas(self):
+        schemas = self.conn.execute(
+            "SELECT schema_name FROM information_schema.schemata"
+        )
+        self.all_schemas = [schema[0] for schema in schemas]
+        return [schema[0] for schema in schemas]
+
+    def get_all_table_names(self):
+        tables = self.conn.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+        )
+        self.all_tables = [table[0] for table in tables]
+        return [table[0] for table in tables]
+
+    def upsert_data(self):
+        register_vector(self.conn)
+        self.conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+
+        max_hit = False
+        self.total_imported_count = 0
+        indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
+        index_names: List[str] = list(indexes_content.keys())
+        if len(index_names) == 0:
+            raise ValueError("No indexes found in VDF_META.json")
+        tables = self.get_all_table_names()
+        # Load Parquet file
+        # print(indexes_content[index_names[0]]):List[NamespaceMeta]
+        for index_name, index_meta in tqdm(
+            indexes_content.items(), desc="Importing indexes"
+        ):
+            for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
+                self.set_dims(namespace_meta, index_name)
+                data_path = namespace_meta["data_path"]
+                final_data_path = self.get_final_data_path(data_path)
+                # Load the data from the parquet files
+                parquet_files = self.get_parquet_files(final_data_path)
+
+                new_index_name = index_name + (
+                    f'_{namespace_meta["namespace"]}'
+                    if namespace_meta["namespace"]
+                    else ""
+                )
+                new_index_name = self.create_new_name(new_index_name, tables)
+                if new_index_name not in tables:
+                    table = self.conn.create_table(
+                        new_index_name, schema=pq.read_schema(parquet_files[0])
+                    )
+                    tqdm.write(f"Created table {new_index_name}")
+                else:
+                    table = self.conn.open_table(new_index_name)
+                    tqdm.write(f"Opened table {new_index_name}")
+
+                for file in tqdm(parquet_files, desc="Iterating parquet files"):
+                    file_path = self.get_file_path(final_data_path, file)
+                    df = self.read_parquet_progress(
+                        file_path,
+                        max_num_rows=(
+                            (self.args.get("max_num_rows") or INT_MAX)
+                            - self.total_imported_count
+                        ),
+                    )
+                    df = cleanup_df(df)
+                    # if there are additional columns in the parquet file, add them to the table
+                    for col in df.columns:
+                        if col not in [field.name for field in table.schema]:
+                            col_type = df[col].dtype
+                            tqdm.write(
+                                f"Adding column {col} of type {col_type} to {new_index_name}"
+                            )
+                            table.add_columns(
+                                {
+                                    col: get_default_value(col_type),
+                                }
+                            )
+                    # split in batches
+                    BATCH_SIZE = self.args.get("batch_size") or DEFAULT_BATCH_SIZE
+                    for batch in tqdm(
+                        divide_into_batches(df, BATCH_SIZE),
+                        desc="Importing batches",
+                        total=len(df) // BATCH_SIZE,
+                    ):
+                        if self.total_imported_count + len(batch) >= (
+                            self.args.get("max_num_rows") or INT_MAX
+                        ):
+                            batch = batch[
+                                : (self.args.get("max_num_rows") or INT_MAX)
+                                - self.total_imported_count
+                            ]
+                            max_hit = True
+                        # convert df into list of dicts
+                        table.add(batch)
+                        self.total_imported_count += len(batch)
+                        if max_hit:
+                            break
+                tqdm.write(f"Imported {self.total_imported_count} rows")
+                tqdm.write(f"New table size: {table.count_rows()}")
+                if max_hit:
+                    break
+        print("Data imported successfully")
+
+
+def get_default_value(data_type):
+    # Define default values for common data types
+    default_values = {
+        "object": "",
+        "int64": 0,
+        "float64": 0.0,
+        "bool": False,
+        "datetime64[ns]": pd.Timestamp("NaT"),
+        "timedelta64[ns]": pd.Timedelta("NaT"),
+    }
+    # Return the default value for the specified data type, or None if not specified
+    return default_values.get(data_type.name, None)
