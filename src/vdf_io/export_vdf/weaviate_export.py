@@ -1,20 +1,17 @@
 import os
 import weaviate
 import json
-
+from typing import Dict, List
 from tqdm import tqdm
+
 from weaviate.classes.query import MetadataQuery
+
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
-from vdf_io.util import set_arg_from_input, set_arg_from_password
+from vdf_io.util import set_arg_from_input
 from vdf_io.constants import DEFAULT_BATCH_SIZE
-from typing import Dict, List
-
-# Set these environment variables
-URL = os.getenv("YOUR_WCS_URL")
-APIKEY = os.getenv("YOUR_WCS_API_KEY")
-OPENAI_APIKEY = os.getenv("OPENAI_APIKEY")
+from vdf_io.weaviate_util import prompt_for_creds
 
 
 class ExportWeaviate(ExportVDB):
@@ -53,24 +50,7 @@ class ExportWeaviate(ExportVDB):
 
     @classmethod
     def export_vdb(cls, args):
-        set_arg_from_input(
-            args,
-            "url",
-            "Enter the URL of Weaviate instance: ",
-            str,
-        )
-        set_arg_from_input(
-            args,
-            "connection_type",
-            "Enter 'local' or 'cloud' for connection types: ",
-            choices=["local", "cloud"],
-        )
-        set_arg_from_password(
-            args,
-            "api_key",
-            "Enter the Weaviate API key: ",
-            "WEAVIATE_API_KEY",
-        )
+        prompt_for_creds(args)
         weaviate_export = ExportWeaviate(args)
         weaviate_export.all_classes = list(
             weaviate_export.client.collections.list_all().keys()

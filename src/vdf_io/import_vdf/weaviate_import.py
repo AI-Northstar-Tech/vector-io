@@ -5,6 +5,7 @@ from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input, set_arg_from_password
 from vdf_io.constants import INT_MAX, DEFAULT_BATCH_SIZE
+from vdf_io.weaviate_util import prompt_for_creds
 
 # Set these environment variables
 URL = os.getenv("YOUR_WCS_URL")
@@ -23,9 +24,6 @@ class ImportWeaviate(ImportVDB):
         parser_weaviate.add_argument("--url", type=str, help="URL of Weaviate instance")
         parser_weaviate.add_argument("--api_key", type=str, help="Weaviate API key")
         parser_weaviate.add_argument(
-            "--index_name", type=str, help="Name of the index in Weaviate"
-        )
-        parser_weaviate.add_argument(
             "--connection-type",
             type=str,
             choices=["local", "cloud"],
@@ -41,30 +39,7 @@ class ImportWeaviate(ImportVDB):
 
     @classmethod
     def import_vdb(cls, args):
-        set_arg_from_input(
-            args,
-            "url",
-            "Enter the URL of Weaviate instance: ",
-            str,
-        )
-        set_arg_from_input(
-            args,
-            "index_name",
-            "Enter the name of the index in Weaviate: ",
-            str,
-        )
-        set_arg_from_input(
-            args,
-            "connection_type",
-            "Enter 'local' or 'cloud' for connection types: ",
-            choices=["local", "cloud"],
-        )
-        set_arg_from_password(
-            args,
-            "api_key",
-            "Enter the Weaviate API key: ",
-            "WEAVIATE_API_KEY",
-        )
+        prompt_for_creds(args)
         weaviate_import = ImportWeaviate(args)
         weaviate_import.upsert_data()
         return weaviate_import
@@ -77,9 +52,7 @@ class ImportWeaviate(ImportVDB):
             self.client = weaviate.connect_to_wcs(
                 cluster_url=self.args["url"],
                 auth_credentials=weaviate.auth.AuthApiKey(self.args["api_key"]),
-                headers={"X-OpenAI-Api-key": self.args["openai_api_key"]}
-                if self.args["openai_api_key"]
-                else None,
+                headers={"X-OpenAI-Api-key": self.args.get("openai_api_key", "")},
                 skip_init_checks=True,
             )
 
