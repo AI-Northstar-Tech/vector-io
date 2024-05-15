@@ -7,7 +7,6 @@ import concurrent.futures
 from astrapy.db import AstraDB
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
-from qdrant_client.http.models import Distance
 
 from vdf_io.constants import INT_MAX
 from vdf_io.names import DBNames

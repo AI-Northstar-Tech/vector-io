@@ -58,12 +58,12 @@ class ExportKDBAI(ExportVDB):
         set_arg_from_input(
             args,
             "tables",
-            f"Enter the name of table to export: {kdbai_export.get_all_table_names()}",
+            "Enter the name of table to export:",
             str,
-            None,
+            choices=kdbai_export.get_all_index_names(),
         )
         if args.get("tables", None) == "":
-            args["tables"] = ",".join(kdbai_export.get_all_table_names())
+            args["tables"] = ",".join(kdbai_export.get_all_index_names())
         kdbai_export.get_data()
         return kdbai_export
 
@@ -74,12 +74,17 @@ class ExportKDBAI(ExportVDB):
         self.session = kdbai.Session(api_key=api_key, endpoint=endpoint)
         self.model = args.get("model_name")
 
-    def get_all_table_names(self):
+    def get_index_names(self):
+        if "tables" not in self.args or self.args["tables"] is None:
+            return self.get_all_index_names()
+        return self.args["tables"].split(",")
+
+    def get_all_index_names(self):
         return self.session.list()
 
     def get_data(self):
         if "tables" not in self.args or self.args["tables"] is None:
-            table_names = self.get_all_table_names()
+            table_names = self.get_all_index_names()
         else:
             table_names = self.args["tables"].split(",")
         index_metas: Dict[str, List[NamespaceMeta]] = {}

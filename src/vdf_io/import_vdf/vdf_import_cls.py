@@ -75,8 +75,8 @@ class ImportVDB(abc.ABC):
                             NamespaceMeta(
                                 namespace="",
                                 index_name=index_name,
-                                total_vector_count=self.args.get("max_num_rows"),
-                                exported_vector_count=self.args.get("max_num_rows"),
+                                total_vector_count=self.args.get("max_num_rows", -1),
+                                exported_vector_count=self.args.get("max_num_rows", -1),
                                 dimensions=self.args.get("vector_dim", -1),
                                 model_name=self.args.get("model_name", ""),
                                 vector_columns=self.args.get(
@@ -167,16 +167,22 @@ class ImportVDB(abc.ABC):
         parquet_files = self.get_parquet_files(final_data_path)
         _, vector_column_name = self.get_vector_column_name(index_name, namespace_meta)
         dims = -1
+        found = False
         for file in tqdm(parquet_files, desc="Iterating parquet files"):
             file_path = self.get_file_path(final_data_path, file)
             df = self.read_parquet_progress(file_path, columns=[vector_column_name])
             i = 0
             while i < len(df[vector_column_name]):
                 first_el = df[vector_column_name].iloc[i]
+                tqdm.write(f"First element: {first_el}")
                 if first_el is None:
                     i += 1
                     continue
                 dims = len(self.extract_vector(first_el))
+                tqdm.write(f"Dimensions: {dims}")
+                found = True
+                break
+            if found:
                 break
         return dims
 

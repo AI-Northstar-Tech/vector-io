@@ -4,10 +4,11 @@ import os
 import json
 import numpy as np
 from tqdm import tqdm
+from halo import Halo
 
 from pinecone import Pinecone, Vector
-from vdf_io.constants import ID_COLUMN
 
+from vdf_io.constants import ID_COLUMN
 from vdf_io.names import DBNames
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
 from vdf_io.util import (
@@ -22,6 +23,7 @@ PINECONE_MAX_K = 10_000
 MAX_TRIES_OVERALL = 150
 MAX_FETCH_SIZE = 1_000
 THREAD_POOL_SIZE = 30
+use_list_points_default = True
 
 
 class ExportPinecone(ExportVDB):
@@ -33,7 +35,20 @@ class ExportPinecone(ExportVDB):
             cls.DB_NAME_SLUG, help="Export data from Pinecone"
         )
         parser_pinecone.add_argument(
+            "--serverless",
+            type=bool,
+            help="Whether the Pinecone instance is serverless",
+            default=False,
+            action=argparse.BooleanOptionalAction,
+        )
+        parser_pinecone.add_argument(
             "-e", "--environment", type=str, help="Environment of Pinecone instance"
+        )
+        parser_pinecone.add_argument(
+            "-c", "--cloud", type=str, help="Cloud of Pinecone Serverless instance"
+        )
+        parser_pinecone.add_argument(
+            "--region", type=str, help="Region of Pinecone Serverless instance"
         )
         parser_pinecone.add_argument(
             "-i", "--index", type=str, help="Name of index to export"
@@ -45,13 +60,20 @@ class ExportPinecone(ExportVDB):
             "--id_range_end", type=int, help="End of id range", default=None
         )
         parser_pinecone.add_argument(
-            "-f", "--id_list_file", type=str, help="Path to id list file", default=None
+            "--id_list_file", type=str, help="Path to id list file", default=None
         )
         parser_pinecone.add_argument(
             "--modify_to_search",
             type=bool,
             help="Allow modifying data to search",
             default=False,
+            action=argparse.BooleanOptionalAction,
+        )
+        parser_pinecone.add_argument(
+            "--use_list_points",
+            type=bool,
+            help="Use list_points API to fetch IDs (default: False)",
+            default=use_list_points_default,
             action=argparse.BooleanOptionalAction,
         )
         parser_pinecone.add_argument(
@@ -73,9 +95,25 @@ class ExportPinecone(ExportVDB):
         """
         Export data from Pinecone
         """
-        set_arg_from_input(
-            args, "environment", "Enter the environment of Pinecone instance: "
-        )
+        if args["serverless"] is False:
+            set_arg_from_input(
+                args, "environment", "Enter the environment of Pinecone instance: "
+            )
+        else:
+            set_arg_from_input(
+                args,
+                "cloud",
+                "Enter the cloud of Pinecone Serverless instance (default: 'aws'): ",
+                str,
+                "aws",
+            )
+            set_arg_from_input(
+                args,
+                "region",
+                "Enter the region of Pinecone Serverless instance (default: 'us-west-2'): ",
+                str,
+                "us-west-2",
+            )
         set_arg_from_input(
             args,
             "index",
@@ -132,6 +170,9 @@ class ExportPinecone(ExportVDB):
         self.pc = Pinecone(api_key=args["pinecone_api_key"])
         self.collected_ids_by_modifying = False
 
+    def get_index_names(self):
+        return self.get_all_index_names()
+
     def get_all_index_names(self):
         return self.pc.list_indexes().names()
 
@@ -166,7 +207,7 @@ class ExportPinecone(ExportVDB):
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size)"
                     )
                     mark_batch_size = mark_batch_size * 3 // 4
-                    if mark_batch_size < MAX_FETCH_SIZE / 100:
+                    if mark_batch_size < 1:
                         raise Exception("Could not fetch vectors")
                     continue
                 batch_vectors = data["vectors"]
@@ -195,7 +236,7 @@ class ExportPinecone(ExportVDB):
                         f"Error upserting vectors: {e}. Trying with a smaller batch size (--batch_size)"
                     )
                     mark_batch_size = mark_batch_size * 3 // 4
-                    if mark_batch_size < MAX_FETCH_SIZE / 100:
+                    if mark_batch_size < 1:
                         raise Exception("Could not upsert vectors")
                     continue
                 i += resp["upserted_count"]
@@ -212,7 +253,11 @@ class ExportPinecone(ExportVDB):
         ids = set(result[ID_COLUMN] for result in results["matches"])
         return ids
 
-    def get_all_ids_from_index(self, num_dimensions, namespace="", hash_value=""):
+    def get_all_ids_from_index(
+        self, namespace="", num_dimensions=None, hash_value=None
+    ):
+        import numpy as np
+
         if (
             self.args["id_range_start"] is not None
             and self.args["id_range_end"] is not None
@@ -232,6 +277,25 @@ class ExportPinecone(ExportVDB):
         if self.args["id_list_file"]:
             with open(self.args["id_list_file"]) as f:
                 return [line.strip() for line in f.readlines()]
+
+        if self.args.get("use_list_points", use_list_points_default):
+            try:
+                # Use list_points with implicit pagination to get all IDs
+                all_ids = []
+                with Halo(text="Collecting IDs using list_points", spinner="dots"):
+                    for ids in self.index.list(namespace=namespace):
+                        all_ids.extend(ids)
+
+                tqdm.write(
+                    f"Collected {len(all_ids)} IDs using list_points with implicit pagination."
+                )
+                return all_ids
+            except Exception as e:
+                tqdm.write(
+                    f"Error fetching IDs using list_points. Falling back to random search method: {e}"
+                )
+
+        # Use the existing code logic to fetch IDs using random search and range fetching
         num_vectors = self.index.describe_index_stats()["namespaces"][namespace][
             "vector_count"
         ]
@@ -360,45 +424,6 @@ class ExportPinecone(ExportVDB):
         )
         return all_ids
 
-    def update_range_from_new_ids(
-        self, vector_range_min, vector_range_max, new_ids, namespace
-    ):
-        # use update_range to update the range of the vectors
-        self.update_range(
-            new_ids, vector_range_min, vector_range_max, namespace, size=1
-        )
-
-    def update_range(
-        self, all_ids, vector_range_min, vector_range_max, namespace, size=10
-    ):
-        random_ids = np.random.choice(list(all_ids), size=size).tolist()
-
-        random_vectors = [
-            x["values"]
-            for x in self.index.fetch(random_ids, namespace=namespace)[
-                "vectors"
-            ].values()
-        ]
-        # extend the range of the vectors
-        random_vectors_np = np.array(random_vectors)
-
-        # Initialize vector_range_min and vector_range_max if they are not set
-        if vector_range_min is None:
-            vector_range_min = np.min(random_vectors_np, axis=0)
-        else:
-            vector_range_min = np.minimum(
-                vector_range_min, np.min(random_vectors_np, axis=0)
-            )
-
-        if vector_range_max is None:
-            vector_range_max = np.max(random_vectors_np, axis=0)
-        else:
-            vector_range_max = np.maximum(
-                vector_range_max, np.max(random_vectors_np, axis=0)
-            )
-
-        return vector_range_min, vector_range_max
-
     def unmark_vectors_as_exported(self, all_ids, namespace, hash_value):
         if (
             self.args.get("modify_to_search") is False
@@ -444,10 +469,14 @@ class ExportPinecone(ExportVDB):
                 if index_name not in self.get_all_index_names():
                     tqdm.write(f"Index {index_name} does not exist, skipping...")
         index_metas = {}
-        for index_name in tqdm(index_names, desc="Fetching indexes"):
+        pbar = tqdm(total=len(index_names), desc="Exporting indexes")
+        for index_name in index_names:
+            pbar.set_description(f"Exporting {index_name}")
+            tqdm.write(f"Exporting index '{index_name}'")
             index_meta = self.get_data_for_index(index_name)
+            pbar.update(1)
             index_metas[index_name] = index_meta
-
+        pbar.close()
         # Create and save internal metadata JSON
         self.file_structure.append(os.path.join(self.vdf_directory, "VDF_META.json"))
         internal_metadata = VDFMeta(
@@ -486,8 +515,8 @@ class ExportPinecone(ExportVDB):
 
             all_ids = list(
                 self.get_all_ids_from_index(
-                    num_dimensions=index_info["dimension"],
                     namespace=namespace,
+                    num_dimensions=index_info["dimension"],
                     hash_value=self.hash_value,
                 )
             )
@@ -505,8 +534,12 @@ class ExportPinecone(ExportVDB):
             while i < len(all_ids):
                 batch_ids = all_ids[i : i + fetch_size]
                 try:
+                    # convert to strs
+                    batch_ids = [str(x) for x in batch_ids]
                     data = self.index.fetch(batch_ids, namespace=namespace)
                 except Exception as e:
+                    if fetch_size < 1:
+                        raise Exception("Could not fetch vectors")
                     tqdm.write(
                         f"Error fetching vectors: {e}. Trying with a smaller batch size (--batch_size): {fetch_size}"
                     )
@@ -550,7 +583,51 @@ class ExportPinecone(ExportVDB):
                 metric=standardize_metric(
                     self.pc.describe_index(index_name).metric, self.DB_NAME_SLUG
                 ),
+                schema_dict_str=(
+                    self.parquet_schema.to_string()
+                    if hasattr(self, "parquet_schema")
+                    else None
+                ),
             )
             index_meta.append(namespace_meta)
             self.args["exported_count"] += total_size
         return index_meta
+
+    def update_range_from_new_ids(
+        self, vector_range_min, vector_range_max, new_ids, namespace
+    ):
+        # use update_range to update the range of the vectors
+        self.update_range(
+            new_ids, vector_range_min, vector_range_max, namespace, size=1
+        )
+
+    def update_range(
+        self, all_ids, vector_range_min, vector_range_max, namespace, size=10
+    ):
+        random_ids = np.random.choice(list(all_ids), size=size).tolist()
+
+        random_vectors = [
+            x["values"]
+            for x in self.index.fetch(random_ids, namespace=namespace)[
+                "vectors"
+            ].values()
+        ]
+        # extend the range of the vectors
+        random_vectors_np = np.array(random_vectors)
+
+        # Initialize vector_range_min and vector_range_max if they are not set
+        if vector_range_min is None:
+            vector_range_min = np.min(random_vectors_np, axis=0)
+        else:
+            vector_range_min = np.minimum(
+                vector_range_min, np.min(random_vectors_np, axis=0)
+            )
+
+        if vector_range_max is None:
+            vector_range_max = np.max(random_vectors_np, axis=0)
+        else:
+            vector_range_max = np.maximum(
+                vector_range_max, np.max(random_vectors_np, axis=0)
+            )
+
+        return vector_range_min, vector_range_max

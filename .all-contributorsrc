@@ -1,0 +1,46 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "dhruv-anand-aintech",
+      "name": "Dhruv Anand",
+      "avatar_url": "https://avatars.githubusercontent.com/u/105786647?v=4",
+      "profile": "http://ainorthstartech.com",
+      "contributions": [
+        "code",
+        "bug",
+        "doc"
+      ]
+    },
+    {
+      "login": "Horcruxno13",
+      "name": "Jayesh Rathi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/72295379?v=4",
+      "profile": "https://github.com/Horcruxno13",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "tottenjordan",
+      "name": "Jordan Totten",
+      "avatar_url": "https://avatars.githubusercontent.com/u/39886184?v=4",
+      "profile": "https://www.linkedin.com/in/jordantotten/",
+      "contributions": [
+        "code"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "skipCi": true,
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "projectName": "vector-io",
+  "projectOwner": "AI-Northstar-Tech"
+}

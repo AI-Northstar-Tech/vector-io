@@ -31,9 +31,9 @@ MANIFEST
 output.txt
 src/vdf_io/notebooks/data/
 **.parquet
-**.jpg
 src/vdf_io/notebooks/parquet_inspect.ipynb
 src/vdf_io/notebooks/~/*
 src/vdf_io/notebooks/chroma/*
 '/Users/dhruvanand/Code/vector-io/src/vdf_io/notebooks/chroma'/chroma.sqlite3
 *.pem
+src/vdf_io/notebooks/**.jpg
