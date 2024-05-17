@@ -1,0 +1,504 @@
+<h1 id="vector-io">Vector IO</h1>
+<p>
+    <a href="https://pypi.org/project/vdf-io/"><img alt="PyPI - Version" src="https://img.shields.io/pypi/v/vdf-io"></a>
+    <a href="https://pypi.org/project/vdf-io/"><img alt="PyPI - Downloads"
+            src="https://img.shields.io/pypi/dm/vdf-io?style=flat&link=https%3A%2F%2Fpypi.org%2Fproject%2Fvdf-io%2F"></a>
+    <a href="https://discord.gg/HGxDZxNt9G"><img alt="Discord"
+            src="https://img.shields.io/discord/1223707915827937321?style=flat&logo=discord&link=https%3A%2F%2Fdiscord.gg%2FHGxDZxNt9G"></a>
+</p>
+<p align="center">
+    <!-- include photo -->
+    <img src="assets/vector-io-logo.png" width="200" />
+</p>
+<p>This library uses a universal format for vector datasets to easily
+    export and import data from all vector databases.</p>
+<p>Request support for a VectorDB by voting/commenting on <a
+        href="https://github.com/AI-Northstar-Tech/vector-io/discussions/38">this
+        poll</a></p>
+<p>See the <a href="#contributing">Contributing</a> section to add
+    support for your favorite vector database.</p>
+<h2 id="supported-vector-databases">Supported Vector Databases</h2>
+<details open>
+    <summary>
+        Fully Supported
+    </summary>
+    <p align="center">
+        <!-- include photo -->
+        <img src="assets/vector-io-ecosystem-may3-2024.jpg" width="800" />
+    </p>
+    <table>
+        <thead>
+            <tr class="header">
+                <th>Vector Database</th>
+                <th>Import</th>
+                <th>Export</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="odd">
+                <td>Pinecone</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr class="even">
+                <td>Qdrant</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr class="odd">
+                <td>Milvus</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr class="even">
+                <td>GCP Vertex AI Vector Search</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr class="odd">
+                <td>KDB.AI</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr class="even">
+                <td>LanceDB</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr class="odd">
+                <td>DataStax Astra DB</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr class="even">
+                <td>Chroma</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+            <tr class="odd">
+                <td>Turbopuffer</td>
+                <td>✅</td>
+                <td>✅</td>
+            </tr>
+        </tbody>
+    </table>
+</details>
+<hr />
+<details open>
+    <summary>
+        Partial
+    </summary>
+    <table>
+        <thead>
+            <tr class="header">
+                <th>Vector Database</th>
+                <th>Import</th>
+                <th>Export</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+</details>
+<!-- line break -->
+<hr />
+<details>
+    <summary>
+        In Progress
+    </summary>
+    <table>
+        <thead>
+            <tr class="header">
+                <th>Vector Database</th>
+                <th>Import</th>
+                <th>Export</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="odd">
+                <td>pgvector</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>Azure AI Search</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>Weaviate</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>MongoDB Atlas</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>Apache Cassandra</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>txtai</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>SQLite-VSS</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+        </tbody>
+    </table>
+</details>
+<hr />
+<details>
+    <summary>
+        Not Supported
+    </summary>
+    <table>
+        <thead>
+            <tr class="header">
+                <th>Vector Database</th>
+                <th>Import</th>
+                <th>Export</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="odd">
+                <td>Vespa</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>AWS Neptune</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>Neo4j</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>Marqo</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>OpenSearch</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>Elasticsearch</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>Apache Solr</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>Redis Search</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>ClickHouse</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>USearch</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>Rockset</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>Epsilla</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>Activeloop Deep Lake</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>ApertureDB</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>CrateDB</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>Meilisearch</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>MyScale</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>Nuclia DB</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>OramaSearch</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>Typesense</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="odd">
+                <td>Anari AI</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+            <tr class="even">
+                <td>Vald</td>
+                <td>❌</td>
+                <td>❌</td>
+            </tr>
+        </tbody>
+    </table>
+</details>
+<h2 id="installation">Installation</h2>
+<h3 id="using-pip">Using pip</h3>
+<div class="sourceCode" id="cb1">
+    <pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install vdf-io</span></code></pre>
+</div>
+<h3 id="from-source">From source</h3>
+<div class="sourceCode" id="cb2">
+    <pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/AI-Northstar-Tech/vector-io.git</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> vector-io</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-r</span> requirements.txt</span></code></pre>
+</div>
+<h2 id="universal-vector-dataset-format-vdf-specification">Universal
+    Vector Dataset Format (VDF) specification</h2>
+<ol type="1">
+    <li>VDF_META.json: It is a json file with the following schema VDFMeta
+        defined in <a href="src/vdf_io/meta_types.py">src/vdf_io/meta_types.py</a>:</li>
+</ol>
+<div class="sourceCode" id="cb3">
+    <pre
+        class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> NamespaceMeta(BaseModel):</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    namespace: <span class="bu">str</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    index_name: <span class="bu">str</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    total_vector_count: <span class="bu">int</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    exported_vector_count: <span class="bu">int</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    dimensions: <span class="bu">int</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    model_name: <span class="bu">str</span> <span class="op">|</span> <span class="va">None</span> <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    vector_columns: List[<span class="bu">str</span>] <span class="op">=</span> [<span class="st">&quot;vector&quot;</span>]</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    data_path: <span class="bu">str</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    metric: <span class="bu">str</span> <span class="op">|</span> <span class="va">None</span> <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    index_config: Optional[Dict[Any, Any]] <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    schema_dict: Optional[Dict[<span class="bu">str</span>, Any]] <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> VDFMeta(BaseModel):</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    version: <span class="bu">str</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    file_structure: List[<span class="bu">str</span>]</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    author: <span class="bu">str</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    exported_from: <span class="bu">str</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    indexes: Dict[<span class="bu">str</span>, List[NamespaceMeta]]</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    exported_at: <span class="bu">str</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    id_column: Optional[<span class="bu">str</span>] <span class="op">=</span> <span class="va">None</span></span></code></pre>
+</div>
+<ol start="2" type="1">
+    <li>Parquet files/folders for metadata and vectors.</li>
+</ol>
+<h2 id="export-script">Export Script</h2>
+<div class="sourceCode" id="cb4">
+    <pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">export_vdf</span> <span class="at">--help</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">usage:</span> export_vdf <span class="pp">[-</span><span class="ss">h</span><span class="pp">]</span> [-m MODEL_NAME]</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                  <span class="ex">[--max_file_size</span> MAX_FILE_SIZE]</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                  <span class="ex">[--push_to_hub</span> <span class="kw">|</span> <span class="ex">--no-push_to_hub]</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                  <span class="ex">[--public</span> <span class="kw">|</span> <span class="ex">--no-public]</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>                  <span class="dt">{pinecone</span><span class="op">,</span><span class="dt">qdrant</span><span class="op">,</span><span class="dt">kdbai</span><span class="op">,</span><span class="dt">milvus</span><span class="op">,</span><span class="dt">vertexai_vectorsearch}</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>                  <span class="ex">...</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="ex">Export</span> data from various vector databases to the VDF format for vector datasets</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="ex">options:</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-h,</span> <span class="at">--help</span>            show this help message and exit</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-m</span> MODEL_NAME, <span class="at">--model_name</span> MODEL_NAME</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Name</span> of model used</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--max_file_size</span> MAX_FILE_SIZE</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Maximum</span> file size in MB <span class="er">(</span><span class="ex">default:</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">1024</span><span class="kw">)</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--push_to_hub,</span> <span class="at">--no-push_to_hub</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Push</span> to hub</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--public,</span> <span class="at">--no-public</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Make</span> dataset public <span class="er">(</span><span class="ex">default:</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">False</span><span class="kw">)</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="ex">Vector</span> Databases:</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  <span class="ex">Choose</span> the vectors database to export data from</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  <span class="dt">{pinecone</span><span class="op">,</span><span class="dt">qdrant</span><span class="op">,</span><span class="dt">kdbai</span><span class="op">,</span><span class="dt">milvus</span><span class="op">,</span><span class="dt">vertexai_vectorsearch}</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="ex">pinecone</span>            Export data from Pinecone</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="ex">qdrant</span>              Export data from Qdrant</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    <span class="ex">kdbai</span>               Export data from KDB.AI</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>    <span class="ex">milvus</span>              Export data from Milvus</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>    <span class="ex">vertexai_vectorsearch</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Export</span> data from Vertex AI Vector</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Search</span></span></code></pre>
+</div>
+<h2 id="import-script">Import script</h2>
+<div class="sourceCode" id="cb5">
+    <pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">import_vdf</span> <span class="at">--help</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">usage:</span> import_vdf <span class="pp">[-</span><span class="ss">h</span><span class="pp">]</span> [-d DIR] [-s <span class="kw">|</span> <span class="ex">--subset</span> <span class="kw">|</span> <span class="ex">--no-subset]</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>                  <span class="ex">[--create_new</span> <span class="kw">|</span> <span class="ex">--no-create_new]</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>                  <span class="dt">{milvus</span><span class="op">,</span><span class="dt">pinecone</span><span class="op">,</span><span class="dt">qdrant</span><span class="op">,</span><span class="dt">vertexai_vectorsearch</span><span class="op">,</span><span class="dt">kdbai}</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>                  <span class="ex">...</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="ex">Import</span> data from VDF to a vector database</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="ex">options:</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-h,</span> <span class="at">--help</span>            show this help message and exit</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-d</span> DIR, <span class="at">--dir</span> DIR     Directory to import</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-s,</span> <span class="at">--subset,</span> <span class="at">--no-subset</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Import</span> a subset of data <span class="er">(</span><span class="ex">default:</span> False<span class="kw">)</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="ex">--create_new,</span> <span class="at">--no-create_new</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Create</span> a new index <span class="er">(</span><span class="ex">default:</span> False<span class="kw">)</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="ex">Vector</span> Databases:</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="ex">Choose</span> the vectors database to export data from</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  <span class="dt">{milvus</span><span class="op">,</span><span class="dt">pinecone</span><span class="op">,</span><span class="dt">qdrant</span><span class="op">,</span><span class="dt">vertexai_vectorsearch</span><span class="op">,</span><span class="dt">kdbai}</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>    <span class="ex">milvus</span>              Import data to Milvus</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    <span class="ex">pinecone</span>            Import data to Pinecone</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>    <span class="ex">qdrant</span>              Import data to Qdrant</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>    <span class="ex">vertexai_vectorsearch</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Import</span> data to Vertex AI Vector Search</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>    <span class="ex">kdbai</span>               Import data to KDB.AI</span></code></pre>
+</div>
+<h2 id="re-embed-script">Re-embed script</h2>
+<p>This Python script is used to re-embed a vector dataset. It takes a
+    directory of vector dataset in the VDF format and re-embeds it using a
+    new model. The script also allows you to specify the name of the column
+    containing text to be embedded.</p>
+<div class="sourceCode" id="cb6">
+    <pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">reembed_vdf</span> <span class="at">--help</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">usage:</span> reembed_vdf <span class="pp">[-</span><span class="ss">h</span><span class="pp">]</span> <span class="at">-d</span> DIR [-m NEW_MODEL_NAME]</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                  <span class="ex">[-t</span> TEXT_COLUMN]</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ex">Reembed</span> a vector dataset</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="ex">options:</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-h,</span> <span class="at">--help</span>            show this help message and exit</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-d</span> DIR, <span class="at">--dir</span> DIR     Directory of vector dataset in</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">the</span> VDF format</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-m</span> NEW_MODEL_NAME, <span class="at">--new_model_name</span> NEW_MODEL_NAME</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Name</span> of new model to be used</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  <span class="ex">-t</span> TEXT_COLUMN, <span class="at">--text_column</span> TEXT_COLUMN</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">Name</span> of the column containing</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>                        <span class="ex">text</span> to be embedded</span></code></pre>
+</div>
+<h2 id="examples">Examples</h2>
+<div class="sourceCode" id="cb7">
+    <pre
+        class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">export_vdf</span> <span class="at">-m</span> hkunlp/instructor-xl <span class="at">--push_to_hub</span> pinecone <span class="at">--environment</span> gcp-starter</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="ex">import_vdf</span> <span class="at">-d</span> /path/to/vdf/dataset milvus</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="ex">reembed_vdf</span> <span class="at">-d</span> /path/to/vdf/dataset <span class="at">-m</span> sentence-transformers/all-MiniLM-L6-v2 <span class="at">-t</span> title</span></code></pre>
+</div>
+<p>Follow the prompt to select the index and id range to export.</p>
+<h2 id="contributing">Contributing</h2>
+<h3 id="adding-a-new-vector-database">Adding a new vector database</h3>
+<p>If you wish to add an import/export implementation for a new vector
+    database, you must also implement the other side of the import/export
+    for the same database. Please fork the repo and send a PR for both the
+    import and export scripts.</p>
+<p>Steps to add a new vector database (ABC):</p>
+<ol type="1">
+    <li>Add your database name in <a href="src/vdf_io/names.py">src/vdf_io/names.py</a> in the DBNames enum
+        class.</li>
+    <li>Create new files <code>src/vdf_io/export_vdf/export_abc.py</code>
+        and <code>src/vdf_io/import_vdf/import_abc.py</code> for the new
+        DB.</li>
+</ol>
+<p><strong>Export</strong>:</p>
+<ol type="1">
+    <li>In your export file, define a class ExportABC which inherits from
+        ExportVDF.</li>
+    <li>Specify a DB_NAME_SLUG for the class</li>
+    <li>The class should implement:
+        <ol type="1">
+            <li>make_parser() function to add database specific arguments to the
+                export_vdf CLI</li>
+            <li>export_vdb() function to prompt user for info not provided in the
+                CLI. It should then call the get_data() function.</li>
+            <li>get_data() function to download points (in a batched manner) with
+                all the metadata from the specified index of the vector database. This
+                data should be stored in a series of parquet files/folders. The metadata
+                should be stored in a json file with the <a
+                    href="#universal-vector-dataset-format-vdf-specification">schema
+                    above</a>.</li>
+        </ol>
+    </li>
+    <li>Use the script to export data from an example index of the vector
+        database and verify that the data is exported correctly.</li>
+</ol>
+<p><strong>Import</strong>:</p>
+<ol type="1">
+    <li>In your import file, define a class ImportABC which inherits from
+        ImportVDF.</li>
+    <li>Specify a DB_NAME_SLUG for the class</li>
+    <li>The class should implement:
+        <ol type="1">
+            <li>make_parser() function to add database specific arguments to the
+                import_vdf CLI, such as the url of the database, any authentication
+                tokens, etc.</li>
+            <li>import_vdb() function to prompt user for info not provided in the
+                CLI. It should then call the upsert_data() function.</li>
+            <li>upsert_data() function to upload points from a vdf dataset (in a
+                batched manner) with all the metadata to the specified index of the
+                vector database. All metadata about the dataset should be read from the
+                VDF_META.json file in the vdf folder.</li>
+        </ol>
+    </li>
+    <li>Use the script to import data from the example vdf dataset exported
+        in the previous step and verify that the data is imported
+        correctly.</li>
+</ol>
+<h3 id="changing-the-vdf-specification">Changing the VDF
+    specification</h3>
+<p>If you wish to change the VDF specification, please open an issue to
+    discuss the change before sending a PR.</p>
+<h3 id="efficiency-improvements">Efficiency improvements</h3>
+<p>If you wish to improve the efficiency of the import/export scripts,
+    please fork the repo and send a PR.</p>
+<h2 id="telemetry">Telemetry</h2>
+<p>Running the scripts in the repo will send anonymous usage data to AI
+    Northstar Tech to help improve the library.</p>
+<p>You can opt out this by setting the environment variable
+    <code>DISABLE_TELEMETRY_VECTORIO</code> to <code>1</code>.
+</p>
+<h2 id="questions">Questions</h2>
+<p>If you have any questions, please open an issue on the repo or
+    message Dhruv Anand on <a href="https://www.linkedin.com/in/dhruv-anand-ainorthstartech/">LinkedIn</a></p>
