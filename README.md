@@ -7,7 +7,9 @@
   <a href="https://pypi.org/project/vdf-io/"><img alt="PyPI - Version" src="https://img.shields.io/pypi/v/vdf-io"></a>
   <a href="https://pypi.org/project/vdf-io/"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/vdf-io?style=flat&link=https%3A%2F%2Fpypi.org%2Fproject%2Fvdf-io%2F"></a>
   <a href="https://discord.gg/HGxDZxNt9G"><img alt="Discord" src="https://img.shields.io/discord/1223707915827937321?style=flat&logo=discord&link=https%3A%2F%2Fdiscord.gg%2FHGxDZxNt9G"></a>
-  <a href="https://dcbadge.limes.pink/api/server/HGxDZxNt9G)](https://discord.gg/HGxDZxNt9G)
+  <a href="https://discord.gg/HGxDZxNt9G">
+    <img src="https://dcbadge.limes.pink/api/server/HGxDZxNt9G" alt="Discord Badge">
+  </a>
 </p>
 
 <p align=center>
