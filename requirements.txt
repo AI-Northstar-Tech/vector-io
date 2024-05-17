@@ -1,6 +1,6 @@
 numpy
 pandas
-pinecone-client~=4.0.0
+pinecone-client[grpc]~=4.0
 pyarrow
 qdrant_client
 tqdm
@@ -34,3 +34,4 @@ mlx_embedding_models
 azure-search-documents
 azure-identity
 turbopuffer[fast]
+psycopg2

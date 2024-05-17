@@ -6,7 +6,8 @@ import numpy as np
 from tqdm import tqdm
 from halo import Halo
 
-from pinecone import Pinecone, Vector
+from pinecone.grpc import PineconeGRPC as Pinecone
+from pinecone import Vector
 
 from vdf_io.constants import ID_COLUMN
 from vdf_io.names import DBNames
@@ -114,11 +115,6 @@ class ExportPinecone(ExportVDB):
                 str,
                 "us-west-2",
             )
-        set_arg_from_input(
-            args,
-            "index",
-            "Enter the name of index to export (hit return to export all): ",
-        )
         set_arg_from_password(
             args,
             "pinecone_api_key",
@@ -158,6 +154,13 @@ class ExportPinecone(ExportVDB):
                     "Enter the path to id list file (hit return to skip): ",
                 )
         pinecone_export = ExportPinecone(args)
+        pinecone_export.all_indexes = pinecone_export.get_all_index_names()
+        set_arg_from_input(
+            args,
+            "index",
+            "Enter the name of indexes to export (comma-separated) (hit return to export all):",
+            choices=pinecone_export.all_indexes,
+        )
         pinecone_export.get_data()
         return pinecone_export
 
@@ -171,6 +174,8 @@ class ExportPinecone(ExportVDB):
         self.collected_ids_by_modifying = False
 
     def get_index_names(self):
+        if self.args.get("index"):
+            return self.args["index"].split(",")
         return self.get_all_index_names()
 
     def get_all_index_names(self):
@@ -239,7 +244,7 @@ class ExportPinecone(ExportVDB):
                     if mark_batch_size < 1:
                         raise Exception("Could not upsert vectors")
                     continue
-                i += resp["upserted_count"]
+                i += resp.upserted_count
                 mark_pbar.update(len(batch_ids))
             self.collected_ids_by_modifying = True
             tqdm.write(f"Marked {len(ids_to_mark)} vectors as exported.")
