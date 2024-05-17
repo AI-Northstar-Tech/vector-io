@@ -45,6 +45,12 @@ jobs:
       - name: Build site
         run: bundle exec jekyll build
 
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-pages
+          path: ./_site
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
