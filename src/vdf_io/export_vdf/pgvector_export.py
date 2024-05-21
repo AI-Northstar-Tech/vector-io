@@ -21,13 +21,13 @@ class ExportPGVector(ExportVDB):
     def make_parser(cls, subparsers):
         parser_pgvector = make_pgv_parser(cls.DB_NAME_SLUG, subparsers)
         parser_pgvector.add_argument(
-            "--tables", type=str, help="PGVector tables to export (comma-separated)"
-        )
-        parser_pgvector.add_argument(
             "--batch_size",
             type=int,
             help="Batch size for exporting data",
             default=10_000,
+        )
+        parser_pgvector.add_argument(
+            "--tables", type=str, help="Postgres tables to export (comma-separated)"
         )
 
     @classmethod
@@ -65,28 +65,33 @@ class ExportPGVector(ExportVDB):
                 port=args["port"] if args.get("port", "") != "" else "5432",
                 dbname=args["dbname"] if args.get("dbname", "") != "" else "postgres",
             )
+        self.cur = self.conn.cursor()
 
     def get_all_schemas(self):
-        schemas = self.conn.execute(
+        schemas = self.cur.execute(
             "SELECT schema_name FROM information_schema.schemata"
         )
         self.all_schemas = [schema[0] for schema in schemas]
         return [schema[0] for schema in schemas]
 
     def get_all_table_names(self):
-        tables = self.conn.execute(
+        self.schema_name = self.args.get("schema") or "public"
+        tables = self.cur.execute(
             "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
         )
         self.all_tables = [table[0] for table in tables]
         return [table[0] for table in tables]
 
     def get_all_index_names(self):
-        return self.db.table_names()
+        # get all tables in the schema
+        return self.cur.execute(
+            f"SELECT table_name FROM information_schema.tables WHERE table_schema='{self.schema_name}'"
+        )
 
     def get_index_names(self):
         if self.args.get("tables", None) is not None:
             return self.args["tables"].split(",")
-        return self.db.table_names()
+        return self.get_all_index_names()
 
     def get_data(self):
         index_names = self.get_index_names()
@@ -100,40 +105,40 @@ class ExportPGVector(ExportVDB):
             offset = 0
             remainder_df = None
             j = 0
-            for batch in tqdm(table.to_lance().to_batches()):
-                df = batch.to_pandas()
-                if remainder_df is not None:
-                    df = pd.concat([remainder_df, df])
-                while len(df) >= BATCH_SIZE:
-                    # TODO: use save_vectors_to_parquet
-                    df[:BATCH_SIZE].to_parquet(
-                        os.path.join(vectors_directory, f"{j}.parquet")
-                    )
-                    j += 1
-                    total += BATCH_SIZE
-                    df = df[BATCH_SIZE:]
-                offset += BATCH_SIZE
-                remainder_df = df
-            if remainder_df is not None and len(remainder_df) > 0:
-                # TODO: use save_vectors_to_parquet
-                remainder_df.to_parquet(os.path.join(vectors_directory, f"{j}.parquet"))
-                total += len(remainder_df)
-            dim = -1
-            for name in table.schema.names:
-                if pyarrow.types.is_fixed_size_list(table.schema.field(name).type):
-                    dim = table.schema.field(name).type.list_size
-            vector_columns = [
-                name
-                for name in table.schema.names
-                if pyarrow.types.is_fixed_size_list(table.schema.field(name).type)
-            ]
-            distance = "Cosine"
-            try:
-                for index in table.list_indices():
-                    if index.vector_column_name == vector_columns[0]:
-                        distance = vector_columns[0]
-            except Exception:
-                pass
+            # for batch in tqdm(table.to_lance().to_batches()):
+            #     df = batch.to_pandas()
+            #     if remainder_df is not None:
+            #         df = pd.concat([remainder_df, df])
+            #     while len(df) >= BATCH_SIZE:
+            #         # TODO: use save_vectors_to_parquet
+            #         df[:BATCH_SIZE].to_parquet(
+            #             os.path.join(vectors_directory, f"{j}.parquet")
+            #         )
+            #         j += 1
+            #         total += BATCH_SIZE
+            #         df = df[BATCH_SIZE:]
+            #     offset += BATCH_SIZE
+            #     remainder_df = df
+            # if remainder_df is not None and len(remainder_df) > 0:
+            #     # TODO: use save_vectors_to_parquet
+            #     remainder_df.to_parquet(os.path.join(vectors_directory, f"{j}.parquet"))
+            #     total += len(remainder_df)
+            # dim = -1
+            # for name in table.schema.names:
+            #     if pyarrow.types.is_fixed_size_list(table.schema.field(name).type):
+            #         dim = table.schema.field(name).type.list_size
+            # vector_columns = [
+            #     name
+            #     for name in table.schema.names
+            #     if pyarrow.types.is_fixed_size_list(table.schema.field(name).type)
+            # ]
+            # distance = "Cosine"
+            # try:
+            #     for index in table.list_indices():
+            #         if index.vector_column_name == vector_columns[0]:
+            #             distance = vector_columns[0]
+            # except Exception:
+            #     pass
 
             namespace_metas = [
                 self.get_namespace_meta(
@@ -141,9 +146,9 @@ class ExportPGVector(ExportVDB):
                     vectors_directory,
                     total=total,
                     num_vectors_exported=total,
-                    dim=dim,
-                    vector_columns=vector_columns,
-                    distance=distance,
+                    # dim=dim,
+                    # vector_columns=vector_columns,
+                    # distance=distance,
                 )
             ]
             index_metas[index_name] = namespace_metas

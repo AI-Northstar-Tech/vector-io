@@ -8,8 +8,7 @@ def make_pgv_parser(DB_NAME_SLUG, subparsers):
     parser_pgvector.add_argument(
         "--platform",
         type=str,
-        choices=["supabase", "neon", "tembo", "any"],
-        default="any",
+        choices=["supabase", "neon", "tembo", "aws", "custom"],
         help="Platform to connect to",
     )
     parser_pgvector.add_argument(
@@ -32,18 +31,32 @@ def make_pgv_parser(DB_NAME_SLUG, subparsers):
     parser_pgvector.add_argument(
         "--dbname", type=str, help="Database name of Postgres instance"
     )
-    parser_pgvector.add_argument(
-        "--tables", type=str, help="Postgres tables to export (comma-separated)"
-    )
     return parser_pgvector
 
 
 def set_pgv_args_from_prompt(args):
     set_arg_from_input(
         args,
+        "platform",
+        "Enter the platform to connect to (default: custom): ",
+        str,
+        default_value="custom",
+    )
+    env_var_name = "POSTGRES_CONNECTION_STRING"
+    if args["platform"] == "supabase":
+        env_var_name = "SUPABASE_CONNECTION_STRING"
+    elif args["platform"] == "neon":
+        env_var_name = "NEON_CONNECTION_STRING"
+    elif args["platform"] == "tembo":
+        env_var_name = "TEMBO_CONNECTION_STRING"
+    elif args["platform"] == "aws":
+        env_var_name = "AURORA_CONNECTION_STRING"
+    set_arg_from_input(
+        args,
         "connection_string",
         "Enter the connection string to Postgres instance: ",
         str,
+        env_var=env_var_name,
     )
     if not args.get("connection_string"):
         set_arg_from_input(

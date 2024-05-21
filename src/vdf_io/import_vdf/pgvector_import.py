@@ -41,22 +41,12 @@ class ImportPGVector(ImportVDB):
             str,
             choices=pgvector_import.all_schemas,
         )
-        set_arg_from_input(
-            args,
-            "tables",
-            "Enter the name of tables to import (comma-separated, all will be imported by default): ",
-            str,
-            choices=pgvector_import.all_tables,
-        )
         pgvector_import.upsert_data()
         return pgvector_import
 
     @classmethod
     def make_parser(cls, subparsers):
-        parser_pgvector = make_pgv_parser(cls.DB_NAME_SLUG, subparsers)
-        parser_pgvector.add_argument(
-            "--tables", type=str, help="Postgres tables to export (comma-separated)"
-        )
+        _parser_pgvector = make_pgv_parser(cls.DB_NAME_SLUG, subparsers)
 
     def __init__(self, args):
         # call super class constructor
@@ -74,22 +64,37 @@ class ImportPGVector(ImportVDB):
             )
 
     def get_all_schemas(self):
-        schemas = self.conn.execute(
-            "SELECT schema_name FROM information_schema.schemata"
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT schema_name FROM information_schema.schemata")
+            schemas_response = cur.fetchall()
+        self.all_schemas = (
+            [schema[0] for schema in schemas_response] if schemas_response else []
         )
-        self.all_schemas = [schema[0] for schema in schemas]
-        return [schema[0] for schema in schemas]
+        return self.all_schemas
 
     def get_all_table_names(self):
-        tables = self.conn.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema='public'"
+        self.schema_name = self.args.get("schema") or "public"
+        with self.conn.cursor() as cur:
+            cur.execute(
+                f"SELECT table_name FROM information_schema.tables WHERE table_schema='{self.schema_name}'"
+            )
+            tables_response = cur.fetchall()
+        tqdm.write(f"Tables in schema {self.schema_name}: {tables_response}")
+        self.all_tables = (
+            [table[0] for table in tables_response] if tables_response else []
         )
-        self.all_tables = [table[0] for table in tables]
-        return [table[0] for table in tables]
+        return self.all_tables
 
     def upsert_data(self):
+        # create pgvector extension if not exists
+        with self.conn.cursor() as cur:
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            # register vector type
         register_vector(self.conn)
-        self.conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+
+        # use the schema
+        with self.conn.cursor() as cur:
+            cur.execute(f"SET search_path TO {self.schema_name}")
 
         max_hit = False
         self.total_imported_count = 0
@@ -97,7 +102,7 @@ class ImportPGVector(ImportVDB):
         index_names: List[str] = list(indexes_content.keys())
         if len(index_names) == 0:
             raise ValueError("No indexes found in VDF_META.json")
-        tables = self.get_all_table_names()
+        self.tables = self.get_all_table_names()
         # Load Parquet file
         # print(indexes_content[index_names[0]]):List[NamespaceMeta]
         for index_name, index_meta in tqdm(
@@ -115,16 +120,33 @@ class ImportPGVector(ImportVDB):
                     if namespace_meta["namespace"]
                     else ""
                 )
-                new_index_name = self.create_new_name(new_index_name, tables)
-                if new_index_name not in tables:
-                    table = self.conn.create_table(
-                        new_index_name, schema=pq.read_schema(parquet_files[0])
-                    )
+                new_index_name = self.create_new_name(new_index_name, self.tables)
+                if new_index_name not in self.tables:
+                    # create postgres table
+                    with self.conn.cursor() as cur:
+                        cur.execute(
+                            f"CREATE TABLE {new_index_name} (id SERIAL PRIMARY KEY)"
+                        )
+                    # use parquet file's schema
+                    schema = pq.read_schema(parquet_files[0])
+                    for field in schema:
+                        col_type = field.type
+                        col_name = field.name
+                        with self.conn.cursor() as cur:
+                            cur.execute(
+                                f"ALTER TABLE {new_index_name} ADD COLUMN {col_name} {col_type}"
+                            )
+                        # check if the column is a vector column
+                        if col_name == namespace_meta["vector_column"]:
+                            with self.conn.cursor() as cur:
+                                cur.execute(
+                                    f"CREATE INDEX {new_index_name}_{col_name}_idx ON {new_index_name} USING vector ({col_name})"
+                                )
                     tqdm.write(f"Created table {new_index_name}")
+                    table_name = new_index_name
                 else:
-                    table = self.conn.open_table(new_index_name)
-                    tqdm.write(f"Opened table {new_index_name}")
-
+                    # set table name
+                    table_name = new_index_name
                 for file in tqdm(parquet_files, desc="Iterating parquet files"):
                     file_path = self.get_file_path(final_data_path, file)
                     df = self.read_parquet_progress(
@@ -136,17 +158,6 @@ class ImportPGVector(ImportVDB):
                     )
                     df = cleanup_df(df)
                     # if there are additional columns in the parquet file, add them to the table
-                    for col in df.columns:
-                        if col not in [field.name for field in table.schema]:
-                            col_type = df[col].dtype
-                            tqdm.write(
-                                f"Adding column {col} of type {col_type} to {new_index_name}"
-                            )
-                            table.add_columns(
-                                {
-                                    col: get_default_value(col_type),
-                                }
-                            )
                     # split in batches
                     BATCH_SIZE = self.args.get("batch_size") or DEFAULT_BATCH_SIZE
                     for batch in tqdm(
@@ -163,12 +174,21 @@ class ImportPGVector(ImportVDB):
                             ]
                             max_hit = True
                         # convert df into list of dicts
-                        table.add(batch)
+                        with self.conn.cursor() as cur:
+                            cur.execute(
+                                f"""INSERT INTO {table_name
+                                } ({', '.join(batch.columns)
+                                }) VALUES {', '.join([str(tuple(row)) for row in batch.itertuples(index=False)])
+                                }"""
+                            )
                         self.total_imported_count += len(batch)
                         if max_hit:
                             break
                 tqdm.write(f"Imported {self.total_imported_count} rows")
-                tqdm.write(f"New table size: {table.count_rows()}")
+                with self.conn.cursor() as cur:
+                    cur.execute(f"SELECT COUNT(*) FROM {table_name}")
+                    new_table_size = cur.fetchone()[0]
+                tqdm.write(f"New table size: {new_table_size}")
                 if max_hit:
                     break
         print("Data imported successfully")
