@@ -1,8 +1,6 @@
 import json
 import os
 from typing import Dict, List
-import pandas as pd
-import pyarrow
 from tqdm import tqdm
 
 import psycopg2
