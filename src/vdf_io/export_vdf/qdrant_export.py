@@ -57,16 +57,18 @@ class ExportQdrant(ExportVDB):
             bool,
             True,
         )
+        set_arg_from_password(
+            args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
+        )
+        qdrant_export = ExportQdrant(args)
+        qdrant_export.all_collections = qdrant_export.get_all_index_names()
         set_arg_from_input(
             args,
             "collections",
             "Enter the name of collection(s) to export (comma-separated) (hit return to export all):",
             str,
+            choices=qdrant_export.all_collections,
         )
-        set_arg_from_password(
-            args, "qdrant_api_key", "Enter your Qdrant API key: ", "QDRANT_API_KEY"
-        )
-        qdrant_export = ExportQdrant(args)
         qdrant_export.get_data()
         return qdrant_export
 
@@ -81,7 +83,7 @@ class ExportQdrant(ExportVDB):
             prefer_grpc=self.args.get("prefer_grpc", True),
         )
 
-    def get_index_names(self) -> List[str]:
+    def get_all_index_names(self) -> List[str]:
         """
         Get all collection names from Qdrant
         """
@@ -89,12 +91,16 @@ class ExportQdrant(ExportVDB):
         collection_names = [collection.name for collection in collections]
         return collection_names
 
-    def get_data(self):
+    def get_index_names(self) -> List[str]:
+        """
+        Get collection names from args or all collection names
+        """
         if "collections" not in self.args or self.args["collections"] is None:
-            collection_names = self.get_index_names()
-        else:
-            collection_names = self.args["collections"].split(",")
+            return self.get_all_index_names()
+        return self.args["collections"].split(",")
 
+    def get_data(self):
+        collection_names = self.get_index_names()
         index_metas: Dict[str, List[NamespaceMeta]] = {}
         for collection_name in tqdm(collection_names, desc="Fetching indexes"):
             index_meta = self.get_data_for_collection(collection_name)
