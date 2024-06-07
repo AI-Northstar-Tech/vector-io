@@ -162,11 +162,13 @@ class ImportVDB(abc.ABC):
                     f"Failed to resolve dimensions for index '{index_name}'"
                 )
 
-    def resolve_dims(self, namespace_meta, index_name, vector_column_name = None):
+    def resolve_dims(self, namespace_meta, index_name, vector_column_name=None):
         final_data_path = self.get_final_data_path(namespace_meta["data_path"])
         parquet_files = self.get_parquet_files(final_data_path)
         if vector_column_name is None:
-            _, vector_column_name = self.get_vector_column_name(index_name, namespace_meta)
+            _, vector_column_name = self.get_vector_column_name(
+                index_name, namespace_meta
+            )
         dims = -1
         found = False
         for file in tqdm(parquet_files, desc="Iterating parquet files"):
