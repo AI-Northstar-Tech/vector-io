@@ -5,7 +5,7 @@ from tqdm import tqdm
 import pyarrow.parquet as pq
 
 from pgvector.psycopg import register_vector
-import psycopg2
+import psycopg
 
 from vdf_io.constants import DEFAULT_BATCH_SIZE, INT_MAX
 from vdf_io.pgvector_util import make_pgv_parser, set_pgv_args_from_prompt
@@ -53,9 +53,9 @@ class ImportPGVector(ImportVDB):
         super().__init__(args)
         # use connection_string
         if args.get("connection_string"):
-            self.conn = psycopg2.connect(args["connection_string"])
+            self.conn = psycopg.connect(args["connection_string"])
         else:
-            self.conn = psycopg2.connect(
+            self.conn = psycopg.connect(
                 user=args["user"],
                 password=args["password"],
                 host=args["host"] if args.get("host", "") != "" else "localhost",
@@ -104,7 +104,6 @@ class ImportPGVector(ImportVDB):
             raise ValueError("No indexes found in VDF_META.json")
         self.tables = self.get_all_table_names()
         # Load Parquet file
-        # print(indexes_content[index_names[0]]):List[NamespaceMeta]
         for index_name, index_meta in tqdm(
             indexes_content.items(), desc="Importing indexes"
         ):
@@ -122,26 +121,60 @@ class ImportPGVector(ImportVDB):
                 )
                 new_index_name = self.create_new_name(new_index_name, self.tables)
                 if new_index_name not in self.tables:
+                    # assemble schema using parquet file's schema
+                    schema = pq.read_schema(parquet_files[0])
+                    schema_dict = {}
+                    if "model_map" not in namespace_meta:
+                        namespace_meta["model_map"] = {}
+"""
+┌──────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
+│ column_name  │ column_type │  null   │   key   │ default │  extra  │
+│   varchar    │   varchar   │ varchar │ varchar │ varchar │ varchar │
+├──────────────┼─────────────┼─────────┼─────────┼─────────┼─────────┤
+│ id           │ BIGINT      │ YES     │         │         │         │
+│ vector       │ DOUBLE[]    │ YES     │         │         │         │
+│ claps        │ BIGINT      │ YES     │         │         │         │
+│ title        │ VARCHAR     │ YES     │         │         │         │
+│ responses    │ BIGINT      │ YES     │         │         │         │
+│ reading_time │ BIGINT      │ YES     │         │         │         │
+│ publication  │ VARCHAR     │ YES     │         │         │         │
+│ link         │ VARCHAR     │ YES     │         │         │         │
+└──────────────┴─────────────┴─────────┴─────────┴─────────┴─────────┘
+id: int64
+vector: list<element: double>
+  child 0, element: double
+claps: int64
+title: string
+responses: int64
+reading_time: int64
+publication: string
+link: string
+"""
+                    parquet_to_sql_type_map = {
+                        
+                        "int64": "BIGINT",
+                        "float64": "DOUBLE PRECISION",
+                        "bool": "BOOLEAN",
+                        "datetime64[ns]": "TIMESTAMP",
+                        "timedelta64[ns]": "INTERVAL",
+                        "object": "VARCHAR",
+                    }
+                    for field in schema:
+                        col_type = field.type
+                        col_name = field.name
+                        schema_dict[col_name] = col_type
+                        # check if the column is a vector column
+                        if col_name in namespace_meta["model_map"]:
+                            schema_dict[col_name] = "vector()"
+                    # create schema string
+                    schema_str = ", ".join(
+                        [f"{col_name} {col_type}" for col_name, col_type in schema_dict.items()]
+                    )
                     # create postgres table
                     with self.conn.cursor() as cur:
                         cur.execute(
                             f"CREATE TABLE {new_index_name} (id SERIAL PRIMARY KEY)"
                         )
-                    # use parquet file's schema
-                    schema = pq.read_schema(parquet_files[0])
-                    for field in schema:
-                        col_type = field.type
-                        col_name = field.name
-                        with self.conn.cursor() as cur:
-                            cur.execute(
-                                f"ALTER TABLE {new_index_name} ADD COLUMN {col_name} {col_type}"
-                            )
-                        # check if the column is a vector column
-                        if col_name == namespace_meta["vector_column"]:
-                            with self.conn.cursor() as cur:
-                                cur.execute(
-                                    f"CREATE INDEX {new_index_name}_{col_name}_idx ON {new_index_name} USING vector ({col_name})"
-                                )
                     tqdm.write(f"Created table {new_index_name}")
                     table_name = new_index_name
                 else:

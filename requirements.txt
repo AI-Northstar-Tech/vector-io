@@ -36,3 +36,4 @@ azure-identity
 turbopuffer[fast]
 pgvector
 psycopg
+duckdb
