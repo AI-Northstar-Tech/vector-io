@@ -40,6 +40,14 @@ class ExportVDB(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def get_all_index_names(self) -> List[str]:
+        """
+        Get all index names from vector database
+        """
+        # raise NotImplementedError()
+        pass
+
+    @abc.abstractmethod
     def get_data(self) -> ExportVDB:
         """
         Get data from vector database

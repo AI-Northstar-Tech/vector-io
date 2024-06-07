@@ -4,7 +4,8 @@ from tqdm import tqdm
 import os
 from dotenv import load_dotenv
 
-from pinecone import Pinecone, ServerlessSpec, PodSpec, Vector
+from pinecone.grpc import PineconeGRPC as Pinecone
+from pinecone import ServerlessSpec, PodSpec, Vector
 
 from vdf_io.constants import INT_MAX
 from vdf_io.names import DBNames
@@ -260,9 +261,9 @@ class ImportPinecone(ImportVDB):
                     ]
                     try:
                         resp = index.upsert(vectors=batch_vectors, namespace=namespace)
-                        self.total_imported_count += resp["upserted_count"]
-                        pbar.update(resp["upserted_count"])
-                        start_idx += resp["upserted_count"]
+                        self.total_imported_count += resp.upserted_count
+                        pbar.update(resp.upserted_count)
+                        start_idx += resp.upserted_count
                     except Exception as e:
                         tqdm.write(
                             f"Error upserting vectors for index '{compliant_index_name}', {e}"

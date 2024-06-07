@@ -1,0 +1,13 @@
+title: Vector-io
+email: dhruv.anand@ainorthstartech.com
+description: >- # this means to ignore newlines until "baseurl:"
+  Vector-io: This library uses a universal format for vector datasets to easily export and import data from all vector databases.
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "" # the base hostname & protocol for your site, e.g. http://example.com
+twitter_username: dhruv___anand
+github_username: dhruv-anand-aintech
+
+# Build settings
+theme: minima
+plugins:
+  - jekyll-feed
