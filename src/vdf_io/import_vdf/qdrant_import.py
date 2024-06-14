@@ -237,7 +237,11 @@ class ImportQdrant(ImportVDB):
                             )
                             for vector_column_name in vector_column_names
                         }
-                        self.client.create_collection(
+                        if len(vector_column_names) == 1 and vector_column_names[0] == "vector":
+                            vectors_config = VectorParams(
+                                size=dims, distance=distance, on_disk=on_disk
+                            )
+                        collection_create_response = self.client.create_collection(
                             collection_name=new_collection_name,
                             vectors_config=vectors_config,
                             sparse_vectors_config=sparse_vectors_config,
@@ -246,6 +250,9 @@ class ImportQdrant(ImportVDB):
                             wal_config=wal_config,
                             quantization_config=quantization_config,
                             on_disk_payload=on_disk_payload,
+                        )
+                        tqdm.write(
+                            f"Created index '{new_collection_name}' with response {collection_create_response}"
                         )
 
                     except Exception as e:
@@ -286,17 +293,31 @@ class ImportQdrant(ImportVDB):
                     keys = set().union(
                         *[vectors_all[vec_col].keys() for vec_col in vectors_all.keys()]
                     )
-                    points = [
-                        PointStruct(
-                            id=get_qdrant_id_from_id(idx),
-                            vector={
-                                vec_col: vectors_all[vec_col].get(idx, [])
-                                for vec_col in vectors_all.keys()
-                            },
-                            payload=metadata.get(idx, {}),
-                        )
-                        for idx in keys
-                    ]
+                    tqdm.write(f"Processing {len(keys)} rows. {vectors_all.keys()}")
+                    if (
+                        len(vectors_all.keys()) == 1
+                        and vectors_all[list(vectors_all.keys())[0]] == "vector"
+                    ):
+                        vec_col_data = vectors_all[list(vectors_all.keys())[0]]
+                        points = [
+                            PointStruct(
+                                id=get_qdrant_id_from_id(idx),
+                                vector=vec_col_data.get(idx, []),
+                            )
+                            for idx in keys
+                        ]
+                    else:
+                        points = [
+                            PointStruct(
+                                id=get_qdrant_id_from_id(idx),
+                                vector={
+                                    vec_col: vectors_all[vec_col].get(idx, [])
+                                    for vec_col in vectors_all.keys()
+                                },
+                                payload=metadata.get(idx, {}),
+                            )
+                            for idx in keys
+                        ]
 
                     if self.total_imported_count + len(points) >= (
                         self.args.get("max_num_rows") or INT_MAX
