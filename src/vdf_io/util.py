@@ -92,20 +92,27 @@ def set_arg_from_input(
     """
     Set the value of an argument from user input if it is not already present
     """
+    read_from_env = False
     if (
         (default_value is None)
         and (env_var is not None)
         and (os.getenv(env_var) is not None)
     ):
         default_value = os.getenv(env_var)
+        read_from_env = True
     if arg_name not in args or (
         args[arg_name] is None and default_value != "DO_NOT_PROMPT"
     ):
         while True:
-            inp = input(
-                prompt
-                + (" " + str(list(choices)) + ": " if choices is not None else "")
-            )
+            default_suffix = ""
+            choices_suffix = ""
+            if read_from_env:
+                default_suffix = f" (default: Read from env var {env_var})"
+            else:
+                default_suffix = f" (default: {default_value})"
+            if choices is not None:
+                choices_suffix = f" (choose from: {str(list(choices))})"
+            inp = input(f"{prompt}{choices_suffix}{default_suffix}: ")
             if len(inp) >= 2:
                 if inp[0] == '"' and inp[-1] == '"':
                     inp = inp[1:-1]
