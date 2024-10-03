@@ -37,3 +37,15 @@ src/vdf_io/notebooks/chroma/*
 '/Users/dhruvanand/Code/vector-io/src/vdf_io/notebooks/chroma'/chroma.sqlite3
 *.pem
 src/vdf_io/notebooks/**.jpg
+
+# testing folders
+testing/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/

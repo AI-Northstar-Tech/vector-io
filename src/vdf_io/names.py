@@ -12,3 +12,4 @@ class DBNames:
     ASTRADB = "astradb"
     AZUREAI = "azureai"
     TURBOPUFFER = "turbopuffer"
+    MONGODB = "mongodb"
