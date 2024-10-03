@@ -215,6 +215,10 @@ db_metric_to_standard_metric: Dict[str, Dict[str, Distance]] = {
         "euclidean_distance": Distance.EUCLID,
         "dot_product": Distance.DOT,
     },
+    DBNames.MONGODB: {
+        "cosine": Distance.COSINE,
+        "euclidean": Distance.EUCLID,
+    },
 }
 
 

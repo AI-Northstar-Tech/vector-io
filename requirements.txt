@@ -35,3 +35,4 @@ azure-search-documents
 azure-identity
 turbopuffer[fast]
 psycopg2
+pymongo
