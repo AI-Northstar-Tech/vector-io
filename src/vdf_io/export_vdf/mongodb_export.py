@@ -7,7 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
-from vdf_io.util import set_arg_from_input, set_arg_from_password
+from vdf_io.util import set_arg_from_input
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from bson import *
 import logging
@@ -85,12 +85,12 @@ class ExportMongoDB(ExportVDB):
     def flatten_dict(self, d, parent_key='', sep='_'):
         items = []
         type_conversions = {
-            ObjectId: lambda v: f"BSON_ObjectId_{str(v)}",
-            Binary: lambda v: f"BSON_Binary_{v.decode('utf-8', errors='ignore')}",
-            Regex: lambda v: f"BSON_Regex_{json.dumps({'pattern': v.pattern, 'options': v.options})}",
-            Timestamp: lambda v: f"BSON_Timestamp_{v.as_datetime().isoformat()}",
-            Decimal128: lambda v: f"BSON_Decimal128_{float(v.to_decimal())}",
-            Code: lambda v: f"BSON_Code_{str(v.code)}",
+            bson.ObjectId: lambda v: f"BSON_ObjectId_{str(v)}",
+            bson.Binary: lambda v: f"BSON_Binary_{v.decode('utf-8', errors='ignore')}",
+            bson.Regex: lambda v: f"BSON_Regex_{json.dumps({'pattern': v.pattern, 'options': v.options})}",
+            bson.Timestamp: lambda v: f"BSON_Timestamp_{v.as_datetime().isoformat()}",
+            bson.Decimal128: lambda v: f"BSON_Decimal128_{float(v.to_decimal())}",
+            bson.Code: lambda v: f"BSON_Code_{str(v.code)}",
         }
 
         for key, value in d.items():
