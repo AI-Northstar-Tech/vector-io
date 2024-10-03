@@ -1,6 +1,5 @@
 import json
 import os
-import bson
 from typing import Dict, List
 import pymongo
 import pandas as pd
