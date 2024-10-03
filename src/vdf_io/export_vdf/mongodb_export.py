@@ -66,7 +66,7 @@ class ExportMongoDB(ExportVDB):
         super().__init__(args)
         try:
             self.client = pymongo.MongoClient(args["connection_string"], serverSelectionTimeoutMS=5000)
-            self.client.server_info()  # This will raise an exception if unable to connect
+            self.client.server_info()
             logger.info("Successfully connected to MongoDB")
         except pymongo.errors.ServerSelectionTimeoutError as err:
             logger.error(f"Failed to connect to MongoDB: {err}")
@@ -128,7 +128,6 @@ class ExportMongoDB(ExportVDB):
         total = 0
         index_metas: Dict[str, List[NamespaceMeta]] = {}
 
-        # First pass to detect vector dimensions if not provided
         if expected_dim is None:
             logger.info("Vector dimension not provided. Detecting from data...")
             sample_doc = self.collection.find_one()
@@ -144,7 +143,6 @@ class ExportMongoDB(ExportVDB):
                 expected_dim = 0
                 logger.warning("No vector columns detected in the data")
 
-        # Rest of the export logic remains the same...
         for i in tqdm(range(total_batches), desc=f"Exporting {collection_name}"):
             cursor = self.collection.find().skip(i * BATCH_SIZE).limit(BATCH_SIZE)
             batch_data = list(cursor)
