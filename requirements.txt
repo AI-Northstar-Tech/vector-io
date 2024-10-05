@@ -34,4 +34,6 @@ mlx_embedding_models
 azure-search-documents
 azure-identity
 turbopuffer[fast]
-psycopg2
+pgvector
+psycopg
+duckdb
