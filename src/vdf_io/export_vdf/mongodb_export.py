@@ -1,6 +1,5 @@
 import json
 import os
-import bson
 from typing import Dict, List
 import pymongo
 import pandas as pd
@@ -85,7 +84,7 @@ class ExportMongoDB(ExportVDB):
         except pymongo.errors.ServerSelectionTimeoutError as err:
             logger.error(f"Failed to connect to MongoDB: {err}")
             raise
-        
+
         try:
             self.db = self.client[args["database"]]
         except Exception as err:
@@ -102,8 +101,12 @@ class ExportMongoDB(ExportVDB):
         collection_name = self.args.get("collection", None)
         if collection_name is not None:
             if collection_name not in self.db.list_collection_names():
-                logger.error(f"Collection '{collection_name}' does not exist in the database.")
-                raise ValueError(f"Collection '{collection_name}' does not exist in the database.")
+                logger.error(
+                    f"Collection '{collection_name}' does not exist in the database."
+                )
+                raise ValueError(
+                    f"Collection '{collection_name}' does not exist in the database."
+                )
             return [collection_name]
         else:
             return self.get_all_index_names()
