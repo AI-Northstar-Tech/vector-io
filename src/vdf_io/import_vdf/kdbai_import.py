@@ -5,7 +5,6 @@ import pyarrow.parquet as pq
 
 import kdbai_client as kdbai
 
-from vdf_io.constants import INT_MAX
 from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
@@ -19,29 +18,29 @@ load_dotenv()
 
 
 _parquettype_to_pytype = {
-    'BOOLEAN': 'bool',
-    'int16': 'int16',
-    'int32': 'int32',
-    'int64': 'int64',
-    'FLOAT': 'float32',
-    'list<element: float>': 'float32s',
-    'DOUBLE': 'float64',
-    'BYTE_ARRAY': 'bytes',
-    'FIXED_LEN_BYTE_ARRAY': 'bytes',
-    'string': 'str',
-    'BINARY': 'bytes',
-    'timestamp[ns]': 'datetime64[ns]',
-    'TIMESTAMP_MILLIS': 'datetime64[ms]',
-    'TIMESTAMP_MICROS': 'datetime64[us]',
-    'DATE': 'datetime64[D]',
-    'TIME_MILLIS': 'timedelta64[ms]',
-    'TIME_MICROS': 'timedelta64[us]',
-    'DECIMAL': 'float64',
-    'UINT8': 'uint8',
-    'UINT16': 'uint16',
-    'UINT32': 'uint32',
-    'UINT64': 'uint64',
-    'INTERVAL': 'timedelta64',
+    "BOOLEAN": "bool",
+    "int16": "int16",
+    "int32": "int32",
+    "int64": "int64",
+    "FLOAT": "float32",
+    "list<element: float>": "float32s",
+    "DOUBLE": "float64",
+    "BYTE_ARRAY": "bytes",
+    "FIXED_LEN_BYTE_ARRAY": "bytes",
+    "string": "str",
+    "BINARY": "bytes",
+    "timestamp[ns]": "datetime64[ns]",
+    "TIMESTAMP_MILLIS": "datetime64[ms]",
+    "TIMESTAMP_MICROS": "datetime64[us]",
+    "DATE": "datetime64[D]",
+    "TIME_MILLIS": "timedelta64[ms]",
+    "TIME_MICROS": "timedelta64[us]",
+    "DECIMAL": "float64",
+    "UINT8": "uint8",
+    "UINT16": "uint16",
+    "UINT32": "uint32",
+    "UINT64": "uint64",
+    "INTERVAL": "timedelta64",
 }
 
 
@@ -61,13 +60,10 @@ class ImportKDBAI(ImportVDB):
                 str,
                 env_var="KDBAI_ENDPOINT",
             )
-            
+
         if args.get("kdbai_api_key") is None:
             set_arg_from_password(
-                args,
-                "kdbai_api_key",
-                "Enter your KDB.AI API key: ",
-                "KDBAI_API_KEY"
+                args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
             )
 
         if args.get("index") is None:
@@ -180,27 +176,33 @@ class ImportKDBAI(ImportVDB):
                     # Define the schema
                     schema = []
                     for c in parquet_columns:
-                        column_name = c['name']
-                        column_type = c['type']
+                        column_name = c["name"]
+                        column_type = c["type"]
 
                         try:
-                            schema.append({
-                                        'name': column_name,
-                                        'type': _parquettype_to_pytype[column_type]
-                                    })
+                            schema.append(
+                                {
+                                    "name": column_name,
+                                    "type": _parquettype_to_pytype[column_type],
+                                }
+                            )
                         except KeyError:
-                            raise ValueError(f"Cannot create the table. The column '{column_name}' with type '{column_type}' is not mapped. Please update the schema.")
+                            raise ValueError(
+                                f"Cannot create the table. The column '{column_name}' with type '{column_type}' is not mapped. Please update the schema."
+                            )
 
-                    index = {'name': 'flat',
-                             'column': vector_column_name,
-                             'type': namespace_meta["model_name"],
-                             'params': {'dims': namespace_meta["dimensions"],
-                                        'metric': standardize_metric_reverse(
-                                                                namespace_meta.get("metric"),
-                                                                self.DB_NAME_SLUG,
-                                                                )
-                                        }
-                            }
+                    index = {
+                        "name": "flat",
+                        "column": vector_column_name,
+                        "type": namespace_meta["model_name"],
+                        "params": {
+                            "dims": namespace_meta["dimensions"],
+                            "metric": standardize_metric_reverse(
+                                namespace_meta.get("metric"),
+                                self.DB_NAME_SLUG,
+                            ),
+                        },
+                    }
 
                     try:
                         if new_index_name in [name.name for name in self.db.tables]:
@@ -209,7 +211,9 @@ class ImportKDBAI(ImportVDB):
                                 f"Table '{new_index_name}' already exists. Upserting data into it."
                             )
                         else:
-                            table = self.db.create_table(new_index_name, schema=schema, indexes=[index])
+                            table = self.db.create_table(
+                                new_index_name, schema=schema, indexes=[index]
+                            )
                             tqdm.write("Table created")
 
                     except kdbai.KDBAIException as e:
@@ -217,15 +221,17 @@ class ImportKDBAI(ImportVDB):
                         raise RuntimeError(f"Error creating table: {e}")
 
                     df = parquet_table.to_pandas()
-                            
+
                     batch_size = self.args.get("batch_size", 10_000) or 10_000
                     pbar = tqdm(total=df.shape[0], desc="Inserting data")
 
                     i = 0
                     try:
                         while i < df.shape[0]:
-                            chunk = df.iloc[i : min(i + batch_size, df.shape[0])].reset_index(drop=True)
-                            
+                            chunk = df.iloc[
+                                i : min(i + batch_size, df.shape[0])
+                            ].reset_index(drop=True)
+
                             try:
                                 table.insert(chunk)
                                 pbar.update(chunk.shape[0])

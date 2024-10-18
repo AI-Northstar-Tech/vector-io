@@ -19,6 +19,7 @@ from vdf_io.util import (
 
 load_dotenv()
 
+
 class ExportKDBAI(ExportVDB):
     DB_NAME_SLUG = DBNames.KDBAI
 
@@ -62,13 +63,10 @@ class ExportKDBAI(ExportVDB):
                 str,
                 env_var="KDBAI_ENDPOINT",
             )
-            
+
         if args.get("kdbai_api_key") is None:
             set_arg_from_password(
-                args,
-                "kdbai_api_key",
-                "Enter your KDB.AI API key: ",
-                "KDBAI_API_KEY"
+                args, "kdbai_api_key", "Enter your KDB.AI API key: ", "KDBAI_API_KEY"
             )
 
         kdbai_export = ExportKDBAI(args)
@@ -81,7 +79,7 @@ class ExportKDBAI(ExportVDB):
                 str,
                 choices=kdbai_export.get_all_index_names(),
             )
-            
+
         if args.get("tables_names", None) == "":
             args["tables_names"] = ",".join(kdbai_export.get_all_index_names())
         kdbai_export.get_data()
@@ -138,10 +136,12 @@ class ExportKDBAI(ExportVDB):
         # metadata = table_res.drop(columns=["vector"]).to_dict(orient="records")
         # self.save_vectors_to_parquet(vectors, metadata, vectors_directory)
 
-        model = table.indexes[0]['type']
-        embedding_name = table.indexes[0]['column']
-        embedding_dims = table.indexes[0]['params']['dims']
-        embedding_dist = standardize_metric(table.indexes[0]['params']['metric'], self.DB_NAME_SLUG)
+        model = table.indexes[0]["type"]
+        embedding_name = table.indexes[0]["column"]
+        embedding_dims = table.indexes[0]["params"]["dims"]
+        embedding_dist = standardize_metric(
+            table.indexes[0]["params"]["metric"], self.DB_NAME_SLUG
+        )
 
         namespace_meta = NamespaceMeta(
             namespace="",
