@@ -15,7 +15,7 @@ google-auth-httplib2
 google-auth-oauthlib
 ratelimit
 backoff
-kdbai-client
+kdbai-client>=1.4.0
 sentry-sdk[opentelemetry]
 halo
 sentence-transformers>=2.6.1
