@@ -1,0 +1,64 @@
+{
+  "version": "v1.0.0",
+  "entity": {
+    "type": "organisation",
+    "role": "owner",
+    "name": "AI Northstar Tech Private Limited",
+    "email": "info@ainorthstartech.com",
+    "phone": "+91-7977314565",
+    "description": "AI Northstar Tech is a boutique consulting firm specializing in AI, RAG, and Enterprise Vector Search.",
+    "webpageUrl": {
+      "url": "https://www.ainorthstartech.com"
+    }
+  },
+  "projects": [
+    {
+      "guid": "vector-io",
+      "name": "Vector-IO",
+      "description": "The universal interface for all vector database, datasets and RAG platforms. Easily export, import, backup, re-embed (using any model) or access your vector data from any vector databases or repository.",
+      "webpageUrl": {
+        "url": "https://vector-io.com",
+        "wellKnown": ""
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/AI-Northstar-Tech/vector-io",
+        "wellKnown": ""
+      },
+      "licenses": [
+        "Apache-2.0"
+      ],
+      "tags": [
+        "vector-database",
+        "data-export",
+        "data-import",
+        "embedding",
+        "ai-tools"
+      ]
+    }
+  ],
+  "funding": {
+    "channels": [
+      {
+        "guid": "bank-transfer",
+        "type": "bank",
+        "address": "Please contact us for bank transfer details",
+        "description": "For direct bank transfers, please reach out to us at info@ainorthstartech.com for account information."
+      }
+    ],
+    "plans": [
+      {
+        "guid": "vector-io-support",
+        "status": "active",
+        "name": "Vector-IO Support Plan",
+        "description": "Support the development and maintenance of Vector-IO tooling",
+        "amount": 500,
+        "currency": "USD",
+        "frequency": "monthly",
+        "channels": [
+          "bank-transfer"
+        ]
+      }
+    ],
+    "history": []
+  }
+}
