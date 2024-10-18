@@ -24,25 +24,24 @@ _parquettype_to_pytype = {
     'int32': 'int32',
     'int64': 'int64',
     'FLOAT': 'float32',
-    'list<element: float>': 'float32s',  # Fix: key is now a valid string
+    'list<element: float>': 'float32s',
     'DOUBLE': 'float64',
-    'BYTE_ARRAY': 'bytes',   # For binary or string representation in some cases
+    'BYTE_ARRAY': 'bytes',
     'FIXED_LEN_BYTE_ARRAY': 'bytes',
     'string': 'str',
     'BINARY': 'bytes',
-    'timestamp[ns]': 'datetime64[ns]',  # Often used for timestamps in Parquet
+    'timestamp[ns]': 'datetime64[ns]',
     'TIMESTAMP_MILLIS': 'datetime64[ms]',
     'TIMESTAMP_MICROS': 'datetime64[us]',
     'DATE': 'datetime64[D]',
     'TIME_MILLIS': 'timedelta64[ms]',
     'TIME_MICROS': 'timedelta64[us]',
-    'DECIMAL': 'float64',   # Can be mapped to float64 or another numeric type depending on precision
+    'DECIMAL': 'float64',
     'UINT8': 'uint8',
     'UINT16': 'uint16',
     'UINT32': 'uint32',
     'UINT64': 'uint64',
-    'INTERVAL': 'timedelta64',  # Can depend on the specific Parquet interval format
-    # Add more mappings based on specific Parquet types if needed
+    'INTERVAL': 'timedelta64',
 }
 
 
@@ -155,7 +154,7 @@ class ImportKDBAI(ImportVDB):
                         pandas_table.to_parquet(parquet_file_path)
 
                     parquet_table = pq.read_table(parquet_file_path)
-                    # rename columns by replacing "-" with "_"
+
                     old_column_name_to_new = {
                         col: self.compliant_name(col)
                         for col in parquet_table.column_names
@@ -203,7 +202,6 @@ class ImportKDBAI(ImportVDB):
                                         }
                             }
 
-                    # First ensure the table does not already exist
                     try:
                         if new_index_name in [name.name for name in self.db.tables]:
                             table = self.db.table(new_index_name)
