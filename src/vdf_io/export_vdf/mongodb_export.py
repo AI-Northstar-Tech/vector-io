@@ -114,7 +114,7 @@ class ExportMongoDB(ExportVDB):
     def get_all_index_names(self):
         return self.db.list_collection_names()
 
-    def flatten_dict(self, d, parent_key="", sep="_"):
+    def flatten_dict(self, d, parent_key="", sep="#SEP#"):
         items = []
         type_conversions = {
             ObjectId: lambda v: f"BSON_ObjectId_{str(v)}",
