@@ -1,12 +1,7 @@
-import argparse
-from typing import Dict, List
 from dotenv import load_dotenv
-import pandas as pd
 from tqdm import tqdm
-import pyarrow.parquet as pq
 import pymongo
 import logging
-import os
 import re
 import ast
 import numpy as np
@@ -14,19 +9,17 @@ from bson import ObjectId, Binary, Regex, Timestamp, Decimal128, Code
 import json
 from datetime import datetime
 from vdf_io.constants import DEFAULT_BATCH_SIZE, INT_MAX
-from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
 from vdf_io.util import (
     cleanup_df,
     divide_into_batches,
     set_arg_from_input,
-    set_arg_from_password,
-    expand_shorthand_path,
 )
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
 load_dotenv()
 logger = logging.getLogger(__name__)
+
 
 class ImportMongoDB(ImportVDB):
     DB_NAME_SLUG = DBNames.MONGODB
@@ -73,10 +66,7 @@ class ImportMongoDB(ImportVDB):
             str,
         )
         set_arg_from_input(
-            args, 
-            "vector_dim",
-            "Enter the expected dimension of vector columns: ",
-            int
+            args, "vector_dim", "Enter the expected dimension of vector columns: ", int
         )
         mongodb_import = ImportMongoDB(args)
         mongodb_import.upsert_data()
@@ -100,7 +90,7 @@ class ImportMongoDB(ImportVDB):
         except Exception as err:
             logger.error(f"Failed to select MongoDB database: {err}")
             raise
-    
+
         try:
             self.collection = self.db[args["collection"]]
         except Exception as err:
@@ -113,7 +103,7 @@ class ImportMongoDB(ImportVDB):
     def convert_document(self, doc):
         converted_doc = {}
         for key, value in doc.items():
-            parts = key.split('#SEP#')
+            parts = key.split("#SEP#")
             value = self.convert_value(value)
             self.nested_set(converted_doc, parts, value)
         return converted_doc
@@ -125,19 +115,20 @@ class ImportMongoDB(ImportVDB):
                 dic[key] = {}  # Overwrite with an empty dictionary
 
             dic = dic.setdefault(key, {})
-        
-        dic[keys[-1]] = value  # Set the final key to the value
 
+        dic[keys[-1]] = value  # Set the final key to the value
 
     def convert_value(self, value):
         if isinstance(value, np.ndarray):
             return value.tolist()  # Convert numpy array to list : MongoDB can't handle the numpy array directly
-        
+
         # Check if the value is a string
         if isinstance(value, str):
             # Check if the string is a date in "YYYY-MM-DD" format or extended ISO format
             date_pattern = r"^\d{4}-\d{2}-\d{2}$"  # Regex for "YYYY-MM-DD"
-            iso_pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$"  # Extended ISO
+            iso_pattern = (
+                r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$"  # Extended ISO
+            )
 
             if re.match(date_pattern, value):  # If it matches "YYYY-MM-DD"
                 try:
@@ -167,28 +158,26 @@ class ImportMongoDB(ImportVDB):
             except (ValueError, SyntaxError):
                 # If it's not an array or number, leave it as a string
                 pass
-            
+
             # Handle special BSON formats, as before
             if value.startswith("BSON_ObjectId_"):
                 return ObjectId(value[14:])
             elif value.startswith("BSON_Binary_"):
-                return Binary(value[12:].encode('utf-8'))
+                return Binary(value[12:].encode("utf-8"))
             elif value.startswith("BSON_Regex_"):
                 regex_dict = json.loads(value[11:])
-                return Regex(regex_dict['pattern'], regex_dict['options'])
+                return Regex(regex_dict["pattern"], regex_dict["options"])
             elif value.startswith("BSON_Timestamp_"):
                 return Timestamp(datetime.fromisoformat(value[16:]))
             elif value.startswith("BSON_Decimal128_"):
                 return Decimal128(value[16:])
             elif value.startswith("BSON_Code_"):
                 return Code(value[10:])
-        
+
         elif isinstance(value, list):
             return [self.convert_value(item) for item in value]
-        
+
         return value
-
-
 
     def upsert_data(self):
         max_hit = False
@@ -198,7 +187,9 @@ class ImportMongoDB(ImportVDB):
         if len(index_names) == 0:
             raise ValueError("No indexes found in VDF_META.json")
 
-        for index_name, index_meta in tqdm(indexes_content.items(), desc="Importing indexes"):
+        for index_name, index_meta in tqdm(
+            indexes_content.items(), desc="Importing indexes"
+        ):
             for namespace_meta in tqdm(index_meta, desc="Importing namespaces"):
                 self.set_dims(namespace_meta, index_name)
                 data_path = namespace_meta["data_path"]
@@ -210,10 +201,12 @@ class ImportMongoDB(ImportVDB):
                     try:
                         df = self.read_parquet_progress(
                             file_path,
-                            max_num_rows=(self.args.get("max_num_rows") or INT_MAX)
+                            max_num_rows=(self.args.get("max_num_rows") or INT_MAX),
                         )
                     except Exception as e:
-                        logger.error(f"Error reading Parquet file {file_path}: {str(e)}")
+                        logger.error(
+                            f"Error reading Parquet file {file_path}: {str(e)}"
+                        )
                         continue
                     df = cleanup_df(df)
 
@@ -232,21 +225,25 @@ class ImportMongoDB(ImportVDB):
                             ]
                             max_hit = True
 
-                        documents = batch.to_dict('records')
-                        
+                        documents = batch.to_dict("records")
+
                         try:
                             documents = self.convert_types(documents)
                             self.collection.insert_many(documents)
                             self.total_imported_count += len(batch)
                         except pymongo.errors.BulkWriteError as e:
                             logger.error(f"Error during bulk insert: {str(e.details)}")
-                        
+
                         if max_hit:
                             break
 
                 tqdm.write(f"Imported {self.total_imported_count} rows")
-                tqdm.write(f"New collection size: {self.collection.count_documents({})}")
+                tqdm.write(
+                    f"New collection size: {self.collection.count_documents({})}"
+                )
                 if max_hit:
                     break
 
-        logger.info(f"Data import completed. Total rows imported: {self.total_imported_count}")
+        logger.info(
+            f"Data import completed. Total rows imported: {self.total_imported_count}"
+        )
