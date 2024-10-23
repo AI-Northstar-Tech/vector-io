@@ -25,6 +25,7 @@ wheels/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
+*.cfg
 *.egg
 MANIFEST
 *.csv
@@ -39,3 +40,17 @@ src/vdf_io/notebooks/chroma/*
 *.pem
 src/vdf_io/notebooks/**.jpg
 
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing folders
+testing/
+tests/
+test_results/
+test_reports/
