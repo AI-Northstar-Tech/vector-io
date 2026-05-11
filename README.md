@@ -44,6 +44,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | DataStax Astra DB              | ✅     | ✅     |
 | Chroma                         | ✅     | ✅     |
 | Turbopuffer                    | ✅     | ✅     |
+| Weaviate                       | ✅     | ✅     |
 
 </details>
 
@@ -67,7 +68,6 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
 | Azure AI Search                | ❌     | ❌     |
-| Weaviate                       | ❌     | ❌     |
 | MongoDB Atlas                  | ❌     | ❌     |
 | OpenSearch                     | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
@@ -251,6 +251,10 @@ options:
 export_vdf -m hkunlp/instructor-xl --push_to_hub pinecone --environment gcp-starter
 
 import_vdf -d /path/to/vdf/dataset milvus
+
+export_vdf weaviate --url http://localhost:8080 --classes MyCollection
+
+import_vdf -d /path/to/vdf/dataset weaviate --url http://localhost:8080
 
 reembed_vdf -d /path/to/vdf/dataset -m sentence-transformers/all-MiniLM-L6-v2 -t title
 ```

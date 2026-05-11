@@ -1,0 +1,17 @@
+Help for 'import_vdf weaviate':
+usage: import_vdf weaviate [-h] [-u URL] [--api_key API_KEY]
+                           [--deployment {local,cloud,custom}]
+                           [--grpc_port GRPC_PORT]
+                           [--grpc_secure | --no-grpc_secure]
+
+options:
+  -h, --help            show this help message and exit
+  -u URL, --url URL     URL of Weaviate instance
+  --api_key API_KEY     Weaviate API key
+  --deployment {local,cloud,custom}
+                        Weaviate deployment type. Inferred from --url by
+                        default.
+  --grpc_port GRPC_PORT
+                        gRPC port for local/custom Weaviate instances
+  --grpc_secure, --no-grpc_secure
+                        Use TLS for gRPC custom connections
