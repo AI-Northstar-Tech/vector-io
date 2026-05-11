@@ -65,9 +65,7 @@ class ImportWeaviate(ImportVDB):
             str,
             "http://localhost:8080",
         )
-        if args.get("deployment") == "cloud" or is_weaviate_cloud_url(
-            args.get("url")
-        ):
+        if args.get("deployment") == "cloud" or is_weaviate_cloud_url(args.get("url")):
             set_arg_from_password(
                 args,
                 "api_key",

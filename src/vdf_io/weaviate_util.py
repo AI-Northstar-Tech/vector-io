@@ -276,9 +276,7 @@ def normalize_vector_map(vector):
         vector = vector.to_dict()
     elif hasattr(vector, "__dict__") and not isinstance(vector, (list, tuple, dict)):
         vector = {
-            key: value
-            for key, value in vars(vector).items()
-            if not key.startswith("_")
+            key: value for key, value in vars(vector).items() if not key.startswith("_")
         }
 
     if isinstance(vector, dict):
