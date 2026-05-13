@@ -113,7 +113,9 @@ class ImportWeaviate(ImportVDB):
                         desc="Importing batches",
                         total=max(len(df) // batch_size, 1),
                     ):
-                        with collection.batch.fixed_size(batch_size=batch_size) as batch:
+                        with collection.batch.fixed_size(
+                            batch_size=batch_size
+                        ) as batch:
                             for _, row in batch_df.iterrows():
                                 vector = self.row_to_vector(row, vector_column_names)
                                 if not vector:

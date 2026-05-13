@@ -116,9 +116,7 @@ class ExportWeaviate(ExportVDB):
                 rows.append(row)
 
                 if len(rows) >= batch_size:
-                    total_exported += self.save_rows_to_parquet(
-                        rows, vectors_directory
-                    )
+                    total_exported += self.save_rows_to_parquet(rows, vectors_directory)
                     rows = []
 
             if rows:
