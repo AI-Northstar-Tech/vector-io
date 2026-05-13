@@ -44,6 +44,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | DataStax Astra DB              | ✅     | ✅     |
 | Chroma                         | ✅     | ✅     |
 | Turbopuffer                    | ✅     | ✅     |
+| Weaviate                       | ✅     | ✅     |
 
 </details>
 
@@ -67,7 +68,6 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
 | Azure AI Search                | ❌     | ❌     |
-| Weaviate                       | ❌     | ❌     |
 | MongoDB Atlas                  | ❌     | ❌     |
 | OpenSearch                     | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
@@ -161,7 +161,7 @@ usage: export_vdf [-h] [-m MODEL_NAME]
                   [--max_file_size MAX_FILE_SIZE]
                   [--push_to_hub | --no-push_to_hub]
                   [--public | --no-public]
-                  {pinecone,qdrant,kdbai,milvus,vertexai_vectorsearch}
+                  {pinecone,qdrant,kdbai,milvus,vertexai_vectorsearch,weaviate}
                   ...
 
 Export data from various vector databases to the VDF format for vector datasets
@@ -190,6 +190,7 @@ Vector Databases:
     vertexai_vectorsearch
                         Export data from Vertex AI Vector
                         Search
+    weaviate           Export data from Weaviate
 ```
 
 ## Import script
@@ -198,7 +199,7 @@ Vector Databases:
 import_vdf --help
 usage: import_vdf [-h] [-d DIR] [-s | --subset | --no-subset]
                   [--create_new | --no-create_new]
-                  {milvus,pinecone,qdrant,vertexai_vectorsearch,kdbai}
+                  {milvus,pinecone,qdrant,vertexai_vectorsearch,kdbai,weaviate}
                   ...
 
 Import data from VDF to a vector database
@@ -221,6 +222,7 @@ Vector Databases:
     vertexai_vectorsearch
                         Import data to Vertex AI Vector Search
     kdbai               Import data to KDB.AI
+    weaviate            Import data to Weaviate
 ```
 
 ## Re-embed script
