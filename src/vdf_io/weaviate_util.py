@@ -33,7 +33,9 @@ def call_with_supported_kwargs(func, **kwargs):
     try:
         signature = inspect.signature(func)
     except (TypeError, ValueError):
-        return func(**{key: value for key, value in kwargs.items() if value is not None})
+        return func(
+            **{key: value for key, value in kwargs.items() if value is not None}
+        )
     supported_kwargs = {
         key: value
         for key, value in kwargs.items()
@@ -188,9 +190,7 @@ def build_weaviate_vector_config(vector_columns, metric=None):
     distance = get_weaviate_distance_config(metric)
     vector_index_config = None
     if distance is not None and hasattr(wvcc.Configure, "VectorIndex"):
-        vector_index_config = wvcc.Configure.VectorIndex.hnsw(
-            distance_metric=distance
-        )
+        vector_index_config = wvcc.Configure.VectorIndex.hnsw(distance_metric=distance)
 
     def self_provided_config(vector_name=None):
         kwargs = {}

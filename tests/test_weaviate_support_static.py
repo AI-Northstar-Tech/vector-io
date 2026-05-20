@@ -36,9 +36,7 @@ class WeaviateSupportStaticTests(unittest.TestCase):
         )
 
     def test_import_weaviate_implements_import_contract(self):
-        import_path = (
-            REPO_ROOT / "src" / "vdf_io" / "import_vdf" / "weaviate_import.py"
-        )
+        import_path = REPO_ROOT / "src" / "vdf_io" / "import_vdf" / "weaviate_import.py"
         self.assertTrue(import_path.exists())
 
         methods = class_methods(import_path, "ImportWeaviate")

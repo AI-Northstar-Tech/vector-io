@@ -41,7 +41,9 @@ class ExportWeaviate(ExportVDB):
         )
         parser_weaviate.add_argument("--api_key", type=str, help="Weaviate API key")
         parser_weaviate.add_argument(
-            "--classes", type=str, help="Collections/classes to export (comma-separated)"
+            "--classes",
+            type=str,
+            help="Collections/classes to export (comma-separated)",
         )
         parser_weaviate.add_argument(
             "--grpc_port",
@@ -149,7 +151,10 @@ class ExportWeaviate(ExportVDB):
                 vectors_by_column.setdefault(vector_column, {})[object_id] = vector
             metadata[object_id] = dict(getattr(item, "properties", {}) or {})
 
-            if sys.getsizeof(vectors_by_column) + sys.getsizeof(metadata) > DISK_SPACE_LIMIT:
+            if (
+                sys.getsizeof(vectors_by_column) + sys.getsizeof(metadata)
+                > DISK_SPACE_LIMIT
+            ):
                 num_vectors_exported += self.save_weaviate_vectors_to_parquet(
                     vectors_by_column,
                     metadata,
