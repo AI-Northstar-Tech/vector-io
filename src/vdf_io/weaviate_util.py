@@ -108,7 +108,9 @@ def build_vector_config(vector_column_names, distance):
     vector_distance = to_weaviate_distance(distance)
 
     if hasattr(Configure, "Vectors"):
-        vector_index_config = Configure.VectorIndex.hnsw(distance_metric=vector_distance)
+        vector_index_config = Configure.VectorIndex.hnsw(
+            distance_metric=vector_distance
+        )
         if len(vector_column_names) == 1:
             try:
                 return {
