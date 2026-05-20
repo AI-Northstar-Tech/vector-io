@@ -1,0 +1,13 @@
+Help for 'import_vdf weaviate':
+usage: import_vdf weaviate [-h] [--url URL] [--api_key API_KEY]
+                           [--grpc_port GRPC_PORT]
+                           [--skip_init_checks SKIP_INIT_CHECKS]
+
+options:
+  -h, --help            show this help message and exit
+  --url URL             URL of a local or cloud Weaviate instance
+  --api_key API_KEY     Weaviate API key
+  --grpc_port GRPC_PORT
+                        Weaviate gRPC port (default: 50051)
+  --skip_init_checks SKIP_INIT_CHECKS
+                        Skip Weaviate client startup checks (default: True)
