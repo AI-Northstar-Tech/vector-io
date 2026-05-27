@@ -127,10 +127,7 @@ class ExportWeaviate(ExportVDB):
         collections = self.client.collections.list_all()
         if isinstance(collections, dict):
             return list(collections.keys())
-        return [
-            getattr(collection, "name", collection)
-            for collection in collections
-        ]
+        return [getattr(collection, "name", collection) for collection in collections]
 
     def get_index_names(self):
         requested = self.args.get("collections") or self.args.get("classes")
