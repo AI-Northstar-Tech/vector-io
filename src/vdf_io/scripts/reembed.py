@@ -4,32 +4,32 @@ import argparse
 import datetime
 import json
 import os
+import sys
 import time
+import warnings
+
 import litellm
-from litellm import EmbeddingResponse
 import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
 import sentence_transformers
+import torch
+from dotenv import load_dotenv
+from IPython.core import ultratb
+from litellm import EmbeddingResponse
+from mlx_embedding_models.embedding import EmbeddingModel
+from sentence_transformers import SentenceTransformer
 from tenacity import (
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_random_exponential,
 )
-import torch
 from tqdm import tqdm
-from dotenv import load_dotenv
-import sys
-from IPython.core import ultratb
-import warnings
-import pyarrow as pa
-import pyarrow.parquet as pq
-from mlx_embedding_models.embedding import EmbeddingModel
-from sentence_transformers import SentenceTransformer
 
 import vdf_io
 from vdf_io.constants import ID_COLUMN
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
-
 from vdf_io.util import (
     get_author_name,
     get_final_data_path,
@@ -225,7 +225,7 @@ def ask_for_text_column(args, file_path, df):
             # pick first non-null value
             non_null_value = df[col].dropna().iloc[0]
             if isinstance(non_null_value, str):
-                tqdm.write(f"{i+1}: {col}")
+                tqdm.write(f"{i + 1}: {col}")
                 text_column_options[i + 1] = col
         choice_correctly_entered = False
         while not choice_correctly_entered:

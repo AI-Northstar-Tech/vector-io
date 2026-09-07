@@ -1,5 +1,6 @@
 import ssl
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import httpx
 from pydantic import BaseModel, Field
 from rich import print as rprint
@@ -7,14 +8,14 @@ from rich import print as rprint
 
 class Document(BaseModel):
     id: str
-    fields: Dict[str, Any]
+    fields: dict[str, Any]
 
 
 class VisitDocumentsResponse(BaseModel):
     path_id: str = Field(alias="pathId")
-    documents: List[Document]
+    documents: list[Document]
     document_count: int = Field(alias="documentCount")
-    continuation: Optional[str]
+    continuation: str | None
 
 
 class VespaClient:
@@ -24,8 +25,8 @@ class VespaClient:
         document_url: str,
         query_url: str,
         content_cluster_name: str,
-        cert_file: Optional[str] = None,
-        pk_file: Optional[str] = None,
+        cert_file: str | None = None,
+        pk_file: str | None = None,
         pool_size: int = 10,
         feed_pool_size: int = 10,
         get_pool_size: int = 10,
@@ -55,7 +56,7 @@ class VespaClient:
                 verify=True if cert_file else False,
                 cert=(cert_file, pk_file) if cert_file else None,
             )
-        except ssl.SSLError as e:  # noqa: F821
+        except ssl.SSLError as e:
             raise VespaError("Failed to create http client due to SSL error", cause=e)
         self.content_cluster_name = content_cluster_name
         self.feed_pool_size = feed_pool_size
@@ -64,7 +65,7 @@ class VespaClient:
         self.partial_pool_size = partial_update_pool_size
 
     def get_all_documents(
-        self, schema: str, stream=False, continuation: Optional[str] = None
+        self, schema: str, stream=False, continuation: str | None = None
     ) -> VisitDocumentsResponse:
         """
         Get all documents in a schema.
@@ -85,7 +86,7 @@ class VespaClient:
                 [f"{key}={value}" for key, value in query_params.items() if value]
             )
             url = f"{self.document_url}/document/v1/{schema}/{schema}/docid"
-            url = f'{url.strip("?")}?{query_string}'
+            url = f"{url.strip('?')}?{query_string}"
             print(f"{url=}")
             resp = self.http_client.get(url)
         except httpx.HTTPError as e:
@@ -129,11 +130,11 @@ class MarqoErrorMeta(type):
         if "__init__" not in attrs:
 
             def __init__(
-                self, message: Optional[str] = None, cause: Optional[Exception] = None
+                self, message: str | None = None, cause: Exception | None = None
             ):
                 super(cls, self).__init__(message, cause)
 
-            setattr(cls, "__init__", __init__)
+            cls.__init__ = __init__
         super().__init__(name, bases, attrs)
 
 
@@ -142,9 +143,7 @@ class MarqoError(Exception, metaclass=MarqoErrorMeta):
     Base class for all Marqo errors.
     """
 
-    def __init__(
-        self, message: Optional[str] = None, cause: Optional[Exception] = None
-    ):
+    def __init__(self, message: str | None = None, cause: Exception | None = None):
         super().__init__(message)
         self.message = message
         self.cause = cause

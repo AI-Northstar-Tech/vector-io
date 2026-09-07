@@ -1,14 +1,14 @@
 import json
 import os
 import sys
-from tqdm import tqdm
 
 import chromadb
+from tqdm import tqdm
 
 from vdf_io.constants import DEFAULT_BATCH_SIZE, DISK_SPACE_LIMIT
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.names import DBNames
 from vdf_io.util import expand_shorthand_path, set_arg_from_input
-from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 
 class ExportChroma(ExportVDB):

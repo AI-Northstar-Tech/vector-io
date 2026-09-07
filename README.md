@@ -148,7 +148,6 @@ class VDFMeta(BaseModel):
     indexes: Dict[str, List[NamespaceMeta]]
     exported_at: str
     id_column: Optional[str] = None
-
 ```
 
 2. Parquet files/folders for metadata and vectors.

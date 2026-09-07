@@ -1,24 +1,24 @@
 import argparse
 import datetime
-import os
 import json
-import numpy as np
-from tqdm import tqdm
-from halo import Halo
+import os
 
-from pinecone.grpc import PineconeGRPC as Pinecone
+import numpy as np
+from halo import Halo
 from pinecone import Vector
+from pinecone.grpc import PineconeGRPC as Pinecone
+from tqdm import tqdm
 
 from vdf_io.constants import ID_COLUMN
-from vdf_io.names import DBNames
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
+from vdf_io.names import DBNames
 from vdf_io.util import (
     get_author_name,
     set_arg_from_input,
     set_arg_from_password,
     standardize_metric,
 )
-from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 PINECONE_MAX_K = 10_000
 MAX_TRIES_OVERALL = 150
@@ -281,7 +281,7 @@ class ExportPinecone(ExportVDB):
             ]
         if self.args["id_list_file"]:
             with open(self.args["id_list_file"]) as f:
-                return [line.strip() for line in f.readlines()]
+                return [line.strip() for line in f]
 
         if self.args.get("use_list_points", use_list_points_default):
             try:
@@ -334,9 +334,7 @@ class ExportPinecone(ExportVDB):
                     range_min = min(all_ids) - fetch_size
                     range_max = max(all_ids) + 10 * fetch_size
                     range_obj = range(range_min, range_max)
-                    tqdm.write(
-                        "Checking ids in range {} to {}".format(range_min, range_max)
-                    )
+                    tqdm.write(f"Checking ids in range {range_min} to {range_max}")
                     ids_to_fetch = [
                         x
                         for x in list(range_obj)
