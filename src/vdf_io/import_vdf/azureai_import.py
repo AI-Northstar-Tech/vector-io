@@ -1,13 +1,11 @@
 from dotenv import load_dotenv
 
-
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.names import DBNames
 from vdf_io.util import (
     set_arg_from_input,
     set_arg_from_password,
 )
-from vdf_io.import_vdf.vdf_import_cls import ImportVDB
-
 
 load_dotenv()
 
