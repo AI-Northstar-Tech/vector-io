@@ -1,22 +1,20 @@
-import os
-import json
-from typing import Dict, List
-from dotenv import load_dotenv
 import datetime
-from tqdm import tqdm
+import json
+import os
 
 import kdbai_client as kdbai
+from dotenv import load_dotenv
+from tqdm import tqdm
 
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
-from vdf_io.names import DBNames
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
+from vdf_io.names import DBNames
 from vdf_io.util import (
     get_author_name,
     set_arg_from_input,
     set_arg_from_password,
     standardize_metric,
 )
-
 
 load_dotenv()
 
@@ -87,7 +85,7 @@ class ExportKDBAI(ExportVDB):
             table_names = self.get_all_index_names()
         else:
             table_names = self.args["tables"].split(",")
-        index_metas: Dict[str, List[NamespaceMeta]] = {}
+        index_metas: dict[str, list[NamespaceMeta]] = {}
         for table_name in tqdm(table_names, desc="Fetching indexes"):
             index_metas[table_name] = self.export_table(table_name)
         internal_metadata = VDFMeta(

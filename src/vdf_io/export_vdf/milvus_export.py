@@ -1,21 +1,19 @@
-from typing import Dict, List
-import os
-import json
 import datetime
-from tqdm import tqdm
-from pymilvus import connections, utility, Collection
+import json
+import os
 
+from pymilvus import Collection, connections, utility
+from tqdm import tqdm
 
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
+from vdf_io.names import DBNames
 from vdf_io.util import (
     get_author_name,
     set_arg_from_input,
     set_arg_from_password,
     standardize_metric,
 )
-from vdf_io.names import DBNames
-
 
 MAX_FETCH_SIZE = 1_000
 
@@ -67,7 +65,7 @@ class ExportMilvus(ExportVDB):
         milvus_export.get_data()
         return milvus_export
 
-    def __init__(self, args: Dict):
+    def __init__(self, args: dict):
         """
         Initialize the class.
 
@@ -91,7 +89,7 @@ class ExportMilvus(ExportVDB):
         else:
             collection_names = self.args.get("collections").split(",")
 
-        index_metas: Dict[str, List[NamespaceMeta]] = {}
+        index_metas: dict[str, list[NamespaceMeta]] = {}
         for collection_name in tqdm(collection_names, desc="Fetching indexes"):
             index_meta = self.get_data_for_collection(collection_name)
             index_metas[collection_name] = index_meta
@@ -111,10 +109,10 @@ class ExportMilvus(ExportVDB):
         print(json.dumps(internal_metadata.model_dump(), indent=4))
         return True
 
-    def get_all_collection_names(self) -> List[str]:
+    def get_all_collection_names(self) -> list[str]:
         return utility.list_collections()
 
-    def get_data_for_collection(self, collection_name: str) -> List[NamespaceMeta]:
+    def get_data_for_collection(self, collection_name: str) -> list[NamespaceMeta]:
         vectors_directory = self.create_vec_dir(collection_name)
 
         try:

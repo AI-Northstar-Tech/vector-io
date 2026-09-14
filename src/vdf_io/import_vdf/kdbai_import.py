@@ -1,14 +1,12 @@
-from typing import Dict, List
+import kdbai_client as kdbai
+import pyarrow.parquet as pq
 from dotenv import load_dotenv
 from tqdm import tqdm
-import pyarrow.parquet as pq
-
-import kdbai_client as kdbai
 
 from vdf_io.constants import INT_MAX
-from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
+from vdf_io.names import DBNames
 from vdf_io.util import (
     set_arg_from_input,
     set_arg_from_password,
@@ -84,8 +82,8 @@ class ImportKDBAI(ImportVDB):
     def upsert_data(self):
         self.total_imported_count = 0
         max_hit = False
-        indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
-        index_names: List[str] = list(indexes_content.keys())
+        indexes_content: dict[str, list[NamespaceMeta]] = self.vdf_meta["indexes"]
+        index_names: list[str] = list(indexes_content.keys())
         if len(index_names) == 0:
             raise ValueError("No indexes found in VDF_META.json")
 
@@ -99,7 +97,7 @@ class ImportKDBAI(ImportVDB):
                 data_path = namespace_meta["data_path"]
                 final_data_path = self.get_final_data_path(data_path)
                 index_name = index_name + (
-                    f'_{namespace_meta["namespace"]}'
+                    f"_{namespace_meta['namespace']}"
                     if namespace_meta["namespace"]
                     else ""
                 )

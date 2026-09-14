@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 import os
+
 import pandas as pd
 
-from vdf_io.util import expand_shorthand_path, read_parquet_progress
 from vdf_io.constants import ID_COLUMN
+from vdf_io.util import expand_shorthand_path, read_parquet_progress
 
 # script to get list of ids from directory of parquet files
 
