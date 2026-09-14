@@ -1,18 +1,17 @@
 import argparse
-from typing import Dict, List
-from dotenv import load_dotenv
-from tqdm import tqdm
 import concurrent.futures
+import re
 
 from astrapy.db import AstraDB
-from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
+from cassandra.cluster import Cluster
+from dotenv import load_dotenv
+from tqdm import tqdm
 
 from vdf_io.constants import INT_MAX
-from vdf_io.names import DBNames
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
-import re
+from vdf_io.names import DBNames
 from vdf_io.util import (
     clean_documents,
     set_arg_from_input,
@@ -109,8 +108,8 @@ class ImportAstraDB(ImportVDB):
     def upsert_data(self, via_cql=False):
         self.total_imported_count = 0
         max_hit = False
-        indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
-        index_names: List[str] = list(indexes_content.keys())
+        indexes_content: dict[str, list[NamespaceMeta]] = self.vdf_meta["indexes"]
+        index_names: list[str] = list(indexes_content.keys())
         if len(index_names) == 0:
             raise ValueError("No indexes found in VDF_META.json")
 
@@ -124,7 +123,7 @@ class ImportAstraDB(ImportVDB):
                 data_path = namespace_meta["data_path"]
                 final_data_path = self.get_final_data_path(data_path)
                 new_index_name = index_name + (
-                    f'_{namespace_meta["namespace"]}'
+                    f"_{namespace_meta['namespace']}"
                     if namespace_meta["namespace"]
                     else ""
                 )
@@ -162,7 +161,7 @@ class ImportAstraDB(ImportVDB):
 
                     self.session.execute(
                         f"CREATE TABLE IF NOT EXISTS {self.args['keyspace']}.{new_index_name}"
-                        f" (id text PRIMARY KEY, \"$vector\" vector<float,{namespace_meta['dimensions']}>)"
+                        f' (id text PRIMARY KEY, "$vector" vector<float,{namespace_meta["dimensions"]}>)'
                     )
                 parquet_files = self.get_parquet_files(final_data_path)
                 vectors = {}
@@ -208,7 +207,7 @@ class ImportAstraDB(ImportVDB):
             keys = list(set(vectors.keys()).union(set(metadata.keys())))
             for id in keys:
                 self.session.execute(
-                    f"INSERT INTO {self.args['keyspace']}.{collection.name} (id, \"$vector\", {', '.join(metadata[id].keys())}) "
+                    f'INSERT INTO {self.args["keyspace"]}.{collection.name} (id, "$vector", {", ".join(metadata[id].keys())}) '
                     f"VALUES ('{id}', {vectors[id]}, {', '.join([str(v) for v in metadata[id].values()])})"
                 )
             return len(vectors)
@@ -248,12 +247,15 @@ class ImportAstraDB(ImportVDB):
             for i in range(0, total_points, BATCH_SIZE)
         ]
 
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=num_parallel_threads
-        ) as executor, tqdm(
-            total=total_points,
-            desc=f"Flushing to DB in batches of {BATCH_SIZE} in {num_parallel_threads} threads",
-        ) as pbar:
+        with (
+            concurrent.futures.ThreadPoolExecutor(
+                max_workers=num_parallel_threads
+            ) as executor,
+            tqdm(
+                total=total_points,
+                desc=f"Flushing to DB in batches of {BATCH_SIZE} in {num_parallel_threads} threads",
+            ) as pbar,
+        ):
             future_to_batch = {
                 executor.submit(flush_batch_to_db, collection, *batch): batch
                 for batch in batches

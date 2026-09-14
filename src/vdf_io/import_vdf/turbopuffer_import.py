@@ -1,7 +1,5 @@
-from typing import Dict, List
-from tqdm import tqdm
-
 import turbopuffer as tpuf
+from tqdm import tqdm
 
 from vdf_io.constants import DEFAULT_BATCH_SIZE, INT_MAX
 from vdf_io.import_vdf.vdf_import_cls import ImportVDB
@@ -55,8 +53,8 @@ class ImportTurbopuffer(ImportVDB):
 
     def upsert_data(self):
         self.total_imported_count = 0
-        indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
-        index_names: List[str] = list(indexes_content.keys())
+        indexes_content: dict[str, list[NamespaceMeta]] = self.vdf_meta["indexes"]
+        index_names: list[str] = list(indexes_content.keys())
         if len(index_names) == 0:
             raise ValueError("No indexes found in VDF_META.json")
         collections = self.get_all_index_names()
@@ -73,7 +71,7 @@ class ImportTurbopuffer(ImportVDB):
                 parquet_files = self.get_parquet_files(final_data_path)
 
                 new_index_name = index_name + (
-                    f'_{namespace_meta["namespace"]}'
+                    f"_{namespace_meta['namespace']}"
                     if namespace_meta["namespace"]
                     else ""
                 )
