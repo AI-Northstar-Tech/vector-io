@@ -1,25 +1,24 @@
-from dotenv import load_dotenv
-from tqdm import tqdm
 import json
 
+from dotenv import load_dotenv
 from pymilvus import (
-    connections,
-    utility,
     Collection,
     CollectionSchema,
-    FieldSchema,
     DataType,
+    FieldSchema,
+    connections,
+    utility,
 )
+from tqdm import tqdm
 
 from vdf_io.constants import INT_MAX
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.names import DBNames
 from vdf_io.util import (
     set_arg_from_input,
     set_arg_from_password,
     standardize_metric_reverse,
 )
-from vdf_io.import_vdf.vdf_import_cls import ImportVDB
-
 
 load_dotenv()
 
@@ -82,7 +81,7 @@ class ImportMilvus(ImportVDB):
                 self.set_dims(namespace_meta, collection_name)
                 data_path = namespace_meta["data_path"]
                 index_name = collection_name + (
-                    f'_{namespace_meta["namespace"]}'
+                    f"_{namespace_meta['namespace']}"
                     if namespace_meta["namespace"]
                     else ""
                 )

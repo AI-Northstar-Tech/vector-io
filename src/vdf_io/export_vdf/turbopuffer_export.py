@@ -1,14 +1,15 @@
 import json
 import os
 import sys
-from typing import Dict, List
-from tqdm import tqdm
+
 import turbopuffer as tpuf
+from tqdm import tqdm
+
 from vdf_io.constants import DISK_SPACE_LIMIT
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input, set_arg_from_password
-from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 
 class ExportTurbopuffer(ExportVDB):
@@ -66,7 +67,7 @@ class ExportTurbopuffer(ExportVDB):
         ids = []
         vectors = {}
         metadata = {}
-        index_metas: Dict[str, List[NamespaceMeta]] = {}
+        index_metas: dict[str, list[NamespaceMeta]] = {}
         self.total_imported_count = 0
         for ns_name in tqdm(
             namespace_names, desc="Exporting turbopuffer namespaces (indexes)"

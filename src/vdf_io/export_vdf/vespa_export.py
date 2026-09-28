@@ -1,10 +1,9 @@
-from typing import List
-from vdf_io.marqo_vespa_util import VespaClient
 from rich import print as rprint
 
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.marqo_vespa_util import VespaClient
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input, set_arg_from_password
-from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 
 class ExportVespa(ExportVDB):
@@ -72,7 +71,7 @@ class ExportVespa(ExportVDB):
     def __init__(self, args):
         super().__init__(args)
 
-    def get_index_names(self) -> List[str]:
+    def get_index_names(self) -> list[str]:
         raise NotImplementedError()  # not available in pyvespa
 
     def get_data(self):
