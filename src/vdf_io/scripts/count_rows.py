@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import pyarrow.parquet as pq
-import os
 import argparse
+import os
+
+import pyarrow.parquet as pq
 
 
 def get_file_size_in_gb(file_path):
