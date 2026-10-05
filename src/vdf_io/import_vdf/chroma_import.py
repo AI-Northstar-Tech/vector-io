@@ -1,10 +1,9 @@
-from typing import Dict, List
+import chromadb
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-import chromadb
-
 from vdf_io.constants import DEFAULT_BATCH_SIZE, INT_MAX
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
 from vdf_io.util import (
@@ -13,8 +12,6 @@ from vdf_io.util import (
     expand_shorthand_path,
     set_arg_from_input,
 )
-from vdf_io.import_vdf.vdf_import_cls import ImportVDB
-
 
 load_dotenv()
 
@@ -105,8 +102,8 @@ class ImportChroma(ImportVDB):
     def upsert_data(self):
         max_hit = False
         self.total_imported_count = 0
-        indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
-        index_names: List[str] = list(indexes_content.keys())
+        indexes_content: dict[str, list[NamespaceMeta]] = self.vdf_meta["indexes"]
+        index_names: list[str] = list(indexes_content.keys())
         if len(index_names) == 0:
             raise ValueError("No indexes found in VDF_META.json")
         collections = self.get_all_index_names()
@@ -123,7 +120,7 @@ class ImportChroma(ImportVDB):
                 parquet_files = self.get_parquet_files(final_data_path)
 
                 new_index_name = index_name + (
-                    f'_{namespace_meta["namespace"]}'
+                    f"_{namespace_meta['namespace']}"
                     if namespace_meta["namespace"]
                     else ""
                 )

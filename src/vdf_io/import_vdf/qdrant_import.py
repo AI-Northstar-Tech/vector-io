@@ -1,19 +1,20 @@
-import json
-from dotenv import load_dotenv
-import numpy as np
-from tqdm import tqdm
-from grpc import RpcError
-from typing import Any, Dict, List
-from PIL import Image
-from halo import Halo
-
 import concurrent.futures
+import json
+from typing import Any
 
+import numpy as np
+from dotenv import load_dotenv
+from grpc import RpcError
+from halo import Halo
+from PIL import Image
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
-from qdrant_client.http.models import VectorParams, Distance, PointStruct
+from qdrant_client.http.models import Distance, PointStruct, VectorParams
+from tqdm import tqdm
 
 from vdf_io.constants import INT_MAX
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
+from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
 from vdf_io.util import (
     expand_shorthand_path,
@@ -21,8 +22,6 @@ from vdf_io.util import (
     set_arg_from_input,
     set_arg_from_password,
 )
-from vdf_io.import_vdf.vdf_import_cls import ImportVDB
-from vdf_io.meta_types import NamespaceMeta
 
 load_dotenv()
 
@@ -150,7 +149,7 @@ class ImportQdrant(ImportVDB):
         max_hit = False
         self.total_imported_count = 0
         # we know that the self.vdf_meta["indexes"] is a list
-        index_meta: Dict[str, List[NamespaceMeta]] = {}
+        index_meta: dict[str, list[NamespaceMeta]] = {}
         for index_name, index_meta in tqdm(
             self.vdf_meta["indexes"].items(), desc="Importing indexes"
         ):
@@ -284,14 +283,14 @@ class ImportQdrant(ImportVDB):
                     self.make_metadata_qdrant_compliant(metadata)
                     # union of all keys in vectors_all
                     keys = set().union(
-                        *[vectors_all[vec_col].keys() for vec_col in vectors_all.keys()]
+                        *[vectors_all[vec_col].keys() for vec_col in vectors_all]
                     )
                     points = [
                         PointStruct(
                             id=get_qdrant_id_from_id(idx),
                             vector={
                                 vec_col: vectors_all[vec_col].get(idx, [])
-                                for vec_col in vectors_all.keys()
+                                for vec_col in vectors_all
                             },
                             payload=metadata.get(idx, {}),
                         )
@@ -313,12 +312,15 @@ class ImportQdrant(ImportVDB):
                         total_points = len(points)
 
                         num_parallel_threads = self.args.get("parallel", 5) or 5
-                        with concurrent.futures.ThreadPoolExecutor(
-                            max_workers=num_parallel_threads
-                        ) as executor, tqdm(
-                            total=total_points,
-                            desc=f"Uploading points in batches of {BATCH_SIZE} in {num_parallel_threads} threads",
-                        ) as pbar:
+                        with (
+                            concurrent.futures.ThreadPoolExecutor(
+                                max_workers=num_parallel_threads
+                            ) as executor,
+                            tqdm(
+                                total=total_points,
+                                desc=f"Uploading points in batches of {BATCH_SIZE} in {num_parallel_threads} threads",
+                            ) as pbar,
+                        ):
                             # Create a future to batch mapping to update progress bar correctly after each batch completion
                             future_to_batch = {
                                 executor.submit(
