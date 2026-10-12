@@ -1,15 +1,15 @@
+import abc
 import ast
 import datetime
-from functools import lru_cache
 import json
 import os
-import numpy as np
-from packaging.version import Version
-import abc
-from tqdm import tqdm
-from halo import Halo
+from functools import lru_cache
 
+import numpy as np
+from halo import Halo
+from packaging.version import Version
 from qdrant_client.http.models import Distance
+from tqdm import tqdm
 
 import vdf_io
 from vdf_io.constants import ID_COLUMN

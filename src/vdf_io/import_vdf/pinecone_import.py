@@ -1,20 +1,20 @@
 import argparse
-import pandas as pd
-from tqdm import tqdm
 import os
-from dotenv import load_dotenv
 
+import pandas as pd
+from dotenv import load_dotenv
+from pinecone import PodSpec, ServerlessSpec, Vector
 from pinecone.grpc import PineconeGRPC as Pinecone
-from pinecone import ServerlessSpec, PodSpec, Vector
+from tqdm import tqdm
 
 from vdf_io.constants import INT_MAX
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.names import DBNames
 from vdf_io.util import (
     set_arg_from_input,
     set_arg_from_password,
     standardize_metric_reverse,
 )
-from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 
 load_dotenv()
 
