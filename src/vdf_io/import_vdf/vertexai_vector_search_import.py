@@ -3,33 +3,31 @@ Import data to vertex ai vector search index
 """
 
 import argparse
-from typing import Dict, List
-import uuid
-import time
-import numpy as np
-import json
 import itertools
-from tqdm import tqdm
-from ratelimit import limits, sleep_and_retry
-from backoff import on_exception, expo
+import json
+import time
+import uuid
+
+import google.api_core.exceptions as google_exceptions
+import google.cloud.aiplatform_v1 as aipv1
+import numpy as np
+from backoff import expo, on_exception
 
 # gcloud config set project $PROJECT_ID - users
 # SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
-
 # NEW
 from google.cloud import aiplatform as aip
-import google.cloud.aiplatform_v1 as aipv1
 from google.cloud import storage
-from google.protobuf import struct_pb2
 from google.cloud.aiplatform_v1.types.index import Index
-from google.cloud.aiplatform_v1.types.index_endpoint import IndexEndpoint
-from google.cloud.aiplatform_v1.types.index_endpoint import DeployedIndex
-import google.api_core.exceptions as google_exceptions
+from google.cloud.aiplatform_v1.types.index_endpoint import DeployedIndex, IndexEndpoint
+from google.protobuf import struct_pb2
+from ratelimit import limits, sleep_and_retry
+from tqdm import tqdm
 
-from vdf_io.names import DBNames
-from vdf_io.import_vdf.vdf_import_cls import ImportVDB
-from vdf_io.util import read_parquet_progress, set_arg_from_input
 from vdf_io.constants import ID_COLUMN, INT_MAX
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
+from vdf_io.names import DBNames
+from vdf_io.util import read_parquet_progress, set_arg_from_input
 
 
 # exceptions
@@ -196,7 +194,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
             action=argparse.BooleanOptionalAction,
         )
 
-    def __init__(self, args: Dict) -> None:
+    def __init__(self, args: dict) -> None:
         super().__init__(args)
         self.DB_NAME_SLUG = DBNames.VERTEXAI
         self.project_id = self.args["project_id"]
@@ -341,7 +339,6 @@ class ImportVertexAIVectorSearch(ImportVDB):
                             )
                         except Exception as e:
                             print(f"{self.gcs_bucket} bucket already exists {e}")
-                            pass
                     self.gcs_folder = "init_index"
                     self.local_file_name = "embeddings_0.json"
                     self.contents_delta_uri = (
@@ -464,7 +461,6 @@ class ImportVertexAIVectorSearch(ImportVDB):
                 print(
                     f"{self.index_name} not an existing display_name or resource_name: {e}"
                 )
-                pass
             if not indexes:
                 try:
                     # checking deployed indexes
@@ -495,7 +491,6 @@ class ImportVertexAIVectorSearch(ImportVDB):
                                 indexes.append(d.index)
                 except Exception as e:
                     print(f"not an existing deployed_index: {e}")
-                    pass
 
         if len(indexes) == 0:
             print(f"Index {self.index_name} not found")
@@ -526,7 +521,6 @@ class ImportVertexAIVectorSearch(ImportVDB):
                 ]
             except Exception as e:
                 print(f"{self.index_endpoint_name} not an existing index endpoint: {e}")
-                pass
         else:
             raise ResourceNotExistException("index_endpoint")
 
@@ -540,7 +534,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
             )
             return index_endpoint
 
-    def list_indexes(self) -> List[Index]:
+    def list_indexes(self) -> list[Index]:
         """
 
         :return:
@@ -550,7 +544,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
         indexes = [response for response in page_result]
         return indexes
 
-    def list_index_endpoints(self) -> List[IndexEndpoint]:
+    def list_index_endpoints(self) -> list[IndexEndpoint]:
         """
 
         :return:
@@ -560,7 +554,7 @@ class ImportVertexAIVectorSearch(ImportVDB):
         index_endpoints = [response for response in page_result]
         return index_endpoints
 
-    def list_deployed_indexes(self, endpoint_name: str = None) -> List[DeployedIndex]:
+    def list_deployed_indexes(self, endpoint_name: str = None) -> list[DeployedIndex]:
         """
 
         :param endpoint_name:

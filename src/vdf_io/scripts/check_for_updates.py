@@ -1,5 +1,5 @@
-import requests
 import pkg_resources as pkg
+import requests
 
 import vdf_io
 
