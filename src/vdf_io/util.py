@@ -266,6 +266,7 @@ def get_final_data_path(cwd, dir, data_path, args):
 def list_configs_and_splits(name):
     if "HUGGING_FACE_TOKEN" not in os.environ:
         yield "train", None
+        return
     import requests
 
     headers = {"Authorization": f"Bearer {os.environ['HUGGING_FACE_TOKEN']}"}
