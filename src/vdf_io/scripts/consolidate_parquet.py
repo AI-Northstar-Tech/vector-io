@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
+import argparse
 import json
+import os
+from collections import defaultdict
+
 import pandas as pd
 import pyarrow.parquet as pq
-import os
-import argparse
-from tqdm import tqdm
 from pyarrow import Table
-from collections import defaultdict
+from tqdm import tqdm
 
 
 def get_file_size_in_gb(file_path):
