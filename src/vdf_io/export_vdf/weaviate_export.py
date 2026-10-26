@@ -1,7 +1,7 @@
 import os
 
-from tqdm import tqdm
 import weaviate
+from tqdm import tqdm
 
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.names import DBNames

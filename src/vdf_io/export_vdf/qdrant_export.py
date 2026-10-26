@@ -1,14 +1,14 @@
 import argparse
 import json
-from typing import Dict, List
-from qdrant_client import QdrantClient
 import os
-from tqdm import tqdm
+
 from dotenv import load_dotenv
+from qdrant_client import QdrantClient
+from tqdm import tqdm
 
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
-from vdf_io.names import DBNames
 from vdf_io.meta_types import NamespaceMeta
+from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input, set_arg_from_password
 
 load_dotenv()
@@ -83,7 +83,7 @@ class ExportQdrant(ExportVDB):
             prefer_grpc=self.args.get("prefer_grpc", True),
         )
 
-    def get_all_index_names(self) -> List[str]:
+    def get_all_index_names(self) -> list[str]:
         """
         Get all collection names from Qdrant
         """
@@ -91,7 +91,7 @@ class ExportQdrant(ExportVDB):
         collection_names = [collection.name for collection in collections]
         return collection_names
 
-    def get_index_names(self) -> List[str]:
+    def get_index_names(self) -> list[str]:
         """
         Get collection names from args or all collection names
         """
@@ -101,7 +101,7 @@ class ExportQdrant(ExportVDB):
 
     def get_data(self):
         collection_names = self.get_index_names()
-        index_metas: Dict[str, List[NamespaceMeta]] = {}
+        index_metas: dict[str, list[NamespaceMeta]] = {}
         for collection_name in tqdm(collection_names, desc="Fetching indexes"):
             index_meta = self.get_data_for_collection(collection_name)
             index_metas[collection_name] = index_meta
@@ -136,7 +136,7 @@ class ExportQdrant(ExportVDB):
             )
             return self.try_scroll((fetch_size * 2) // 3, collection_name, next_offset)
 
-    def get_data_for_collection(self, collection_name) -> List[NamespaceMeta]:
+    def get_data_for_collection(self, collection_name) -> list[NamespaceMeta]:
         vectors_directory = self.create_vec_dir(collection_name)
 
         total = self.client.get_collection(collection_name).vectors_count
