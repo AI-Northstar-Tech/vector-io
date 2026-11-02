@@ -1,6 +1,6 @@
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input
-from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 
 class ExportTxtai(ExportVDB):
