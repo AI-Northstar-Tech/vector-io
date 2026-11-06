@@ -102,7 +102,9 @@ class ExportWeaviate(ExportVDB):
     def get_index_names(self) -> List[str]:
         if not self.args.get("classes"):
             return self.all_classes
-        input_classes = [c.strip() for c in self.args["classes"].split(",") if c.strip()]
+        input_classes = [
+            c.strip() for c in self.args["classes"].split(",") if c.strip()
+        ]
         missing = set(input_classes) - set(self.all_classes)
         if missing:
             tqdm.write(
