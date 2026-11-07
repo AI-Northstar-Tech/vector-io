@@ -69,7 +69,9 @@ def _to_weaviate_uuid(raw_id: Any) -> str:
     return str(candidate)
 
 
-def _sanitize_properties(row_dict: Dict[str, Any], excluded_cols: List[str]) -> Dict[str, Any]:
+def _sanitize_properties(
+    row_dict: Dict[str, Any], excluded_cols: List[str]
+) -> Dict[str, Any]:
     """Extracts non-vector columns and strips NaN or unsupported null coordinates for Weaviate properties."""
     props: Dict[str, Any] = {}
     for key, val in row_dict.items():
@@ -151,9 +153,7 @@ class ImportWeaviate(ImportVDB):
             return list(collections.keys())
         return [getattr(c, "name", str(c)) for c in collections]
 
-    def _ensure_collection(
-        self, collection_name: str, ctx_meta: Dict[str, Any]
-    ):
+    def _ensure_collection(self, collection_name: str, ctx_meta: Dict[str, Any]):
         """Retrieves an existing Weaviate collection or creates one with matching vector and distance settings."""
         existing = self.get_all_index_names()
         if collection_name in existing:
@@ -184,9 +184,7 @@ class ImportWeaviate(ImportVDB):
             vectorizer_config=named_configs,
         )
 
-    def _build_row_vector(
-        self, row: Any, vector_column_names: List[str]
-    ) -> Any:
+    def _build_row_vector(self, row: Any, vector_column_names: List[str]) -> Any:
         """Extracts either a single float list or a named-vector dictionary for a DataObject."""
         if len(vector_column_names) == 1 and vector_column_names[0] == "vector":
             raw_val = row.get("vector")
@@ -230,9 +228,7 @@ class ImportWeaviate(ImportVDB):
             return INT_MAX
         return user_limit - self.total_imported_count
 
-    def _import_parquet_file(
-        self, file_path: str, ctx: NamespaceImportContext
-    ) -> bool:
+    def _import_parquet_file(self, file_path: str, ctx: NamespaceImportContext) -> bool:
         """Reads a single Parquet file in batches and inserts DataObjects into the target Weaviate collection."""
         max_rows = self._remaining_row_budget()
         if max_rows <= 0:
@@ -258,9 +254,13 @@ class ImportWeaviate(ImportVDB):
         final_data_path = self.get_final_data_path(namespace_meta["data_path"])
         parquet_files = self.get_parquet_files(final_data_path)
 
-        suffix = f"_{namespace_meta['namespace']}" if namespace_meta.get("namespace") else ""
+        suffix = (
+            f"_{namespace_meta['namespace']}" if namespace_meta.get("namespace") else ""
+        )
         base_name = _normalize_weaviate_name(f"{index_name}{suffix}")
-        target_name = self.create_new_name(base_name, self.get_all_index_names(), delimiter="_")
+        target_name = self.create_new_name(
+            base_name, self.get_all_index_names(), delimiter="_"
+        )
         vector_column_names, _ = self.get_vector_column_name(
             target_name, namespace_meta, multi_vector_supported=True
         )

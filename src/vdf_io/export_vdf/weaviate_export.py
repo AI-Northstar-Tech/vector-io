@@ -144,9 +144,7 @@ def _unpack_object_vectors(raw_vector: Any) -> Dict[str, List[float]]:
     if list(raw_vector.keys()) == ["default"]:
         return {"vector": _to_float_list(raw_vector["default"])}
     return {
-        name: _to_float_list(vec)
-        for name, vec in raw_vector.items()
-        if vec is not None
+        name: _to_float_list(vec) for name, vec in raw_vector.items() if vec is not None
     }
 
 
@@ -260,9 +258,7 @@ class ExportWeaviate(ExportVDB):
             for obj_id in all_ids
         ]
         df = pd.DataFrame.from_records(rows)
-        parquet_file = os.path.join(
-            state.vectors_directory, f"{self.file_ctr}.parquet"
-        )
+        parquet_file = os.path.join(state.vectors_directory, f"{self.file_ctr}.parquet")
         df.to_parquet(parquet_file)
         schema = pq.read_schema(parquet_file)
         self.parquet_schema = (
