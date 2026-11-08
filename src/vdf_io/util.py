@@ -536,3 +536,65 @@ def create_turbopuffer_index_class(index_name, schema):
 
     index_class = type(class_name, (object,), class_attrs)
     return index_class
+
+
+
+def create_weaviate_index_class(index_name, schema):
+    """
+    Create a Python class for a Weaviate collection based on its property schema.
+    """
+    prefix = index_name[0].upper() + index_name[1:] if index_name else "Weaviate"
+    class_name = f"{prefix}Index"
+    class_attrs = {}
+    for field_name, field_type in (schema or {}).items():
+        ft = str(field_type).lower()
+        if "int" in ft:
+            attr_type = int
+        elif "number" in ft or "float" in ft:
+            attr_type = float
+        elif "bool" in ft:
+            attr_type = bool
+        elif "array" in ft or "[]" in ft:
+            attr_type = list
+        else:
+            attr_type = str
+        class_attrs[field_name] = attr_type
+    return type(class_name, (object,), class_attrs)
+
+
+db_metric_to_standard_metric[DBNames.PGVECTOR] = {
+    "cosine": Distance.COSINE,
+    "vector_cosine_ops": Distance.COSINE,
+    "l2": Distance.EUCLID,
+    "vector_l2_ops": Distance.EUCLID,
+    "ip": Distance.DOT,
+    "inner_product": Distance.DOT,
+    "vector_ip_ops": Distance.DOT,
+    "l1": Distance.MANHATTAN,
+    "vector_l1_ops": Distance.MANHATTAN,
+}
+
+
+def create_pgvector_index_class(table_name, schema):
+    """
+    Create a Python class for a pgvector table based on its column schema.
+    """
+    prefix = table_name[0].upper() + table_name[1:] if table_name else "PgVector"
+    class_name = f"{prefix}Table"
+    class_attrs = {}
+    for col_name, col_type in (schema or {}).items():
+        ct = str(col_type).lower()
+        if "int" in ct or "serial" in ct:
+            attr_type = int
+        elif "float" in ct or "double" in ct or "numeric" in ct or "real" in ct:
+            attr_type = float
+        elif "bool" in ct:
+            attr_type = bool
+        elif "vector" in ct or "array" in ct or "[]" in ct:
+            attr_type = list
+        elif "json" in ct:
+            attr_type = dict
+        else:
+            attr_type = str
+        class_attrs[col_name] = attr_type
+    return type(class_name, (object,), class_attrs)
