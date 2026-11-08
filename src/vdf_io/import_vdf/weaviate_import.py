@@ -1,5 +1,6 @@
 import argparse
-from typing import Any, Dict, List
+from typing import Any
+
 from tqdm import tqdm
 
 try:
@@ -115,9 +116,11 @@ class ImportWeaviate(ImportVDB):
 
     def __init__(self, args, client=None):
         super().__init__(args)
-        self.client = client if client is not None else connect_weaviate_client(self.args)
+        self.client = (
+            client if client is not None else connect_weaviate_client(self.args)
+        )
 
-    def get_all_index_names(self) -> List[str]:
+    def get_all_index_names(self) -> list[str]:
         collections = self.client.collections.list_all()
         if isinstance(collections, dict):
             return list(collections.keys())
@@ -138,8 +141,8 @@ class ImportWeaviate(ImportVDB):
     def _ensure_collection_exists(
         self,
         collection_name: str,
-        existing_collections: List[str],
-        vector_column_names: List[str],
+        existing_collections: list[str],
+        vector_column_names: list[str],
         distance_metric_str: str,
     ):
         if collection_name in existing_collections:
@@ -171,14 +174,14 @@ class ImportWeaviate(ImportVDB):
                 )
             else:
                 return self.client.collections.create(name=collection_name)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             tqdm.write(f"Notice when creating collection '{collection_name}': {e}")
             return self.client.collections.get(collection_name)
 
     def upsert_data(self):
         self.total_imported_count = 0
         max_hit = False
-        indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
+        indexes_content: dict[str, list[NamespaceMeta]] = self.vdf_meta["indexes"]
         if not indexes_content:
             raise ValueError("No indexes found in VDF_META.json")
 
@@ -238,14 +241,14 @@ class ImportWeaviate(ImportVDB):
                     ):
                         objects_to_insert = []
                         for _, row in batch_df.iterrows():
-                            raw_id = row[self.id_column] if self.id_column in row else None
+                            raw_id = row.get(self.id_column, None)
                             obj_uuid = (
                                 str(get_qdrant_id_from_id(str(raw_id)))
                                 if raw_id is not None
                                 else None
                             )
 
-                            props: Dict[str, Any] = {}
+                            props: dict[str, Any] = {}
                             for col in batch_df.columns:
                                 if col == self.id_column or col in vector_column_names:
                                     continue

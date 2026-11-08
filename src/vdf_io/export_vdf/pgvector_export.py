@@ -2,7 +2,7 @@ import ast
 import json
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 import pyarrow as pa
@@ -25,7 +25,7 @@ from vdf_io.util import (
 )
 
 
-def connect_pgvector(args: Dict[str, Any]):
+def connect_pgvector(args: dict[str, Any]):
     """
     Connect to either a local or cloud PostgreSQL (pgvector) instance using a
     connection URL/DSN or host/port/dbname/user/password parameters.
@@ -47,7 +47,7 @@ def connect_pgvector(args: Dict[str, Any]):
     )
 
 
-def _parse_pgvector_value(val: Any) -> Optional[List[float]]:
+def _parse_pgvector_value(val: Any) -> list[float] | None:
     if val is None:
         return None
     if isinstance(val, list):
@@ -183,10 +183,12 @@ class ExportPGVector(ExportVDB):
 
     def __init__(self, args, connection=None):
         super().__init__(args)
-        self.conn = connection if connection is not None else connect_pgvector(self.args)
-        self.generated_classes: Dict[str, type] = {}
+        self.conn = (
+            connection if connection is not None else connect_pgvector(self.args)
+        )
+        self.generated_classes: dict[str, type] = {}
 
-    def get_all_index_names(self) -> List[str]:
+    def get_all_index_names(self) -> list[str]:
         query = """
             SELECT DISTINCT table_name
             FROM information_schema.columns
@@ -198,7 +200,7 @@ class ExportPGVector(ExportVDB):
             rows = cur.fetchall()
         return [r[0] for r in rows]
 
-    def get_index_names(self) -> List[str]:
+    def get_index_names(self) -> list[str]:
         if not hasattr(self, "all_tables") or self.all_tables is None:
             self.all_tables = self.get_all_index_names()
         if not self.args.get("tables"):
@@ -206,7 +208,9 @@ class ExportPGVector(ExportVDB):
         requested = [t.strip() for t in self.args["tables"].split(",") if t.strip()]
         return [t for t in self.all_tables if t in requested]
 
-    def _inspect_table(self, table_name: str) -> Tuple[List[str], List[str], Dict[str, str], str]:
+    def _inspect_table(
+        self, table_name: str
+    ) -> tuple[list[str], list[str], dict[str, str], str]:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
@@ -219,9 +223,9 @@ class ExportPGVector(ExportVDB):
             )
             cols = cur.fetchall()
 
-        all_cols: List[str] = []
-        vec_cols: List[str] = []
-        schema_map: Dict[str, str] = {}
+        all_cols: list[str] = []
+        vec_cols: list[str] = []
+        schema_map: dict[str, str] = {}
         for col_name, data_type, udt_name in cols:
             all_cols.append(col_name)
             if udt_name == "vector" or "vector" in str(data_type).lower():
@@ -248,12 +252,14 @@ class ExportPGVector(ExportVDB):
                         if op_name in lower_def:
                             distance = op_name
                             break
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
         return all_cols, vec_cols, schema_map, distance
 
-    def save_records_to_parquet(self, records: List[Dict[str, Any]], vectors_directory: str) -> int:
+    def save_records_to_parquet(
+        self, records: list[dict[str, Any]], vectors_directory: str
+    ) -> int:
         if not records:
             return 0
         df = pd.DataFrame.from_records(records)
@@ -271,7 +277,7 @@ class ExportPGVector(ExportVDB):
 
     def get_data(self):
         table_names = self.get_index_names()
-        index_metas: Dict[str, List[NamespaceMeta]] = {}
+        index_metas: dict[str, list[NamespaceMeta]] = {}
         batch_size = self.args.get("batch_size") or DEFAULT_BATCH_SIZE
 
         for table_name in tqdm(table_names, desc="Exporting pgvector tables"):
@@ -285,7 +291,7 @@ class ExportPGVector(ExportVDB):
                 cur.execute(f'SELECT COUNT(*) FROM "{table_name}";')
                 total_count = int(cur.fetchone()[0])
 
-            records_buffer: List[Dict[str, Any]] = []
+            records_buffer: list[dict[str, Any]] = []
             num_exported = 0
             detected_dim = -1
 
@@ -295,7 +301,7 @@ class ExportPGVector(ExportVDB):
 
             for row_idx, row_tuple in enumerate(rows):
                 row_dict = dict(zip(all_cols, row_tuple))
-                rec: Dict[str, Any] = {}
+                rec: dict[str, Any] = {}
                 rec[ID_COLUMN] = str(row_dict.get(ID_COLUMN, row_idx + 1))
 
                 for k, v in row_dict.items():

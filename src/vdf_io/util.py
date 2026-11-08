@@ -336,7 +336,7 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
         return [
             "hf://" + x
             for x in fs.glob(
-                f"datasets/{args.get('hf_dataset')}/{data_path if data_path!='.' else ''}/**.parquet"
+                f"datasets/{args.get('hf_dataset')}/{data_path if data_path != '.' else ''}/**.parquet"
             )
         ]
     if not os.path.isdir(data_path):
@@ -536,7 +536,6 @@ def create_turbopuffer_index_class(index_name, schema):
 
     index_class = type(class_name, (object,), class_attrs)
     return index_class
-
 
 
 def create_weaviate_index_class(index_name, schema):

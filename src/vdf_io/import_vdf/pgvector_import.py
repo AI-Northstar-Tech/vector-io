@@ -1,5 +1,6 @@
 import json
-from typing import Any, Dict, List
+from typing import Any
+
 from tqdm import tqdm
 
 from vdf_io.constants import DEFAULT_BATCH_SIZE, INT_MAX
@@ -125,9 +126,11 @@ class ImportPGVector(ImportVDB):
 
     def __init__(self, args, connection=None):
         super().__init__(args)
-        self.conn = connection if connection is not None else connect_pgvector(self.args)
+        self.conn = (
+            connection if connection is not None else connect_pgvector(self.args)
+        )
 
-    def get_all_index_names(self) -> List[str]:
+    def get_all_index_names(self) -> list[str]:
         with self.conn.cursor() as cur:
             cur.execute(
                 "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';"
@@ -137,7 +140,7 @@ class ImportPGVector(ImportVDB):
     def _ensure_table_exists(
         self,
         table_name: str,
-        vector_column_names: List[str],
+        vector_column_names: list[str],
         dims: int,
         metric: str,
     ):
@@ -155,9 +158,7 @@ class ImportPGVector(ImportVDB):
         rev = standardize_metric_reverse(metric, self.DB_NAME_SLUG)
         index_ops = ops_map.get(rev, "vector_cosine_ops")
 
-        vec_col_defs = ", ".join(
-            f'"{vc}" vector({dims})' for vc in vector_column_names
-        )
+        vec_col_defs = ", ".join(f'"{vc}" vector({dims})' for vc in vector_column_names)
         with self.conn.cursor() as cur:
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
             cur.execute(
@@ -176,7 +177,7 @@ class ImportPGVector(ImportVDB):
     def upsert_data(self):
         self.total_imported_count = 0
         max_hit = False
-        indexes_content: Dict[str, List[NamespaceMeta]] = self.vdf_meta["indexes"]
+        indexes_content: dict[str, list[NamespaceMeta]] = self.vdf_meta["indexes"]
         if not indexes_content:
             raise ValueError("No indexes found in VDF_META.json")
 
@@ -231,7 +232,7 @@ class ImportPGVector(ImportVDB):
                         rows_to_insert = []
                         for _, row in batch_df.iterrows():
                             row_id = str(row[self.id_column])
-                            meta_dict: Dict[str, Any] = {}
+                            meta_dict: dict[str, Any] = {}
                             for col in batch_df.columns:
                                 if col == self.id_column or col in vector_column_names:
                                     continue
@@ -257,7 +258,7 @@ class ImportPGVector(ImportVDB):
                                 ["%s", "%s"] + ["%s"] * len(vector_column_names)
                             )
                             update_set = ", ".join(
-                                ['metadata = EXCLUDED.metadata']
+                                ["metadata = EXCLUDED.metadata"]
                                 + [
                                     f'"{vc}" = EXCLUDED."{vc}"'
                                     for vc in vector_column_names

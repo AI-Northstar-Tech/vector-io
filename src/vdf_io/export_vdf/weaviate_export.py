@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -26,7 +26,7 @@ from vdf_io.util import (
 )
 
 
-def connect_weaviate_client(args: Dict[str, Any]):
+def connect_weaviate_client(args: dict[str, Any]):
     """
     Connect to either a local, embedded, custom, or Weaviate Cloud Services (WCS) instance.
     """
@@ -40,7 +40,9 @@ def connect_weaviate_client(args: Dict[str, Any]):
     api_key = args.get("api_key")
     parsed = urlparse(url if "://" in url else f"http://{url}")
     host = parsed.hostname or "localhost"
-    port = args.get("port") or parsed.port or (443 if parsed.scheme == "https" else 8080)
+    port = (
+        args.get("port") or parsed.port or (443 if parsed.scheme == "https" else 8080)
+    )
     grpc_port = args.get("grpc_port") or 50051
 
     is_local = args.get("local") or host in ("localhost", "127.0.0.1", "0.0.0.0")
@@ -169,21 +171,25 @@ class ExportWeaviate(ExportVDB):
 
     def __init__(self, args, client=None):
         super().__init__(args)
-        self.client = client if client is not None else connect_weaviate_client(self.args)
-        self.generated_classes: Dict[str, type] = {}
+        self.client = (
+            client if client is not None else connect_weaviate_client(self.args)
+        )
+        self.generated_classes: dict[str, type] = {}
 
-    def get_all_index_names(self) -> List[str]:
+    def get_all_index_names(self) -> list[str]:
         collections = self.client.collections.list_all()
         if isinstance(collections, dict):
             return list(collections.keys())
         return [str(c) for c in collections]
 
-    def get_index_names(self) -> List[str]:
+    def get_index_names(self) -> list[str]:
         if not hasattr(self, "all_classes") or self.all_classes is None:
             self.all_classes = self.get_all_index_names()
         if not self.args.get("classes"):
             return self.all_classes
-        input_classes = [c.strip() for c in self.args["classes"].split(",") if c.strip()]
+        input_classes = [
+            c.strip() for c in self.args["classes"].split(",") if c.strip()
+        ]
         missing = set(input_classes) - set(self.all_classes)
         if missing:
             tqdm.write(
@@ -193,7 +199,7 @@ class ExportWeaviate(ExportVDB):
 
     def save_multi_vectors_to_parquet(
         self,
-        records: List[Dict[str, Any]],
+        records: list[dict[str, Any]],
         vectors_directory: str,
     ) -> int:
         if not records:
@@ -211,10 +217,12 @@ class ExportWeaviate(ExportVDB):
         self.file_ctr += 1
         return len(df)
 
-    def _extract_collection_schema_and_metric(self, collection) -> Tuple[Dict[str, str], Optional[str], Optional[Dict[str, Any]]]:
-        schema_map: Dict[str, str] = {}
-        distance_metric: Optional[str] = "cosine"
-        raw_config_dict: Optional[Dict[str, Any]] = None
+    def _extract_collection_schema_and_metric(
+        self, collection
+    ) -> tuple[dict[str, str], str | None, dict[str, Any] | None]:
+        schema_map: dict[str, str] = {}
+        distance_metric: str | None = "cosine"
+        raw_config_dict: dict[str, Any] | None = None
         try:
             cfg = collection.config.get()
             if hasattr(cfg, "to_dict"):
@@ -227,13 +235,13 @@ class ExportWeaviate(ExportVDB):
                 dist = getattr(cfg.vector_index_config, "distance_metric", None)
                 if dist is not None:
                     distance_metric = str(getattr(dist, "value", dist)).lower()
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
         return schema_map, distance_metric, raw_config_dict
 
     def get_data(self):
         index_names = self.get_index_names()
-        index_metas: Dict[str, List[NamespaceMeta]] = {}
+        index_metas: dict[str, list[NamespaceMeta]] = {}
         batch_size = self.args.get("batch_size") or DEFAULT_BATCH_SIZE
 
         for class_name in tqdm(index_names, desc="Fetching Weaviate classes"):
@@ -251,12 +259,12 @@ class ExportWeaviate(ExportVDB):
             try:
                 agg_resp = collection.aggregate.over_all(total_count=True)
                 total_count = int(getattr(agg_resp, "total_count", 0) or 0)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 total_count = 0
 
-            records_buffer: List[Dict[str, Any]] = []
+            records_buffer: list[dict[str, Any]] = []
             num_vectors_exported = 0
-            detected_vector_columns: List[str] = []
+            detected_vector_columns: list[str] = []
             detected_dim: int = -1
 
             pbar = tqdm(total=total_count or None, desc=f"Exporting {class_name}")
@@ -265,7 +273,7 @@ class ExportWeaviate(ExportVDB):
                 props = dict(getattr(item, "properties", {}) or {})
                 raw_vec = getattr(item, "vector", None)
 
-                row: Dict[str, Any] = {ID_COLUMN: obj_id}
+                row: dict[str, Any] = {ID_COLUMN: obj_id}
                 # Rename any property colliding with ID_COLUMN
                 for k, v in props.items():
                     col_key = f"metadata_{k}" if k == ID_COLUMN else k
