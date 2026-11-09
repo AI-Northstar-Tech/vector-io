@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-from getpass import getpass
-import os
-from huggingface_hub import HfApi
 import argparse
+import os
+from getpass import getpass
+
+from huggingface_hub import HfApi
 
 
 def push_to_hub(export_obj, args):

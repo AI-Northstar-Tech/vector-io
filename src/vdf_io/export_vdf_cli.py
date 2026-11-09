@@ -1,30 +1,28 @@
 #!/usr/bin/env python3
 
 import argparse
+import importlib
 import os
+import pkgutil
 import sys
 import time
 import traceback
-from dotenv import find_dotenv, load_dotenv
 import warnings
-import pkgutil
-import importlib
-
 
 import sentry_sdk
+from dotenv import find_dotenv, load_dotenv
 from opentelemetry import trace
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.sdk.trace import TracerProvider
 from sentry_sdk.integrations.opentelemetry import (
-    SentrySpanProcessor,
     SentryPropagator,
+    SentrySpanProcessor,
 )
 
 import vdf_io
 from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.scripts.check_for_updates import check_for_updates
 from vdf_io.scripts.push_to_hub_vdf import push_to_hub
-
 
 # Path to the directory containing all export modules
 package_dir = "vdf_io.export_vdf"
@@ -96,7 +94,6 @@ def main():
         finally:
             sentry_sdk.flush()
     sentry_sdk.flush()
-    return
 
 
 ARGS_ALLOWLIST = [
