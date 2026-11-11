@@ -3,7 +3,9 @@ import os
 import sys
 import tempfile
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
+)
 
 from vdf_io.export_vdf.weaviate_export import (
     ExportWeaviate,
@@ -76,7 +78,10 @@ def test_distance_metric_bidirectional_mapping():
 def test_automatic_python_class_generation():
     code = generate_python_class_for_collection(
         "Article",
-        [{"name": "title", "dataType": ["text"]}, {"name": "views", "dataType": ["int"]}],
+        [
+            {"name": "title", "dataType": ["text"]},
+            {"name": "views", "dataType": ["int"]},
+        ],
     )
     assert "class ArticleRecord:" in code
     assert "title: Optional[str] = None" in code
@@ -103,7 +108,11 @@ def test_export_and_import_single_and_multivector_collections():
         )
         src_client = _MockWeaviateClient({"Documents": col})
         exporter = ExportWeaviate.export_vdb(
-            {"url": "http://localhost:8080", "vdf_directory": tmpdir, "classes": "Documents"},
+            {
+                "url": "http://localhost:8080",
+                "vdf_directory": tmpdir,
+                "classes": "Documents",
+            },
             client_override=src_client,
         )
         assert "Documents" in exporter.index_metas
@@ -129,8 +138,12 @@ def test_export_defaults_to_all_classes_when_unspecified():
     with tempfile.TemporaryDirectory() as tmpdir:
         src_client = _MockWeaviateClient(
             {
-                "ClassA": _MockCollection("ClassA", [_MockObj("a1", {"k": "v"}, [1.0, 2.0])]),
-                "ClassB": _MockCollection("ClassB", [_MockObj("b1", {"k": "w"}, [3.0, 4.0])]),
+                "ClassA": _MockCollection(
+                    "ClassA", [_MockObj("a1", {"k": "v"}, [1.0, 2.0])]
+                ),
+                "ClassB": _MockCollection(
+                    "ClassB", [_MockObj("b1", {"k": "w"}, [3.0, 4.0])]
+                ),
             }
         )
         exporter = ExportWeaviate.export_vdb(
@@ -144,7 +157,9 @@ def test_cli_make_parser_registers_weaviate_options():
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="db")
     ExportWeaviate.make_parser(sub)
-    parsed = parser.parse_args(["weaviate", "--url", "http://localhost:8080", "--classes", "Docs", "--local"])
+    parsed = parser.parse_args(
+        ["weaviate", "--url", "http://localhost:8080", "--classes", "Docs", "--local"]
+    )
     assert parsed.url == "http://localhost:8080"
     assert parsed.classes == "Docs"
     assert parsed.local is True

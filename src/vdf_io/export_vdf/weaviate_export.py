@@ -23,10 +23,12 @@ except ImportError:
 try:
     from tqdm import tqdm
 except ImportError:
+
     class tqdm:
         @staticmethod
         def write(msg: str) -> None:
             print(msg)
+
 
 try:
     import weaviate
@@ -56,7 +58,9 @@ except ImportError:
             self.vdf_directory = self.args.get("vdf_directory", "./vdf_export")
             self.file_structure: list[str] = []
 
-    def set_arg_from_input(args, key, prompt, type_name=str, default_value=None, **kwargs):
+    def set_arg_from_input(
+        args, key, prompt, type_name=str, default_value=None, **kwargs
+    ):
         if args.get(key) is None and default_value is not None:
             args[key] = default_value
 
@@ -100,7 +104,9 @@ def map_vdf_distance_to_weaviate(vdf_metric: str | None) -> str:
     return "cosine"
 
 
-def generate_python_class_for_collection(class_name: str, properties: list[dict[str, Any]]) -> str:
+def generate_python_class_for_collection(
+    class_name: str, properties: list[dict[str, Any]]
+) -> str:
     """Automatically generate a typed Python dataclass definition for an exported Weaviate class."""
     type_map = {
         "text": "str",
@@ -134,16 +140,22 @@ def connect_weaviate_client(args: dict[str, Any], client_override: Any = None) -
     if client_override is not None:
         return client_override
     if weaviate is None:
-        raise RuntimeError("weaviate-client is required to connect to a live Weaviate instance")
+        raise RuntimeError(
+            "weaviate-client is required to connect to a live Weaviate instance"
+        )
 
     url = str(args.get("url") or "http://localhost:8080").strip()
     api_key = args.get("api_key")
-    use_local = bool(args.get("local", False)) or "localhost" in url or "127.0.0.1" in url
+    use_local = (
+        bool(args.get("local", False)) or "localhost" in url or "127.0.0.1" in url
+    )
 
     if use_local and hasattr(weaviate, "connect_to_local"):
         port = int(args.get("port", 8080))
         grpc_port = int(args.get("grpc_port", 50051))
-        return weaviate.connect_to_local(port=port, grpc_port=grpc_port, skip_init_checks=True)
+        return weaviate.connect_to_local(
+            port=port, grpc_port=grpc_port, skip_init_checks=True
+        )
 
     auth_creds = (
         weaviate.auth.AuthApiKey(api_key)
@@ -193,7 +205,9 @@ class ExportWeaviate(ExportVDB):
         )
 
     @classmethod
-    def export_vdb(cls, args: dict[str, Any], client_override: Any = None) -> "ExportWeaviate":
+    def export_vdb(
+        cls, args: dict[str, Any], client_override: Any = None
+    ) -> "ExportWeaviate":
         set_arg_from_input(
             args,
             "url",
@@ -221,7 +235,9 @@ class ExportWeaviate(ExportVDB):
 
     def __init__(self, args: dict[str, Any], client_override: Any = None) -> None:
         super().__init__(args)
-        self.client = connect_weaviate_client(self.args, client_override=client_override)
+        self.client = connect_weaviate_client(
+            self.args, client_override=client_override
+        )
         self.all_classes = self._list_all_collections()
         self.index_metas: dict[str, list[dict[str, Any]]] = {}
 
@@ -240,7 +256,9 @@ class ExportWeaviate(ExportVDB):
         requested = [c.strip() for c in str(raw).split(",") if c.strip()]
         missing = set(requested) - set(self.all_classes)
         if missing:
-            tqdm.write(f"Warning: classes not found in Weaviate instance: {sorted(missing)}")
+            tqdm.write(
+                f"Warning: classes not found in Weaviate instance: {sorted(missing)}"
+            )
         return [c for c in self.all_classes if c in requested]
 
     def export_collection(self, class_name: str) -> dict[str, Any]:
@@ -273,7 +291,9 @@ class ExportWeaviate(ExportVDB):
             vec = getattr(obj, "vector", None)
             if isinstance(vec, dict):
                 for vec_name, vec_vals in vec.items():
-                    col_name = f"vector_{vec_name}" if vec_name != "default" else "vector"
+                    col_name = (
+                        f"vector_{vec_name}" if vec_name != "default" else "vector"
+                    )
                     row[col_name] = list(vec_vals)
                     vector_columns[col_name] = len(vec_vals)
             elif isinstance(vec, (list, tuple)):
@@ -282,7 +302,9 @@ class ExportWeaviate(ExportVDB):
 
             records.append(row)
 
-        out_dir = os.path.join(getattr(self, "vdf_directory", "./vdf_export"), class_name)
+        out_dir = os.path.join(
+            getattr(self, "vdf_directory", "./vdf_export"), class_name
+        )
         os.makedirs(out_dir, exist_ok=True)
         parquet_path = os.path.join(out_dir, "1.parquet")
         if pd is not None:
@@ -318,7 +340,9 @@ class ExportWeaviate(ExportVDB):
         for class_name in self.get_index_names():
             exported[class_name] = self.export_collection(class_name)
 
-        meta_path = os.path.join(getattr(self, "vdf_directory", "./vdf_export"), "VDF_META.json")
+        meta_path = os.path.join(
+            getattr(self, "vdf_directory", "./vdf_export"), "VDF_META.json"
+        )
         os.makedirs(os.path.dirname(meta_path), exist_ok=True)
         vdf_meta = {
             "version": "1.0.0",

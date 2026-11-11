@@ -40,7 +40,9 @@ except ImportError:
         def __init__(self, args: dict[str, Any]):
             self.args = dict(args)
 
-    def set_arg_from_input(args, key, prompt, type_name=str, default_value=None, **kwargs):
+    def set_arg_from_input(
+        args, key, prompt, type_name=str, default_value=None, **kwargs
+    ):
         if args.get(key) is None and default_value is not None:
             args[key] = default_value
 
@@ -79,7 +81,9 @@ class ImportWeaviate(ImportVDB):
         )
 
     @classmethod
-    def import_vdb(cls, args: dict[str, Any], client_override: Any = None) -> "ImportWeaviate":
+    def import_vdb(
+        cls, args: dict[str, Any], client_override: Any = None
+    ) -> "ImportWeaviate":
         set_arg_from_input(
             args,
             "url",
@@ -106,11 +110,15 @@ class ImportWeaviate(ImportVDB):
 
     def __init__(self, args: dict[str, Any], client_override: Any = None) -> None:
         super().__init__(args)
-        self.client = connect_weaviate_client(self.args, client_override=client_override)
+        self.client = connect_weaviate_client(
+            self.args, client_override=client_override
+        )
         self.imported_counts: dict[str, int] = {}
 
     def upsert_data(self) -> dict[str, int]:
-        vdf_dir = self.args.get("dir") or self.args.get("vdf_directory") or "./vdf_export"
+        vdf_dir = (
+            self.args.get("dir") or self.args.get("vdf_directory") or "./vdf_export"
+        )
         meta_path = os.path.join(vdf_dir, "VDF_META.json")
         if not os.path.exists(meta_path):
             raise FileNotFoundError(f"VDF_META.json not found in {vdf_dir}")
@@ -121,7 +129,9 @@ class ImportWeaviate(ImportVDB):
         existing = set()
         if hasattr(self.client, "collections"):
             cols = self.client.collections.list_all()
-            existing = set(cols.keys() if isinstance(cols, dict) else [str(c) for c in cols])
+            existing = set(
+                cols.keys() if isinstance(cols, dict) else [str(c) for c in cols]
+            )
 
         for index_name, ns_list in vdf_meta.get("indexes", {}).items():
             for ns_meta in ns_list:
@@ -136,7 +146,9 @@ class ImportWeaviate(ImportVDB):
                     existing.add(index_name)
 
                 collection = self.client.collections.get(index_name)
-                data_path = ns_meta.get("data_path") or os.path.join(vdf_dir, index_name, "1.parquet")
+                data_path = ns_meta.get("data_path") or os.path.join(
+                    vdf_dir, index_name, "1.parquet"
+                )
                 if not os.path.exists(data_path):
                     continue
                 if pd is not None:
@@ -153,7 +165,11 @@ class ImportWeaviate(ImportVDB):
                     for vc in vec_cols:
                         if vc in row_dict and row_dict[vc] is not None:
                             val = row_dict.pop(vc)
-                            vec_key = vc.replace("vector_", "") if vc.startswith("vector_") else "default"
+                            vec_key = (
+                                vc.replace("vector_", "")
+                                if vc.startswith("vector_")
+                                else "default"
+                            )
                             vectors[vec_key] = list(val)
 
                     vector_payload: Any = (
