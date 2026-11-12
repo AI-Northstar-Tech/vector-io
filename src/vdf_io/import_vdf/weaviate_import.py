@@ -4,7 +4,6 @@ import uuid
 
 from dotenv import load_dotenv
 from tqdm import tqdm
-import weaviate
 import weaviate.classes.config as wvc
 
 from vdf_io.constants import DEFAULT_BATCH_SIZE, ID_COLUMN, INT_MAX
@@ -42,10 +41,15 @@ class ImportWeaviate(ImportVDB):
             "-u", "--url", type=str, help="URL of Weaviate instance (local or WCS)"
         )
         parser_weaviate.add_argument(
-            "--api_key", type=str, help="Weaviate API key (for WCS/authenticated instances)"
+            "--api_key",
+            type=str,
+            help="Weaviate API key (for WCS/authenticated instances)",
         )
         parser_weaviate.add_argument(
-            "-c", "--classes", type=str, help="Target Weaviate classes/collections (comma-separated)"
+            "-c",
+            "--classes",
+            type=str,
+            help="Target Weaviate classes/collections (comma-separated)",
         )
         parser_weaviate.add_argument(
             "--local",
@@ -71,7 +75,9 @@ class ImportWeaviate(ImportVDB):
             default_value="http://localhost:8080",
             env_var="WEAVIATE_URL",
         )
-        if "localhost" not in str(args.get("url", "")) and "127.0.0.1" not in str(args.get("url", "")):
+        if "localhost" not in str(args.get("url", "")) and "127.0.0.1" not in str(
+            args.get("url", "")
+        ):
             set_arg_from_password(
                 args,
                 "api_key",
@@ -105,7 +111,9 @@ class ImportWeaviate(ImportVDB):
                 parquet_files = self.get_parquet_files(final_data_path)
 
                 raw_name = index_name + (
-                    f"_{namespace_meta['namespace']}" if namespace_meta.get("namespace") else ""
+                    f"_{namespace_meta['namespace']}"
+                    if namespace_meta.get("namespace")
+                    else ""
                 )
                 class_name = raw_name[:1].upper() + raw_name[1:].replace("-", "_")
                 class_name = self.create_new_name(class_name, existing_collections)
@@ -141,7 +149,9 @@ class ImportWeaviate(ImportVDB):
                         vector_index_config=(
                             None
                             if (is_multi_vector and len(vector_column_names) > 1)
-                            else wvc.Configure.VectorIndex.hnsw(distance_metric=wv_distance)
+                            else wvc.Configure.VectorIndex.hnsw(
+                                distance_metric=wv_distance
+                            )
                         ),
                     )
                     existing_collections.append(class_name)
@@ -172,14 +182,22 @@ class ImportWeaviate(ImportVDB):
                             ]
                             max_hit = True
 
-                        with collection.batch.fixed_size(batch_size=batch_size) as batch:
+                        with collection.batch.fixed_size(
+                            batch_size=batch_size
+                        ) as batch:
                             for _, row in batch_df.iterrows():
                                 row_dict = row.to_dict()
                                 raw_id = row_dict.pop(id_col, None)
                                 try:
-                                    obj_uuid = str(uuid.UUID(str(raw_id))) if raw_id else str(uuid.uuid4())
+                                    obj_uuid = (
+                                        str(uuid.UUID(str(raw_id)))
+                                        if raw_id
+                                        else str(uuid.uuid4())
+                                    )
                                 except Exception:
-                                    obj_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, str(raw_id)))
+                                    obj_uuid = str(
+                                        uuid.uuid5(uuid.NAMESPACE_DNS, str(raw_id))
+                                    )
 
                                 if len(vector_column_names) > 1:
                                     vec_payload = {
@@ -191,7 +209,8 @@ class ImportWeaviate(ImportVDB):
                                     vcol = vector_column_names[0]
                                     vec_payload = (
                                         list(row_dict.pop(vcol))
-                                        if vcol in row_dict and row_dict[vcol] is not None
+                                        if vcol in row_dict
+                                        and row_dict[vcol] is not None
                                         else None
                                     )
 
@@ -209,4 +228,6 @@ class ImportWeaviate(ImportVDB):
                 break
 
         self.args["imported_count"] = self.total_imported_count
-        tqdm.write(f"Successfully imported {self.total_imported_count} objects into Weaviate.")
+        tqdm.write(
+            f"Successfully imported {self.total_imported_count} objects into Weaviate."
+        )

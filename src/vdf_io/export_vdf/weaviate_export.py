@@ -16,8 +16,17 @@ from vdf_io.util import set_arg_from_input, set_arg_from_password
 
 
 def connect_weaviate_client(args):
-    url = args.get("url") or os.getenv("WEAVIATE_URL") or os.getenv("YOUR_WCS_URL") or "http://localhost:8080"
-    api_key = args.get("api_key") or os.getenv("WEAVIATE_API_KEY") or os.getenv("YOUR_WCS_API_KEY")
+    url = (
+        args.get("url")
+        or os.getenv("WEAVIATE_URL")
+        or os.getenv("YOUR_WCS_URL")
+        or "http://localhost:8080"
+    )
+    api_key = (
+        args.get("api_key")
+        or os.getenv("WEAVIATE_API_KEY")
+        or os.getenv("YOUR_WCS_API_KEY")
+    )
     use_local = args.get("local", False) or "localhost" in url or "127.0.0.1" in url
 
     if use_local and not api_key:
@@ -25,7 +34,9 @@ def connect_weaviate_client(args):
         host = parsed.hostname or "localhost"
         port = parsed.port or 8080
         grpc_port = int(args.get("grpc_port") or 50051)
-        return weaviate.connect_to_local(host=host, port=port, grpc_port=grpc_port, skip_init_checks=True)
+        return weaviate.connect_to_local(
+            host=host, port=port, grpc_port=grpc_port, skip_init_checks=True
+        )
 
     auth = weaviate.auth.AuthApiKey(api_key) if api_key else None
     return weaviate.connect_to_wcs(
@@ -47,10 +58,15 @@ class ExportWeaviate(ExportVDB):
             "-u", "--url", type=str, help="URL of Weaviate instance (local or WCS)"
         )
         parser_weaviate.add_argument(
-            "--api_key", type=str, help="Weaviate API key (for WCS/authenticated instances)"
+            "--api_key",
+            type=str,
+            help="Weaviate API key (for WCS/authenticated instances)",
         )
         parser_weaviate.add_argument(
-            "-c", "--classes", type=str, help="Classes/collections to export (comma-separated)"
+            "-c",
+            "--classes",
+            type=str,
+            help="Classes/collections to export (comma-separated)",
         )
         parser_weaviate.add_argument(
             "--local",
@@ -76,7 +92,9 @@ class ExportWeaviate(ExportVDB):
             default_value="http://localhost:8080",
             env_var="WEAVIATE_URL",
         )
-        if "localhost" not in str(args.get("url", "")) and "127.0.0.1" not in str(args.get("url", "")):
+        if "localhost" not in str(args.get("url", "")) and "127.0.0.1" not in str(
+            args.get("url", "")
+        ):
             set_arg_from_password(
                 args,
                 "api_key",
@@ -108,10 +126,14 @@ class ExportWeaviate(ExportVDB):
             self.all_classes = self.get_all_index_names()
         if not self.args.get("classes"):
             return self.all_classes
-        input_classes = [c.strip() for c in self.args["classes"].split(",") if c.strip()]
+        input_classes = [
+            c.strip() for c in self.args["classes"].split(",") if c.strip()
+        ]
         missing = set(input_classes) - set(self.all_classes)
         if missing:
-            tqdm.write(f"These classes are not present in the Weaviate instance: {missing}")
+            tqdm.write(
+                f"These classes are not present in the Weaviate instance: {missing}"
+            )
         return [c for c in self.all_classes if c in input_classes]
 
     def get_data(self):
@@ -168,7 +190,9 @@ class ExportWeaviate(ExportVDB):
 
             rows.append(row)
             if len(rows) >= batch_size:
-                num_vectors_exported += self._flush_rows_to_parquet(rows, vectors_directory)
+                num_vectors_exported += self._flush_rows_to_parquet(
+                    rows, vectors_directory
+                )
                 rows = []
 
         if rows:
@@ -180,7 +204,9 @@ class ExportWeaviate(ExportVDB):
         distance_metric = "cosine"
         try:
             cfg = collection.config.get()
-            if hasattr(cfg, "vector_index_config") and hasattr(cfg.vector_index_config, "distance_metric"):
+            if hasattr(cfg, "vector_index_config") and hasattr(
+                cfg.vector_index_config, "distance_metric"
+            ):
                 distance_metric = str(cfg.vector_index_config.distance_metric.value)
         except Exception:
             pass
