@@ -204,6 +204,7 @@ db_metric_to_standard_metric: Dict[str, Dict[str, Distance]] = {
         "l2-squared": Distance.EUCLID,
         "dot": Distance.DOT,
         "manhattan": Distance.MANHATTAN,
+        "hamming": Distance.HAMMING,
     },
     DBNames.VESPA: {
         "angular": Distance.COSINE,

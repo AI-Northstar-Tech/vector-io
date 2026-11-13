@@ -44,6 +44,7 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | DataStax Astra DB              | ✅     | ✅     |
 | Chroma                         | ✅     | ✅     |
 | Turbopuffer                    | ✅     | ✅     |
+| Weaviate                       | ✅     | ✅     |
 
 </details>
 
@@ -67,7 +68,6 @@ See the [Contributing](#contributing) section to add support for your favorite v
 | Vector Database                | Import | Export |
 |--------------------------------|--------|--------|
 | Azure AI Search                | ❌     | ❌     |
-| Weaviate                       | ❌     | ❌     |
 | MongoDB Atlas                  | ❌     | ❌     |
 | OpenSearch                     | ❌     | ❌     |
 | Apache Cassandra               | ❌     | ❌     |
