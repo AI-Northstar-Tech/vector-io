@@ -6,7 +6,7 @@ from typing import Any, List
 from dotenv import load_dotenv
 from tqdm import tqdm
 import weaviate
-from weaviate.classes.config import Configure, DataType, Property
+from weaviate.classes.config import Configure, DataType
 from weaviate.classes.data import DataObject
 
 from vdf_io.constants import INT_MAX

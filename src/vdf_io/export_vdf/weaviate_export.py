@@ -181,9 +181,7 @@ class ExportWeaviate(ExportVDB):
             objects = response.objects
             if not objects:
                 break
-            num_vectors_exported += self.save_from_objects(
-                objects, vectors_directory
-            )
+            num_vectors_exported += self.save_from_objects(objects, vectors_directory)
             if dim == -1 or len(vector_columns) == 1:
                 vector_columns, dim = self.infer_vector_columns(objects, dim)
             offset += len(objects)
