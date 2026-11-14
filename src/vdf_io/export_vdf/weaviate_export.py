@@ -260,9 +260,7 @@ class ExportWeaviate(ExportVDB):
     def _connect(self):
         headers = _normalize_headers(self.args.get("headers"))
         api_key = self.args.get("api_key")
-        auth_credentials = (
-            weaviate.auth.AuthApiKey(api_key) if api_key else None
-        )
+        auth_credentials = weaviate.auth.AuthApiKey(api_key) if api_key else None
 
         local = _as_bool(self.args.get("local"), False)
         url = self.args.get("url")
@@ -300,7 +298,9 @@ class ExportWeaviate(ExportVDB):
         collections = self.client.collections.list_all()
         if isinstance(collections, dict):
             return list(collections.keys())
-        return [getattr(collection, "name", str(collection)) for collection in collections]
+        return [
+            getattr(collection, "name", str(collection)) for collection in collections
+        ]
 
     def get_index_names(self) -> List[str]:
         if not self.args.get("classes"):
@@ -316,7 +316,9 @@ class ExportWeaviate(ExportVDB):
             tqdm.write(
                 f"These classes are not present in the Weaviate instance: {missing}"
             )
-        return [class_name for class_name in self.all_classes if class_name in input_classes]
+        return [
+            class_name for class_name in self.all_classes if class_name in input_classes
+        ]
 
     def get_data(self):
         index_names = self.get_index_names()
@@ -491,7 +493,9 @@ class ExportWeaviate(ExportVDB):
         dimensions = self._get_dimensions(collection, vector_names_from_config)
 
         num_vectors_exported = 0
-        batch_size = int(self.args.get("batch_size", DEFAULT_BATCH_SIZE) or DEFAULT_BATCH_SIZE)
+        batch_size = int(
+            self.args.get("batch_size", DEFAULT_BATCH_SIZE) or DEFAULT_BATCH_SIZE
+        )
         batch_vectors: Dict[Any, Dict[str, List[float]]] = {}
         batch_metadata: Dict[Any, Dict[str, Any]] = {}
         discovered_vector_names: List[str] = list(vector_names_from_config)
