@@ -1,15 +1,15 @@
 import json
 import os
-from typing import Dict, List
+
 import lancedb
 import pandas as pd
 import pyarrow
 from tqdm import tqdm
-from vdf_io.meta_types import NamespaceMeta
 
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
+from vdf_io.meta_types import NamespaceMeta
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input, set_arg_from_password
-from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 
 class ExportLanceDB(ExportVDB):
@@ -83,7 +83,7 @@ class ExportLanceDB(ExportVDB):
         index_names = self.get_index_names()
         BATCH_SIZE = self.args["batch_size"]
         total = 0
-        index_metas: Dict[str, List[NamespaceMeta]] = {}
+        index_metas: dict[str, list[NamespaceMeta]] = {}
         for index_name in index_names:
             namespace_metas = []
             vectors_directory = self.create_vec_dir(index_name)

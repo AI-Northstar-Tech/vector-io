@@ -1,21 +1,20 @@
-from pathlib import Path
-from collections import OrderedDict
-from getpass import getpass
 import hashlib
 import json
 import os
+import sys
 import time
-from typing import Dict
+from collections import OrderedDict
+from getpass import getpass
+from io import StringIO
+from pathlib import Path
 from uuid import UUID
+
 import numpy as np
 import pandas as pd
-from io import StringIO
-import sys
-from tqdm import tqdm
-from PIL import Image
 from halo import Halo
-
+from PIL import Image
 from qdrant_client.http.models import Distance
+from tqdm import tqdm
 
 from vdf_io.constants import ID_COLUMN, INT_MAX
 from vdf_io.names import DBNames
@@ -107,9 +106,7 @@ def set_arg_from_input(
                 + (" " + str(list(choices)) + ": " if choices is not None else "")
             )
             if len(inp) >= 2:
-                if inp[0] == '"' and inp[-1] == '"':
-                    inp = inp[1:-1]
-                elif inp[0] == "'" and inp[-1] == "'":
+                if inp[0] == '"' and inp[-1] == '"' or inp[0] == "'" and inp[-1] == "'":
                     inp = inp[1:-1]
             if inp == "":
                 args[arg_name] = (
@@ -124,7 +121,6 @@ def set_arg_from_input(
             else:
                 args[arg_name] = type_name(inp)
                 break
-    return
 
 
 def set_arg_from_password(args, arg_name, prompt, env_var_name):
@@ -135,7 +131,6 @@ def set_arg_from_password(args, arg_name, prompt, env_var_name):
         args[arg_name] = os.getenv(env_var_name)
     elif arg_name not in args or args[arg_name] is None:
         args[arg_name] = getpass(prompt)
-    return
 
 
 def expand_shorthand_path(shorthand_path):
@@ -156,7 +151,7 @@ def expand_shorthand_path(shorthand_path):
     return str(full_path)
 
 
-db_metric_to_standard_metric: Dict[str, Dict[str, Distance]] = {
+db_metric_to_standard_metric: dict[str, dict[str, Distance]] = {
     DBNames.PINECONE: {
         "cosine": Distance.COSINE,
         "euclidean": Distance.EUCLID,
@@ -316,10 +311,8 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
                 if id_column not in df.columns:
                     # remove all rows
                     tqdm.write(
-                        (
-                            f"ID column '{id_column}' not found in parquet file '{data_path}'."
-                            f" Skipping split '{split}', config '{config}'."
-                        )
+                        f"ID column '{id_column}' not found in parquet file '{data_path}'."
+                        f" Skipping split '{split}', config '{config}'."
                     )
                     continue
                 total_rows_loaded += len(df)
@@ -336,7 +329,7 @@ def get_parquet_files(data_path, args, temp_file_paths=[], id_column=ID_COLUMN):
         return [
             "hf://" + x
             for x in fs.glob(
-                f"datasets/{args.get('hf_dataset')}/{data_path if data_path!='.' else ''}/**.parquet"
+                f"datasets/{args.get('hf_dataset')}/{data_path if data_path != '.' else ''}/**.parquet"
             )
         ]
     if not os.path.isdir(data_path):
@@ -422,8 +415,7 @@ def get_qdrant_id_from_id(idx):
 
 def read_parquet_progress(file_path, id_column, **kwargs):
     if file_path.startswith("hf://"):
-        from huggingface_hub import HfFileSystem
-        from huggingface_hub import hf_hub_download
+        from huggingface_hub import HfFileSystem, hf_hub_download
 
         fs = HfFileSystem()
         resolved_path = fs.resolve_path(file_path)
@@ -461,8 +453,8 @@ def read_parquet_progress(file_path, id_column, **kwargs):
             "max_num_rows" in kwargs
             and (kwargs.get("max_num_rows", INT_MAX) or INT_MAX) < INT_MAX
         ):
-            from pyarrow.parquet import ParquetFile
             import pyarrow as pa
+            from pyarrow.parquet import ParquetFile
 
             pf = ParquetFile(file_path_to_be_read)
             first_ten_rows = next(pf.iter_batches(batch_size=kwargs["max_num_rows"]))

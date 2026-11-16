@@ -2,18 +2,20 @@
 Export data from vertex ai vector search index
 """
 
-import os
 import json
-from tqdm import tqdm
+import os
 
 import google.auth
 from google.cloud import aiplatform
-from google.cloud.aiplatform import MatchingEngineIndex  # as vs
-from google.cloud.aiplatform import MatchingEngineIndexEndpoint  # as vsep
+from google.cloud.aiplatform import (
+    MatchingEngineIndex,  # as vs
+    MatchingEngineIndexEndpoint,  # as vsep
+)
+from tqdm import tqdm
 
+from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 from vdf_io.names import DBNames
 from vdf_io.util import set_arg_from_input, standardize_metric
-from vdf_io.export_vdf.vdb_export_cls import ExportVDB
 
 
 class ExportVertexAIVectorSearch(ExportVDB):
