@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
-from pathlib import Path
+import json
 import os
 import sys
-import json
+from pathlib import Path
+
 import yaml
 
 

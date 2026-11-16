@@ -1,15 +1,16 @@
 from __future__ import annotations
-import datetime
-from typing import List
-import pandas as pd
-import os
-import abc
-import pyarrow.parquet as pq
-import pyarrow as pa
 
+import abc
+import datetime
+import os
+
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+from vdf_io.constants import ID_COLUMN
 from vdf_io.meta_types import NamespaceMeta, VDFMeta
 from vdf_io.util import extract_data_hash, get_author_name, standardize_metric
-from vdf_io.constants import ID_COLUMN
 
 
 class ExportVDB(abc.ABC):
@@ -32,20 +33,18 @@ class ExportVDB(abc.ABC):
         os.makedirs(self.vdf_directory, exist_ok=True)
 
     @abc.abstractmethod
-    def get_index_names(self) -> List[str]:
+    def get_index_names(self) -> list[str]:
         """
         Get index names from vector database
         """
         # raise NotImplementedError()
-        pass
 
     @abc.abstractmethod
-    def get_all_index_names(self) -> List[str]:
+    def get_all_index_names(self) -> list[str]:
         """
         Get all index names from vector database
         """
         # raise NotImplementedError()
-        pass
 
     @abc.abstractmethod
     def get_data(self) -> ExportVDB:
@@ -68,7 +67,7 @@ class ExportVDB(abc.ABC):
         vectors_df = pd.DataFrame(list(vectors.items()), columns=[ID_COLUMN, "vector"])
 
         if metadata:
-            metadata_list = [{**{ID_COLUMN: k}, **v} for k, v in metadata.items()]
+            metadata_list = [{ID_COLUMN: k, **v} for k, v in metadata.items()]
             metadata_df = pd.DataFrame.from_records(metadata_list)
 
             # Check for duplicate column names and rename as necessary
