@@ -5,22 +5,21 @@ import importlib
 import os
 import pkgutil
 import time
-import warnings
-from dotenv import find_dotenv, load_dotenv
 import traceback
+import warnings
 
 import sentry_sdk
+from dotenv import find_dotenv, load_dotenv
 from opentelemetry import trace
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.sdk.trace import TracerProvider
-from sentry_sdk.integrations.opentelemetry import SentrySpanProcessor, SentryPropagator
+from sentry_sdk.integrations.opentelemetry import SentryPropagator, SentrySpanProcessor
 
 import vdf_io
 from vdf_io.constants import ID_COLUMN
+from vdf_io.import_vdf.vdf_import_cls import ImportVDB
 from vdf_io.scripts.check_for_updates import check_for_updates
 from vdf_io.util import set_arg_from_input
-from vdf_io.import_vdf.vdf_import_cls import ImportVDB
-
 
 load_dotenv(find_dotenv(), override=True)
 # Path to the directory containing all export modules
