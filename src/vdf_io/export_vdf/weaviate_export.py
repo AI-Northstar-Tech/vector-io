@@ -47,7 +47,9 @@ def connect_weaviate_client(
             skip_init_checks=True,
         )
 
-    if any(s in host for s in (".weaviate.network", ".weaviate.cloud", ".semi.network")):
+    if any(
+        s in host for s in (".weaviate.network", ".weaviate.cloud", ".semi.network")
+    ):
         connect_cloud = getattr(weaviate, "connect_to_weaviate_cloud", None) or getattr(
             weaviate, "connect_to_wcs"
         )
@@ -91,7 +93,9 @@ def generate_weaviate_dataclass_code(
     for prop in properties_meta:
         pname = prop.get("name", "field")
         dtype = prop.get("data_type", "Any").lower()
-        lines.append(f"    {pname}: Optional[{weaviate_to_py.get(dtype, 'Any')}] = None")
+        lines.append(
+            f"    {pname}: Optional[{weaviate_to_py.get(dtype, 'Any')}] = None"
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -103,17 +107,27 @@ class ExportWeaviate(ExportVDB):
         p = subparsers.add_parser(cls.DB_NAME_SLUG, help="Export data from Weaviate")
         p.add_argument("-u", "--url", type=str, help="URL of Weaviate instance")
         p.add_argument("--api_key", type=str, help="Weaviate API key")
-        p.add_argument("--grpc_port", type=int, default=50051, help="Weaviate gRPC port")
+        p.add_argument(
+            "--grpc_port", type=int, default=50051, help="Weaviate gRPC port"
+        )
         p.add_argument("-c", "--classes", type=str, help="Comma-separated classes")
         p.add_argument("-b", "--batch_size", type=int, default=DEFAULT_BATCH_SIZE)
 
     @classmethod
     def export_vdb(cls, args):
         set_arg_from_input(
-            args, "url", "Enter Weaviate URL (default: 'http://localhost:8080'): ", str, default_value="http://localhost:8080"
+            args,
+            "url",
+            "Enter Weaviate URL (default: 'http://localhost:8080'): ",
+            str,
+            default_value="http://localhost:8080",
         )
         set_arg_from_input(
-            args, "grpc_port", "Enter Weaviate gRPC port (default: 50051): ", int, default_value=50051
+            args,
+            "grpc_port",
+            "Enter Weaviate gRPC port (default: 50051): ",
+            int,
+            default_value=50051,
         )
         set_arg_from_password(
             args, "api_key", "Enter Weaviate API key: ", "WEAVIATE_API_KEY"
@@ -130,7 +144,11 @@ class ExportWeaviate(ExportVDB):
                 default_value=None,
             )
             set_arg_from_input(
-                exporter.args, "batch_size", "Enter batch size: ", int, default_value=DEFAULT_BATCH_SIZE
+                exporter.args,
+                "batch_size",
+                "Enter batch size: ",
+                int,
+                default_value=DEFAULT_BATCH_SIZE,
             )
             exporter.get_data()
         finally:
@@ -180,19 +198,34 @@ class ExportWeaviate(ExportVDB):
             vec_cfg = getattr(cfg, "vector_config", None)
             if isinstance(vec_cfg, dict):
                 for vname, vdef in vec_cfg.items():
-                    sub_dist = getattr(getattr(vdef, "vector_index_config", None), "distance_metric", None)
+                    sub_dist = getattr(
+                        getattr(vdef, "vector_index_config", None),
+                        "distance_metric",
+                        None,
+                    )
                     if sub_dist is not None:
-                        named_metrics[vname] = str(getattr(sub_dist, "value", sub_dist)).lower()
+                        named_metrics[vname] = str(
+                            getattr(sub_dist, "value", sub_dist)
+                        ).lower()
                 if named_metrics and distance == "cosine":
                     distance = next(iter(named_metrics.values()))
             for prop in getattr(cfg, "properties", []) or []:
                 pname = getattr(prop, "name", None)
                 dtype = getattr(prop, "data_type", None)
                 if pname:
-                    props_meta.append({"name": str(pname), "data_type": str(getattr(dtype, "value", dtype or "text"))})
+                    props_meta.append(
+                        {
+                            "name": str(pname),
+                            "data_type": str(getattr(dtype, "value", dtype or "text")),
+                        }
+                    )
         except Exception:
             pass
-        return {"distance": distance, "named_metrics": named_metrics, "properties": props_meta}
+        return {
+            "distance": distance,
+            "named_metrics": named_metrics,
+            "properties": props_meta,
+        }
 
     def _flush_rows(self, rows: List[Dict[str, Any]], vectors_directory: str) -> int:
         if not rows:
@@ -203,7 +236,9 @@ class ExportWeaviate(ExportVDB):
         if not hasattr(self, "parquet_schema"):
             self.parquet_schema = pq.read_schema(pf)
         else:
-            self.parquet_schema = pa.unify_schemas([self.parquet_schema, pq.read_schema(pf)])
+            self.parquet_schema = pa.unify_schemas(
+                [self.parquet_schema, pq.read_schema(pf)]
+            )
         self.file_structure.append(pf)
         self.file_ctr += 1
         return len(df)
@@ -212,18 +247,29 @@ class ExportWeaviate(ExportVDB):
         batch_size = int(self.args.get("batch_size") or DEFAULT_BATCH_SIZE)
         index_metas: Dict[str, List[NamespaceMeta]] = {}
 
-        for class_name in tqdm(self.get_index_names(), desc="Exporting Weaviate classes"):
+        for class_name in tqdm(
+            self.get_index_names(), desc="Exporting Weaviate classes"
+        ):
             collection = self.client.collections.get(class_name)
             vectors_directory = self.create_vec_dir(class_name)
             cfg_info = self._extract_config(collection)
 
             schema_file = os.path.join(self.vdf_directory, f"{class_name}_schema.py")
             with open(schema_file, "w", encoding="utf-8") as sf:
-                sf.write(generate_weaviate_dataclass_code(class_name, cfg_info["properties"]))
+                sf.write(
+                    generate_weaviate_dataclass_code(class_name, cfg_info["properties"])
+                )
             self.file_structure.append(schema_file)
 
             try:
-                total_count = int(getattr(collection.aggregate.over_all(total_count=True), "total_count", 0) or 0)
+                total_count = int(
+                    getattr(
+                        collection.aggregate.over_all(total_count=True),
+                        "total_count",
+                        0,
+                    )
+                    or 0
+                )
             except Exception:
                 total_count = 0
 
@@ -264,7 +310,10 @@ class ExportWeaviate(ExportVDB):
                     col_dims["vector"] = len(v)
 
                 rows_buf.append(row)
-                if len(rows_buf) >= batch_size or len(str(rows_buf)) >= DISK_SPACE_LIMIT:
+                if (
+                    len(rows_buf) >= batch_size
+                    or len(str(rows_buf)) >= DISK_SPACE_LIMIT
+                ):
                     exported_count += self._flush_rows(rows_buf, vectors_directory)
                     rows_buf = []
 
@@ -300,7 +349,9 @@ class ExportWeaviate(ExportVDB):
 
         meta_path = os.path.join(self.vdf_directory, "VDF_META.json")
         self.file_structure.append(meta_path)
-        meta_text = json.dumps(self.get_basic_vdf_meta(index_metas).model_dump(), indent=4)
+        meta_text = json.dumps(
+            self.get_basic_vdf_meta(index_metas).model_dump(), indent=4
+        )
         with open(meta_path, "w", encoding="utf-8") as jf:
             jf.write(meta_text)
         return True

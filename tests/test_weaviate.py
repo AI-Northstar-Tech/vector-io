@@ -36,13 +36,19 @@ class FakeCollection:
         self._props = props or []
         self.data = FakeCollectionData()
         self.aggregate = SimpleNamespace(
-            over_all=lambda total_count=True: SimpleNamespace(total_count=len(self._items))
+            over_all=lambda total_count=True: SimpleNamespace(
+                total_count=len(self._items)
+            )
         )
         self.config = SimpleNamespace(get=self._get_config)
 
     def _get_config(self):
         vec_cfg = {
-            k: SimpleNamespace(vector_index_config=SimpleNamespace(distance_metric=SimpleNamespace(value=v)))
+            k: SimpleNamespace(
+                vector_index_config=SimpleNamespace(
+                    distance_metric=SimpleNamespace(value=v)
+                )
+            )
             for k, v in self._named_metrics.items()
         }
         prop_objs = [
@@ -50,7 +56,9 @@ class FakeCollection:
             for p in self._props
         ]
         return SimpleNamespace(
-            vector_index_config=SimpleNamespace(distance_metric=SimpleNamespace(value=self._distance)),
+            vector_index_config=SimpleNamespace(
+                distance_metric=SimpleNamespace(value=self._distance)
+            ),
             vector_config=vec_cfg if vec_cfg else None,
             properties=prop_objs,
         )
@@ -98,7 +106,9 @@ def test_connect_weaviate_local_and_cloud_routing():
         fake_mod.connect_to_local.assert_called_once()
         connect_weaviate_client("https://cluster.weaviate.network", api_key="wcs")
         fake_mod.connect_to_weaviate_cloud.assert_called_once()
-        connect_weaviate_client("https://internal.corp:8443", api_key="k", grpc_port=50052)
+        connect_weaviate_client(
+            "https://internal.corp:8443", api_key="k", grpc_port=50052
+        )
         fake_mod.connect_to_custom.assert_called_once()
 
 
@@ -133,7 +143,10 @@ def test_export_and_import_single_and_multi_vector_roundtrip(tmp_path, monkeypat
             "Article": FakeCollection(
                 items=single_items,
                 distance="dot",
-                props=[{"name": "title", "type": "text"}, {"name": "views", "type": "int"}],
+                props=[
+                    {"name": "title", "type": "text"},
+                    {"name": "views", "type": "int"},
+                ],
             ),
             "MultiVecProduct": FakeCollection(
                 items=multi_items,
@@ -144,22 +157,40 @@ def test_export_and_import_single_and_multi_vector_roundtrip(tmp_path, monkeypat
     )
 
     exporter = ExportWeaviate(
-        {"library_version": "0.1.0", "url": "http://localhost:8080", "classes": None, "batch_size": 10},
+        {
+            "library_version": "0.1.0",
+            "url": "http://localhost:8080",
+            "classes": None,
+            "batch_size": 10,
+        },
         client=src_client,
     )
     assert exporter.get_index_names() == ["Article", "MultiVecProduct"]
     assert exporter.get_data() is True
 
     vdf_dir = os.path.join(tmp_path, exporter.vdf_directory)
-    meta = json.loads(open(os.path.join(vdf_dir, "VDF_META.json"), encoding="utf-8").read())
+    meta = json.loads(
+        open(os.path.join(vdf_dir, "VDF_META.json"), encoding="utf-8").read()
+    )
     assert meta["indexes"]["Article"][0]["vector_columns"] == ["vector"]
     assert meta["indexes"]["Article"][0]["metric"] == Distance.DOT
-    assert meta["indexes"]["MultiVecProduct"][0]["vector_columns"] == ["title_vec", "body_vec"]
-    assert meta["indexes"]["MultiVecProduct"][0]["model_map"]["body_vec"]["dimensions"] == 3
+    assert meta["indexes"]["MultiVecProduct"][0]["vector_columns"] == [
+        "title_vec",
+        "body_vec",
+    ]
+    assert (
+        meta["indexes"]["MultiVecProduct"][0]["model_map"]["body_vec"]["dimensions"]
+        == 3
+    )
 
     dst_client = FakeWeaviateClient()
     importer = ImportWeaviate(
-        {"dir": vdf_dir, "library_version": "0.1.0", "url": "http://localhost:8080", "batch_size": 2},
+        {
+            "dir": vdf_dir,
+            "library_version": "0.1.0",
+            "url": "http://localhost:8080",
+            "batch_size": 2,
+        },
         client=dst_client,
     )
     assert importer.upsert_data() == 4
@@ -173,7 +204,9 @@ def test_export_and_import_single_and_multi_vector_roundtrip(tmp_path, monkeypat
 def test_cli_parsers_and_helpers():
     parser = argparse.ArgumentParser()
     ExportWeaviate.make_parser(parser.add_subparsers())
-    parsed = parser.parse_args(["weaviate", "--url", "http://localhost:8080", "--classes", "Article"])
+    parsed = parser.parse_args(
+        ["weaviate", "--url", "http://localhost:8080", "--classes", "Article"]
+    )
     assert parsed.classes == "Article"
 
     parser_in = argparse.ArgumentParser()
@@ -181,7 +214,9 @@ def test_cli_parsers_and_helpers():
     parsed_in = parser_in.parse_args(["weaviate", "--url", "http://localhost:8080"])
     assert parsed_in.url == "http://localhost:8080"
 
-    code = generate_weaviate_dataclass_code("Article", [{"name": "title", "data_type": "text"}])
+    code = generate_weaviate_dataclass_code(
+        "Article", [{"name": "title", "data_type": "text"}]
+    )
     assert "class Article:" in code
     assert normalize_weaviate_class_name("my-index") == "My_index"
     assert to_weaviate_uuid("doc-42") == to_weaviate_uuid("doc-42")

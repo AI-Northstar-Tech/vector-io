@@ -71,22 +71,36 @@ class ImportWeaviate(ImportVDB):
         p = subparsers.add_parser(cls.DB_NAME_SLUG, help="Import data into Weaviate")
         p.add_argument("-u", "--url", type=str, help="URL of Weaviate instance")
         p.add_argument("--api_key", type=str, help="Weaviate API key")
-        p.add_argument("--grpc_port", type=int, default=50051, help="Weaviate gRPC port")
+        p.add_argument(
+            "--grpc_port", type=int, default=50051, help="Weaviate gRPC port"
+        )
         p.add_argument("-b", "--batch_size", type=int, default=1000, help="Batch size")
 
     @classmethod
     def import_vdb(cls, args):
         set_arg_from_input(
-            args, "url", "Enter Weaviate URL (default: 'http://localhost:8080'): ", str, default_value="http://localhost:8080"
+            args,
+            "url",
+            "Enter Weaviate URL (default: 'http://localhost:8080'): ",
+            str,
+            default_value="http://localhost:8080",
         )
         set_arg_from_input(
-            args, "grpc_port", "Enter Weaviate gRPC port (default: 50051): ", int, default_value=50051
+            args,
+            "grpc_port",
+            "Enter Weaviate gRPC port (default: 50051): ",
+            int,
+            default_value=50051,
         )
         set_arg_from_password(
             args, "api_key", "Enter Weaviate API key: ", "WEAVIATE_API_KEY"
         )
         set_arg_from_input(
-            args, "batch_size", "Enter batch size (default: 1000): ", int, default_value=1000
+            args,
+            "batch_size",
+            "Enter batch size (default: 1000): ",
+            int,
+            default_value=1000,
         )
         importer = cls(args)
         try:
@@ -111,7 +125,11 @@ class ImportWeaviate(ImportVDB):
             fn()
 
     def _ensure_collection(
-        self, class_name: str, vector_columns: List[str], metric: Optional[str], existing: List[str]
+        self,
+        class_name: str,
+        vector_columns: List[str],
+        metric: Optional[str],
+        existing: List[str],
     ) -> str:
         target = normalize_weaviate_class_name(class_name)
         if self.args.get("create_new") and target in existing:
@@ -124,7 +142,9 @@ class ImportWeaviate(ImportVDB):
                 vec_cfg = [
                     Configure.NamedVectors.none(
                         name=vc,
-                        vector_index_config=Configure.VectorIndex.hnsw(distance_metric=dist_enum),
+                        vector_index_config=Configure.VectorIndex.hnsw(
+                            distance_metric=dist_enum
+                        ),
                     )
                     for vc in vector_columns
                 ]
@@ -133,7 +153,9 @@ class ImportWeaviate(ImportVDB):
                 self.client.collections.create(
                     name=target,
                     vectorizer_config=Configure.Vectorizer.none(),
-                    vector_index_config=Configure.VectorIndex.hnsw(distance_metric=dist_enum),
+                    vector_index_config=Configure.VectorIndex.hnsw(
+                        distance_metric=dist_enum
+                    ),
                 )
         else:
             self.client.collections.create(
@@ -171,16 +193,26 @@ class ImportWeaviate(ImportVDB):
             raise ValueError("No indexes found in VDF_META.json")
 
         raw_ex = self.client.collections.list_all()
-        existing = list(raw_ex.keys()) if isinstance(raw_ex, dict) else [str(x) for x in raw_ex]
+        existing = (
+            list(raw_ex.keys())
+            if isinstance(raw_ex, dict)
+            else [str(x) for x in raw_ex]
+        )
         max_hit = False
 
-        for index_name, ns_metas in tqdm(indexes_content.items(), desc="Importing Weaviate classes"):
+        for index_name, ns_metas in tqdm(
+            indexes_content.items(), desc="Importing Weaviate classes"
+        ):
             for ns_meta in ns_metas:
                 vec_cols, _ = self.get_vector_column_name(index_name, ns_meta)
                 if isinstance(vec_cols, str):
                     vec_cols = [vec_cols]
-                raw_cls = index_name + (f"_{ns_meta['namespace']}" if ns_meta.get("namespace") else "")
-                target_cls = self._ensure_collection(raw_cls, vec_cols, ns_meta.get("metric"), existing)
+                raw_cls = index_name + (
+                    f"_{ns_meta['namespace']}" if ns_meta.get("namespace") else ""
+                )
+                target_cls = self._ensure_collection(
+                    raw_cls, vec_cols, ns_meta.get("metric"), existing
+                )
                 collection = self.client.collections.get(target_cls)
 
                 final_path = self.get_final_data_path(ns_meta["data_path"])
@@ -198,9 +230,13 @@ class ImportWeaviate(ImportVDB):
                         objs = []
                         for _, row in batch_df.iterrows():
                             rd = row.to_dict()
-                            obj_uuid = to_weaviate_uuid(rd.pop(self.id_column, None) or uuid.uuid4())
+                            obj_uuid = to_weaviate_uuid(
+                                rd.pop(self.id_column, None) or uuid.uuid4()
+                            )
                             if len(vec_cols) == 1:
-                                vec_payload: Any = self._coerce_vec(rd.pop(vec_cols[0], None))
+                                vec_payload: Any = self._coerce_vec(
+                                    rd.pop(vec_cols[0], None)
+                                )
                             else:
                                 vec_payload = {}
                                 for vc in vec_cols:
@@ -213,9 +249,15 @@ class ImportWeaviate(ImportVDB):
                                 if self._clean_prop(v) is not None
                             }
                             objs.append(
-                                DataObject(uuid=obj_uuid, properties=props, vector=vec_payload)
+                                DataObject(
+                                    uuid=obj_uuid, properties=props, vector=vec_payload
+                                )
                                 if DataObject is not None
-                                else {"uuid": obj_uuid, "properties": props, "vector": vec_payload}
+                                else {
+                                    "uuid": obj_uuid,
+                                    "properties": props,
+                                    "vector": vec_payload,
+                                }
                             )
                         if objs:
                             collection.data.insert_many(objs)
