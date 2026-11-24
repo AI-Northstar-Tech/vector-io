@@ -202,8 +202,10 @@ db_metric_to_standard_metric: Dict[str, Dict[str, Distance]] = {
     DBNames.WEAVIATE: {
         "cosine": Distance.COSINE,
         "l2-squared": Distance.EUCLID,
+        "l2_squared": Distance.EUCLID,
         "dot": Distance.DOT,
         "manhattan": Distance.MANHATTAN,
+        "hamming": Distance.MANHATTAN,
     },
     DBNames.VESPA: {
         "angular": Distance.COSINE,
@@ -222,11 +224,12 @@ def standardize_metric(metric, db):
     """
     Standardize the metric name to the one used in the standard library.
     """
+    norm_metric = metric.lower() if isinstance(metric, str) else metric
     if (
         db in db_metric_to_standard_metric
-        and metric in db_metric_to_standard_metric[db]
+        and norm_metric in db_metric_to_standard_metric[db]
     ):
-        return db_metric_to_standard_metric[db][metric]
+        return db_metric_to_standard_metric[db][norm_metric]
     else:
         tqdm.write(f"Invalid metric '{metric}' for database '{db}'")
         return Distance.COSINE
